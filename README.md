@@ -10,17 +10,21 @@
 
 
 2. Активируйте виртуальное окружение:
+	```bash
 	python3 -m venv venv
 	source venv/bin/activate	
 
 3. Установите зависимости:
+	```bash
 	pip install PySide6 pyodbc python-dotenv
 
 
 4. Создайте .env
+	```bash
 	cp .env.example .env
 
 5. Запустите:
+	```bash
 	python3 main.py
 
 
