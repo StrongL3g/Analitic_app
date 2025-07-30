@@ -4,11 +4,21 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem,
     QStackedWidget, QWidget, QVBoxLayout, QLabel, QSplitter
 )
-from PySide6.QtCore import Qt  # <-- Импортируем Qt здесь (и в других файлах, где нужно)
+from PySide6.QtCore import Qt
 
-# Импорт страниц
+# === ВАЖНО: импорты до создания QApplication ===
+from PySide6.QtCore import QCoreApplication
+QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+
+# === Теперь создаём QApplication ===
+app = QApplication(sys.argv)
+
+# === Подключаем БД и страницы ===
+from database.db import Database
 from views.dashboard import DashboardPage
 
+# Импорт всех страниц
 from views.measurement.lines import LinesPage
 from views.measurement.ranges import RangesPage
 from views.measurement.background import BackgroundPage
@@ -30,14 +40,18 @@ from views.settings import SettingsPage
 from views.users import UsersPage
 from views.logs import LogsPage
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Система анализа спектров")
         self.resize(1200, 800)
 
-        # Текущая роль пользователя (для примера)
-        self.current_role = "Инженер-программист"  # Можно поменять на "Аналитик" или "Технолог"
+        # Текущая роль пользователя
+        self.current_role = "Инженер-программист"
+
+        # === Создаём подключение к БД ===
+        self.db = Database()
 
         # Разделитель: слева — меню, справа — контент
         splitter = QSplitter(Qt.Horizontal)
@@ -84,9 +98,6 @@ class MainWindow(QMainWindow):
             self.tree.addTopLevelItem(settings_item)
             self.tree.addTopLevelItem(users_item)
             self.tree.addTopLevelItem(logs_item)
-        else:
-            # Для других ролей эти разделы не показываем
-            pass
 
         # === ЦЕНТР: контент ===
         self.stacked_widget = QStackedWidget()
@@ -100,7 +111,7 @@ class MainWindow(QMainWindow):
         self.pages["ranges"] = RangesPage()
         self.pages["background"] = BackgroundPage()
         self.pages["params"] = ParamsPage()
-        self.pages["elements"] = ElementsPage()
+        self.pages["elements"] = ElementsPage(self.db)  # ← передаём db
         self.pages["criteria"] = CriteriaPage()
 
         self.pages["equations"] = EquationsPage()
@@ -132,7 +143,7 @@ class MainWindow(QMainWindow):
     def create_menu_item(self, text, key):
         item = QTreeWidgetItem()
         item.setText(0, text)
-        item.setData(0, Qt.UserRole, key)  # Сохраняем ключ
+        item.setData(0, Qt.UserRole, key)
         return item
 
     def on_item_clicked(self, item, column):
@@ -141,7 +152,7 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentWidget(self.pages[key])
 
 
-app = QApplication(sys.argv)
+# === Запуск приложения ===
 window = MainWindow()
 window.show()
 app.exec()
