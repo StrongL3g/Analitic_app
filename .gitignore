@@ -1,0 +1,22 @@
+# Виртуальное окружение
+venv/
+__pycache__/
+*.pyc
+
+# Переменные окружения
+.env
+.env.*
+
+# Файлы Python
+*.pyc
+*~
+.*.swp
+.DS_Store
+
+# Логи и временные файлы
+logs/
+*.log
+
+# Системные файлы
+Thumbs.db
+Desktop.ini
