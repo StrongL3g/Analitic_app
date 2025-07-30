@@ -5,7 +5,7 @@ __pycache__/
 
 # Переменные окружения
 .env
-#.env.*
+.env.*
 
 # Файлы Python
 *.pyc
