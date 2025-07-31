@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
         self.pages["dashboard"] = DashboardPage()
 
         self.pages["lines"] = LinesPage(self.db)
-        self.pages["ranges"] = RangesPage()
+        self.pages["ranges"] = RangesPage(self.db)
         self.pages["background"] = BackgroundPage()
         self.pages["params"] = ParamsPage()
         self.pages["elements"] = ElementsPage(self.db)  # ← передаём db
