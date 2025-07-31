@@ -151,4 +151,9 @@ class RangesPage(QWidget):
                         original["ln_ch_max"] = item_max.text().strip()
                     updated_count += 1
                 except Exception as e:
-                    print(f"Ошибка при обновлении диапазона ID={row_id
+                    print(f"Ошибка при обновлении диапазона ID={row_id}: {e}")
+
+        if updated_count > 0:
+            print(f"Сохранено: {updated_count} строк")
+        else:
+            print("Изменений не было")
