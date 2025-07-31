@@ -52,7 +52,7 @@ class RangesPage(QWidget):
         SELECT [id], [ln_nmb], [ln_ch_min], [ln_ch_max]
         FROM [AMMKASAKDB01].[dbo].[SET02]
         WHERE [ak_nmb] = 1
-        ORDER BY [ln_nmb]
+        ORDER BY [ID]
         """
         try:
             data = self.db.fetch_all(query)
