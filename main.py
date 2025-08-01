@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
 
         self.pages["lines"] = LinesPage(self.db)
         self.pages["ranges"] = RangesPage(self.db)
-        self.pages["background"] = BackgroundPage()
+        self.pages["background"] = BackgroundPage(self.db)
         self.pages["params"] = ParamsPage()
         self.pages["elements"] = ElementsPage(self.db)  # ← передаём db
         self.pages["criteria"] = CriteriaPage()
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         self.pages["equations"] = EquationsPage()
         self.pages["models"] = ModelsPage()
 
-        self.pages["composition"] = CompositionPage()
+        self.pages["composition"] = CompositionPage(self.db)
         self.pages["regression"] = RegressionPage()
         self.pages["correction"] = CorrectionPage()
         self.pages["recalc"] = RecalcPage()
