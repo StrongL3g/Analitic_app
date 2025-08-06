@@ -1,25 +1,21 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QHBoxLayout, QCheckBox, QListWidget, QListWidgetItem, QComboBox, QSizePolicy, QDateTimeEdit,
-    QTimeEdit, QMessageBox, QGridLayout, QFrame, QHeaderView, QStyle, QStyledItemDelegate, QStyleOptionHeader,
-    QTableView, QScrollArea
-)
-from PySide6.QtCore import Qt, QEvent, QDateTime, QTime, QRect, QAbstractTableModel, QModelIndex
-from PySide6.QtGui import QGuiApplication, QFontMetrics
+    QWidget, QVBoxLayout, QTableWidget,
+    QPushButton, QLabel, QHBoxLayout, QCheckBox, QComboBox, QDateTimeEdit,
+    QTimeEdit, QMessageBox, QHeaderView, QScrollArea, QTableWidgetItem)
+from PySide6.QtCore import Qt, QEvent, QDateTime, QTime
+from PySide6.QtGui import QFontMetrics
 from database.db import Database
 
 
-
 class TimeEdit15Min(QTimeEdit):
-    #Кастомный QTimeEdit с шагом 15 минут
-
+    # Кастомный QTimeEdit с шагом 15 минут
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setDisplayFormat("HH:mm")
         self.setTime(QTime(0, 0))
 
     def stepBy(self, steps):
-        #Переопределяем изменение значения стрелочками
+        # Переопределяем изменение значения стрелочками
         current_time = self.time()
         minutes = current_time.minute()
         hours = current_time.hour()
@@ -59,21 +55,15 @@ class CompositionPage(QWidget):
             ORDER BY ak_nmb, el_nmb
             """
 
-            # Используем fetch_all, который точно работает (как в load_data())
             rows = self.db.fetch_all(query)
 
             if not rows:
                 print("Предупреждение: Нет данных в результате запроса")
                 return []
 
-            # Дополнительная диагностика
-            print(f"Получено строк: {len(rows)}")
-            print(f"Первая строка: {rows[0]} (тип: {type(rows[0])})")
-
             elements = []
             for row in rows:
                 try:
-                    # Обрабатываем как словарь
                     el_name = row['el_name'].strip() if 'el_name' in row else None
                     if el_name and el_name not in ('-', 'None', ''):
                         elements.append(el_name)
@@ -81,7 +71,6 @@ class CompositionPage(QWidget):
                     print(f"Ошибка обработки строки {row}: {str(e)}")
                     continue
 
-            print(f"Найдено элементов: {elements}")
             return elements
 
         except Exception as e:
@@ -125,16 +114,14 @@ class CompositionPage(QWidget):
         self.upper_table = QTableWidget()
         self.configured_elements = self.get_configured_elements()
 
-        # Столбцы: ID, Пусто (Модель), Пусто (Время), + по одному на каждый элемент
         column_count = 3 + len(self.configured_elements)
         self.upper_table.setColumnCount(column_count)
         self.upper_table.setRowCount(0)
 
-        # Устанавливаем заголовки
         headers = ["", "", ""] + self.configured_elements
         self.upper_table.setHorizontalHeaderLabels(headers)
 
-        # Настраиваем внешний вид (остальное как было)
+        # Настройки таблицы
         self.upper_table.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.upper_table.verticalHeader().setVisible(False)
         self.upper_table.setShowGrid(False)
@@ -143,6 +130,10 @@ class CompositionPage(QWidget):
         self.upper_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.upper_table.setSelectionMode(QTableWidget.NoSelection)
         self.upper_table.setFixedHeight(self.upper_table.horizontalHeader().height())
+
+        # Устанавливаем минимальные ширины (будут пересчитаны позже)
+        for i in range(column_count):
+            self.upper_table.setColumnWidth(i, 100)
 
         return self.upper_table
 
@@ -161,14 +152,30 @@ class CompositionPage(QWidget):
 
         self.lower_table.setHorizontalHeaderLabels(headers)
 
-        # Настраиваем внешний вид (как было)
-        self.lower_table.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        # Настраиваем внешний вид
+        self.lower_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)  # Изменяем на Interactive
         self.lower_table.verticalHeader().setVisible(False)
         self.lower_table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
-        header = self.lower_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Fixed)
+        self.lower_table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
+        self.lower_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)  # Включаем полосу прокрутки
+
+        # Разрешаем редактирование только для столбцов "С хим"
+        self.lower_table.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.EditKeyPressed)
+
+        # Подключаем валидацию ввода
+        self.lower_table.itemChanged.connect(self.validate_table_input)
 
         return self.lower_table
+
+    def validate_table_input(self, item):
+        """Проверяет ввод в ячейки таблицы"""
+        header = self.lower_table.horizontalHeaderItem(item.column()).text()
+        if "С хим" in header:
+            try:
+                float(item.text())
+            except ValueError:
+                QMessageBox.warning(self, "Ошибка", "Введите числовое значение")
+                item.setText("0.0")  # Устанавливаем значение по умолчанию
 
     def calculate_column_widths(self):
         """Рассчитывает ширину столбцов с учетом содержимого"""
@@ -209,10 +216,6 @@ class CompositionPage(QWidget):
         for i in range(3, 3 + len(self.configured_elements)):
             self.upper_table.setColumnWidth(i, element_width * 3)
 
-        # Обновляем минимальную ширину виджета
-        total_width = id_width + model_width + time_width + (len(self.configured_elements) * 3 * element_width)
-        self.setMinimumWidth(total_width + 50)
-
     def create_tables_container(self):
         """Создает контейнер для таблиц с синхронизацией прокрутки"""
         container = QWidget()
@@ -228,18 +231,47 @@ class CompositionPage(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidget(container)
         scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Синхронизируем горизонтальную прокрутку
-        self.lower_table.horizontalScrollBar().valueChanged.connect(
-            lambda value: self.upper_table.horizontalScrollBar().setValue(value)
-        )
+        # Функция для синхронизации прокрутки
+        def sync_upper_scroll(value):
+            # Рассчитываем позицию для верхней таблицы
+            # Каждый заголовок элемента в верхней таблице соответствует 3 столбцам в нижней
+            upper_pos = value // 3
+            self.upper_table.horizontalScrollBar().setValue(upper_pos)
+            print("Синхронизируем")
+
+        # Подключаем синхронизацию
+        self.lower_table.horizontalScrollBar().valueChanged.connect(sync_upper_scroll)
+
+        # Также обновляем ширину столбцов верхней таблицы при изменении размеров
+        def update_upper_columns():
+            # Первые три столбца (ID, Модель, Время)
+            self.upper_table.setColumnWidth(0, self.lower_table.columnWidth(0))
+            self.upper_table.setColumnWidth(1, self.lower_table.columnWidth(1))
+            self.upper_table.setColumnWidth(2, self.lower_table.columnWidth(2))
+
+            # Столбцы элементов (каждый соответствует 3 столбцам в нижней таблице)
+            for i in range(3, self.upper_table.columnCount()):
+                lower_col1 = 3 + (i - 3) * 3
+                total_width = sum(self.lower_table.columnWidth(lower_col1 + k) for k in range(3))
+                self.upper_table.setColumnWidth(i, total_width)
+
+        # Обновляем при изменении размеров
+        self.lower_table.horizontalHeader().sectionResized.connect(update_upper_columns)
+
+        # Первоначальная настройка ширины
+        update_upper_columns()
 
         return scroll_area
 
     def init_ui(self):
         main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+
+        # Убираем фиксированную ширину
+        self.setMinimumWidth(800)  # Минимальная ширина, но можно менять
 
         # Заголовок
         title = QLabel("Ввод химических содержаний")
@@ -249,8 +281,8 @@ class CompositionPage(QWidget):
 
         # Контейнер для чекбоксов и полей дат
         container = QHBoxLayout()
-        container.setAlignment(Qt.AlignLeft)  # Выравнивание по левому краю
-        container.setSpacing(10)  # Уменьшаем расстояние между элементами
+        container.setAlignment(Qt.AlignLeft)
+        container.setSpacing(10)
 
         # Вертикальные чекбоксы
         checkboxes = QVBoxLayout()
@@ -320,9 +352,7 @@ class CompositionPage(QWidget):
 
         # Добавляем таблицы в контейнер с прокруткой
         tables_container = self.create_tables_container()
-        main_layout.addWidget(tables_container, stretch=1)
-
-
+        main_layout.addWidget(tables_container, stretch=1)  # Растягиваем на все доступное пространство
 
         # Кнопки
         btn_layout = QHBoxLayout()
@@ -344,14 +374,202 @@ class CompositionPage(QWidget):
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
 
-        self.setLayout(main_layout)
-
         self.load_data()
 
-
-
     def load_data(self):
-        print("Заглушка")
+        """Загрузка данных из базы данных с учетом фильтров"""
+        try:
+            print("Начало загрузки данных...")
+
+            manual_only = self.check_man.isChecked()
+            has_chemistry = self.check_chem.isChecked()
+            print(f"Фильтры: Ручное={manual_only}, Химия={has_chemistry}")
+
+            dt_from = QDateTime(
+                self.date_from.date(),
+                self.time_from.time()
+            ).toString("yyyy-MM-dd HH:mm:ss")
+
+            dt_to = QDateTime(
+                self.date_to.date(),
+                self.time_to.time()
+            ).toString("yyyy-MM-dd HH:mm:ss")
+
+            print(f"Диапазон дат: {dt_from} - {dt_to}")
+
+            selected_product = self.product_combo.currentText()
+            try:
+                pr_nmb = int(selected_product.split()[-1])
+                print(f"Выбран продукт: {pr_nmb}")
+            except:
+                QMessageBox.warning(self, "Ошибка", "Неверный формат номера продукта")
+                return
+
+            query = """
+            SELECT 
+                [id], [mdl_nmb], [meas_dt], [cuv_nmb], [meas_type], [pr_nmb],
+                [c_01],[c_02],[c_03],[c_04],[c_05],[c_06],[c_07],[c_08],
+                [c_cor_01],[c_cor_02],[c_cor_03],[c_cor_04],[c_cor_05],[c_cor_06],[c_cor_07],[c_cor_08],
+                [c_chem_01],[c_chem_02],[c_chem_03],[c_chem_04],[c_chem_05],[c_chem_06],[c_chem_07],[c_chem_08]
+            FROM [AMMKASAKDB01].[dbo].[PR_MEAS]
+            WHERE [meas_dt] BETWEEN ? AND ?
+            AND [pr_nmb] = ?
+            """
+
+            params = [dt_from, dt_to, pr_nmb]
+
+            conditions = []
+            if manual_only:
+                conditions.append("[meas_type] = 0")
+            if has_chemistry:
+                chem_conditions = [f"[c_chem_{i:02d}] <> 0" for i in range(1, 9)]
+                conditions.append(f"({' OR '.join(chem_conditions)})")
+
+            if conditions:
+                query += " AND " + " AND ".join(conditions)
+
+            query += " ORDER BY [meas_dt]"
+
+            print("Выполняемый запрос:")
+            print(query)
+            print("Параметры:", params)
+
+            if not self.db or not hasattr(self.db, 'fetch_all'):
+                QMessageBox.critical(self, "Ошибка", "Нет подключения к базе данных")
+                return
+
+            rows = self.db.fetch_all(query, params)
+            print(f"Найдено строк: {len(rows)}")
+
+            if not rows:
+                QMessageBox.information(self, "Информация",
+                                        "Данные не найдены. Проверьте параметры фильтрации:\n"
+                                        f"Дата: {dt_from} - {dt_to}\n"
+                                        f"Продукт: {pr_nmb}\n"
+                                        f"Фильтры: Ручное измерение={manual_only}, Наличие химии={has_chemistry}")
+                return
+
+            elements = self.get_configured_elements()
+            print(f"Загружено элементов: {len(elements)}")
+
+            self.lower_table.setRowCount(0)
+
+            for row in rows:
+                row_pos = self.lower_table.rowCount()
+                self.lower_table.insertRow(row_pos)
+
+                # Основные колонки
+                self.lower_table.setItem(row_pos, 0, QTableWidgetItem(str(row.get('id', ''))))
+                self.lower_table.setItem(row_pos, 1, QTableWidgetItem(str(row.get('mdl_nmb', ''))))
+
+                # Исправленное форматирование даты
+                meas_dt = row.get('meas_dt')
+                if isinstance(meas_dt, str):
+                    dt_str = meas_dt  # Если дата уже в строковом формате
+                elif hasattr(meas_dt, 'strftime'):
+                    dt_str = meas_dt.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    dt_str = str(meas_dt) if meas_dt else ""
+
+                self.lower_table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
+
+                # Данные по элементам
+                for i, element in enumerate(elements, 1):
+                    if i > 8:
+                        break
+
+                    col_base = 3 + (i - 1) * 3
+                    for prefix in ['c_', 'c_cor_', 'c_chem_']:
+                        val = row.get(f"{prefix}{i:02d}")
+                        item_text = f"{float(val):.4f}" if val is not None else ""
+                        self.lower_table.setItem(row_pos, col_base, QTableWidgetItem(item_text))
+                        col_base += 1
+
+            self.lower_table.resizeColumnsToContents()
+            print("Данные успешно загружены")
+
+        except Exception as e:
+            error_msg = f"Ошибка загрузки данных: {str(e)}"
+            print(error_msg)
+            QMessageBox.critical(self, "Ошибка", error_msg)
 
     def save_data(self):
-        print("Заглушка")
+        """Сохранение измененных химических содержаний в БД"""
+        try:
+            # Проверяем соединение с БД
+            if not self.db or not hasattr(self.db, 'execute'):
+                QMessageBox.critical(self, "Ошибка", "Нет подключения к базе данных")
+                return
+
+            # Собираем все изменения
+            updates = []
+            for row in range(self.lower_table.rowCount()):
+                id_item = self.lower_table.item(row, 0)
+                if not id_item:
+                    continue
+
+                row_id = id_item.text()
+                if not row_id.isdigit():
+                    QMessageBox.warning(self, "Ошибка", f"Некорректный ID в строке {row + 1}")
+                    return
+
+                # Проходим по всем столбцам "С хим"
+                for col in range(self.lower_table.columnCount()):
+                    header_item = self.lower_table.horizontalHeaderItem(col)
+                    if not header_item:
+                        continue
+
+                    header = header_item.text()
+                    if "С хим" in header:
+                        try:
+                            # Получаем номер элемента из заголовка
+                            element_name = header.split("(")[1].split(")")[0]
+                            element_idx = self.configured_elements.index(element_name) + 1
+                        except (IndexError, ValueError):
+                            continue
+
+                        item = self.lower_table.item(row, col)
+                        if item is None:
+                            continue
+
+                        # Проверяем, что значение - число
+                        try:
+                            new_value = float(item.text())
+                        except ValueError:
+                            QMessageBox.warning(self, "Ошибка",
+                                                f"Некорректное значение для элемента {element_name} в строке {row + 1}")
+                            return
+
+                        updates.append({
+                            'id': int(row_id),  # Конвертируем в целое число
+                            'element_num': element_idx,
+                            'value': new_value
+                        })
+
+            if not updates:
+                QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
+                return
+
+            # Выполняем все запросы UPDATE
+            success = True
+            for update in updates:
+                query = f"""
+                UPDATE [AMMKASAKDB01].[dbo].[PR_MEAS]
+                SET [c_chem_{update['element_num']:02d}] = ?
+                WHERE [id] = ?
+                """
+                params = [update['value'], update['id']]
+
+                if not self.db.execute(query, params):
+                    success = False
+                    QMessageBox.critical(self, "Ошибка",
+                                         f"Не удалось обновить запись ID {update['id']}")
+                    break
+
+            if success:
+                # Обновляем данные в таблице
+                self.load_data()
+                QMessageBox.information(self, "Успех", "Изменения успешно сохранены")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении данных: {str(e)}")
