@@ -7,15 +7,16 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 # === ВАЖНО: импорты до создания QApplication ===
-from PySide6.QtCore import QCoreApplication
-QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+# Убираем устаревшие атрибуты DPI
+# QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+# QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
 # === Теперь создаём QApplication ===
 app = QApplication(sys.argv)
 
 # === Подключаем БД и страницы ===
 from database.db import Database
+from utils.helpers import set_database_instance  # Добавляем импорт
 from views.dashboard import DashboardPage
 
 # Импорт всех страниц
@@ -52,6 +53,8 @@ class MainWindow(QMainWindow):
 
         # === Создаём подключение к БД ===
         self.db = Database()
+        # Устанавливаем экземпляр БД для утилит
+        set_database_instance(self.db)
 
         # Разделитель: слева — меню, справа — контент
         splitter = QSplitter(Qt.Horizontal)
@@ -111,8 +114,8 @@ class MainWindow(QMainWindow):
         self.pages["ranges"] = RangesPage(self.db)
         self.pages["background"] = BackgroundPage(self.db)
         self.pages["params"] = ParamsPage(self.db)
-        self.pages["elements"] = ElementsPage(self.db)  # ← передаём db
-        self.pages["criteria"] = CriteriaPage()
+        self.pages["elements"] = ElementsPage(self.db)
+        self.pages["criteria"] = CriteriaPage(self.db)
 
         self.pages["equations"] = EquationsPage()
         self.pages["models"] = ModelsPage()
