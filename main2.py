@@ -1,41 +1,33 @@
-# main.py
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem,
-    QStackedWidget, QWidget, QVBoxLayout, QLabel, QSplitter
+    QStackedWidget, QWidget, QSplitter
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication
 
-# === ВАЖНО: импорты до создания QApplication ===
-from PySide6.QtCore import QCoreApplication
+# Настройки масштабирования для HighDPI
 QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
-# === Теперь создаём QApplication ===
 app = QApplication(sys.argv)
 
-# === Подключаем БД и страницы ===
+# Импорты страниц
 from database.db import Database
 from views.dashboard import DashboardPage
-
-# Импорт всех страниц
 from views.measurement.lines import LinesPage
 from views.measurement.ranges import RangesPage
 from views.measurement.background import BackgroundPage
 from views.measurement.params import ParamsPage
 from views.measurement.elements import ElementsPage
 from views.measurement.criteria import CriteriaPage
-
 from views.products.equations import EquationsPage
 from views.products.models import ModelsPage
-
 from views.data.composition import CompositionPage
 from views.data.regression import RegressionPage
 from views.data.correction import CorrectionPage
 from views.data.recalc import RecalcPage
 from views.data.standards import StandardsPage
 from views.data.report import ReportPage
-
 from views.settings import SettingsPage
 from views.users import UsersPage
 from views.logs import LogsPage
@@ -47,23 +39,22 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Система анализа спектров")
         self.resize(1200, 800)
 
-
         # Текущая роль пользователя
         self.current_role = "Инженер-программист"
 
-        # === Создаём подключение к БД ===
+        # Подключение к БД
         self.db = Database()
 
-        # Разделитель: слева — меню, справа — контент
+        # Основной разделитель
         splitter = QSplitter(Qt.Horizontal)
 
-        # === ЛЕВОЕ МЕНЮ: дерево ===
+        # === Левое меню ===
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
         self.tree.setFixedWidth(250)
         self.tree.setStyleSheet("QTreeWidget { font-size: 13px; }")
 
-        # Заполняем дерево
+        # Заполнение дерева меню
         self.tree.addTopLevelItem(self.create_menu_item("Главный", "dashboard"))
 
         measurement_item = self.create_menu_item("Управление измерениями", "measurement")
@@ -86,74 +77,107 @@ class MainWindow(QMainWindow):
         data_item.addChild(self.create_menu_item("Нормативы", "standards"))
         data_item.addChild(self.create_menu_item("Отчет", "report"))
 
-        settings_item = self.create_menu_item("Настройки", "settings")
-        users_item = self.create_menu_item("Пользователи", "users")
-        logs_item = self.create_menu_item("Журнал", "logs")
-
         self.tree.addTopLevelItem(measurement_item)
         self.tree.addTopLevelItem(products_item)
         self.tree.addTopLevelItem(data_item)
 
-        # Ограничиваем доступ к разделам
+        # Разделы только для инженера-программиста
         if self.current_role == "Инженер-программист":
+            settings_item = self.create_menu_item("Настройки", "settings")
+            users_item = self.create_menu_item("Пользователи", "users")
+            logs_item = self.create_menu_item("Журнал", "logs")
             self.tree.addTopLevelItem(settings_item)
             self.tree.addTopLevelItem(users_item)
             self.tree.addTopLevelItem(logs_item)
 
-        # === ЦЕНТР: контент ===
+        # === Область контента ===
         self.stacked_widget = QStackedWidget()
 
-        # Добавим страницы
-        self.pages = {}
+        # Словарь классов страниц
+        self.page_classes = {
+            "dashboard": DashboardPage,
 
-        self.pages["dashboard"] = DashboardPage()
+            "lines": LinesPage,
+            "ranges": RangesPage,
+            "background": BackgroundPage,
+            "params": ParamsPage,
+            "elements": ElementsPage,
+            "criteria": CriteriaPage,
 
-        self.pages["lines"] = LinesPage(self.db)
-        self.pages["ranges"] = RangesPage(self.db)
-        self.pages["background"] = BackgroundPage(self.db)
-        self.pages["params"] = ParamsPage(self.db)
-        self.pages["elements"] = ElementsPage(self.db)  # ← передаём db
-        self.pages["criteria"] = CriteriaPage()
+            "equations": EquationsPage,
+            "models": ModelsPage,
 
-        self.pages["equations"] = EquationsPage()
-        self.pages["models"] = ModelsPage()
+            "composition": CompositionPage,
+            "regression": RegressionPage,
+            "correction": CorrectionPage,
+            "recalc": RecalcPage,
+            "standards": StandardsPage,
+            "report": ReportPage,
 
-        self.pages["composition"] = CompositionPage(self.db)
-        self.pages["regression"] = RegressionPage()
-        self.pages["correction"] = CorrectionPage()
-        self.pages["recalc"] = RecalcPage()
-        self.pages["standards"] = StandardsPage()
-        self.pages["report"] = ReportPage()
+            "settings": SettingsPage,
+            "users": UsersPage,
+            "logs": LogsPage
+        }
 
-        self.pages["settings"] = SettingsPage()
-        self.pages["users"] = UsersPage()
-        self.pages["logs"] = LogsPage()
+        # Страницы, требующие подключения к БД
+        self.db_pages = {
+            "lines", "ranges", "background", "params",
+            "elements", "composition"
+        }
 
-        for name, page in self.pages.items():
-            self.stacked_widget.addWidget(page)
+        # Текущая страница
+        self.current_page = None
 
-        # === Сигнал: при клике в дереве — меняем страницу ===
+        # Подключение сигналов
         self.tree.itemClicked.connect(self.on_item_clicked)
 
-        # Добавляем в сплиттер
+        # Добавление виджетов в разделитель
         splitter.addWidget(self.tree)
         splitter.addWidget(self.stacked_widget)
 
+        # Установка разделителя как центрального виджета
         self.setCentralWidget(splitter)
 
+        # Сразу открываем главную страницу
+        self.create_and_show_page("dashboard")
+
     def create_menu_item(self, text, key):
+        """Создает элемент меню с заданным текстом и ключом"""
         item = QTreeWidgetItem()
         item.setText(0, text)
         item.setData(0, Qt.UserRole, key)
         return item
 
+    def create_and_show_page(self, key):
+        """Создает новую страницу и удаляет предыдущую"""
+        if key not in self.page_classes:
+            return
+
+        # Удаляем текущую страницу, если она есть
+        if self.current_page:
+            self.stacked_widget.removeWidget(self.current_page)
+            self.current_page.deleteLater()
+
+        # Создаем новую страницу
+        if key in self.db_pages:
+            page = self.page_classes[key](self.db)  # Страницы, требующие db
+        else:
+            page = self.page_classes[key]()  # Остальные страницы
+
+        self.current_page = page
+        self.stacked_widget.addWidget(page)
+        self.stacked_widget.setCurrentWidget(page)
+
+
     def on_item_clicked(self, item, column):
+        """Обработчик клика по пункту меню"""
         key = item.data(0, Qt.UserRole)
-        if key and key in self.pages:
-            self.stacked_widget.setCurrentWidget(self.pages[key])
+        if key:
+            self.create_and_show_page(key)
 
 
-# === Запуск приложения ===
-window = MainWindow()
-window.show()
-app.exec()
+# Запуск приложения
+if __name__ == "__main__":
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
