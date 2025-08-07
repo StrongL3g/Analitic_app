@@ -16,7 +16,7 @@
 
 3. Установите зависимости:
 	```bash
-	pip install PySide6 pyodbc python-dotenv
+	pip install PySide6 pyodbc python-dotenv matplotlib
 
 
 4. Создайте .env
