@@ -122,7 +122,7 @@ class MainWindow(QMainWindow):
         # Страницы, требующие подключения к БД
         self.db_pages = {
             "lines", "ranges", "background", "params",
-            "elements", "composition"
+            "elements", "criteria", "composition", "regression"
         }
 
         # Текущая страница

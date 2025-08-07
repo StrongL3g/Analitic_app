@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         self.pages["models"] = ModelsPage()
 
         self.pages["composition"] = CompositionPage(self.db)
-        self.pages["regression"] = RegressionPage()
+        self.pages["regression"] = RegressionPage(self.db)
         self.pages["correction"] = CorrectionPage()
         self.pages["recalc"] = RecalcPage()
         self.pages["standards"] = StandardsPage()
