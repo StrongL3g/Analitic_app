@@ -1,19 +1,26 @@
-# views/data/regression.py
+# views/data/regression.py (обновленная часть)
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
-    QComboBox, QLineEdit, QGroupBox, QSplitter, QTabWidget
+    QComboBox, QLineEdit, QGroupBox, QSplitter, QTabWidget,
+    QMessageBox, QDialog  # Добавили QDialog
 )
 from PySide6.QtCore import Qt
 from database.db import Database
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+# Добавляем импорт диалога
+from views.data.sample_dialog import SampleDialog
+
+import json
+import os
 
 class RegressionPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
+        self.current_sample = []  # Храним текущую выборку
         self.init_ui()
 
     def init_ui(self):
@@ -38,13 +45,18 @@ class RegressionPage(QWidget):
 
         # Кнопки
         btn_layout = QHBoxLayout()
-        btn_change_selection = QPushButton("Изменить выборку")
-        btn_save_equation = QPushButton("Сохранить уравнение")
-        btn_load_data = QPushButton("Выгрузка данных")
+        self.btn_change_selection = QPushButton("Изменить выборку")
+        self.btn_save_equation = QPushButton("Сохранить уравнение")
+        self.btn_load_data = QPushButton("Выгрузка данных")
 
-        btn_layout.addWidget(btn_change_selection)
-        btn_layout.addWidget(btn_save_equation)
-        btn_layout.addWidget(btn_load_data)
+        # Подключаем обработчики событий
+        self.btn_change_selection.clicked.connect(self.open_sample_dialog)
+        self.btn_save_equation.clicked.connect(self.save_equation)
+        self.btn_load_data.clicked.connect(self.load_data)
+
+        btn_layout.addWidget(self.btn_change_selection)
+        btn_layout.addWidget(self.btn_save_equation)
+        btn_layout.addWidget(self.btn_load_data)
         btn_layout.addStretch()
         left_top_layout.addLayout(btn_layout)
 
@@ -175,3 +187,68 @@ class RegressionPage(QWidget):
         layout.addWidget(main_splitter)
 
         self.setLayout(layout)
+
+    def open_sample_dialog(self):
+        """Открывает диалог формирования выборки"""
+        dialog = SampleDialog(self.db, self)
+        if dialog.exec() == QDialog.Accepted:
+            # Получаем данные выборки
+            sample_data = dialog.get_sample_data()
+            self.current_sample = sample_data
+            print(f"Получена выборка: {len(sample_data)} строк")
+            # TODO: Обновить таблицу выборки в основном окне
+            self.update_sample_table()
+
+    def update_sample_table(self):
+        """Обновляет таблицу выборки в основном окне"""
+        # TODO: Реализовать обновление таблицы выборки
+        print("Обновление таблицы выборки...")
+        for item in self.current_sample:
+            print(f"  Продукт {item['product_id']}: "
+                  f"{item['date_from']} {item['time_from']} - "
+                  f"{item['date_to']} {item['time_to']}")
+
+    def save_equation(self):
+        """Сохраняет уравнение"""
+        print("Сохранение уравнения...")
+        # TODO: Реализовать сохранение уравнения
+
+    def load_data(self):
+        """Загружает данные"""
+        print("Загрузка данных...")
+        # TODO: Реализовать загрузку данных
+        # Используем self.current_sample для формирования запроса к БД
+
+    def open_sample_dialog(self):
+        """Открывает диалог формирования выборки"""
+        dialog = SampleDialog(self.db, self)
+        if dialog.exec() == QDialog.Accepted:
+            # Обновляем выборку из файла
+            self.load_sample_from_file()
+            print(f"Получена выборка: {len(self.current_sample)} строк")
+            self.update_sample_table()
+
+    def load_sample_from_file(self):
+        """Загружает выборку из файла"""
+        try:
+            if os.path.exists("config/sample.json"):
+                with open("config/sample.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self.current_sample = data
+                    else:
+                        self.current_sample = []
+            else:
+                self.current_sample = []
+        except Exception as e:
+            print(f"Ошибка загрузки выборки: {e}")
+            self.current_sample = []
+
+    def update_sample_table(self):
+        """Обновляет таблицу выборки в основном окне"""
+        print("Обновление таблицы выборки...")
+        for item in self.current_sample:
+            print(f"  Продукт {item['product_id']}: "
+                  f"{item['date_from']} {item['time_from']} - "
+                  f"{item['date_to']} {item['time_to']}")
+        # TODO: Обновить GUI таблицу выборки
