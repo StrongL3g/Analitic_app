@@ -1,4 +1,6 @@
 # views/measurement/elements.py
+import os
+import json
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QLabel, QHBoxLayout
@@ -11,26 +13,23 @@ class ElementsPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.original_data = {}  # Сохраняем оригинальные данные для сравнения
+        self.original_data = {}
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # Заголовок
         title = QLabel("Элементы (SET05, ak_nmb = 1)")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # Таблица
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["ID", "Номер", "Название"])
-        self.table.setEditTriggers(QTableWidget.DoubleClicked)  # Редактирование по двойному клику
+        self.table.setEditTriggers(QTableWidget.DoubleClicked)
         layout.addWidget(self.table)
 
-        # Кнопки
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
@@ -45,8 +44,6 @@ class ElementsPage(QWidget):
         layout.addLayout(btn_layout)
 
         self.setLayout(layout)
-
-        # Загружаем данные при открытии
         self.load_data()
 
     def load_data(self):
@@ -66,21 +63,19 @@ class ElementsPage(QWidget):
                 row_pos = self.table.rowCount()
                 self.table.insertRow(row_pos)
 
-                # ID
                 item_id = QTableWidgetItem(str(row_data["id"]))
-                item_id.setFlags(item_id.flags() & ~Qt.ItemIsEditable)  # Только для чтения
+                item_id.setFlags(item_id.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 0, item_id)
 
-                # Номер
                 item_nmb = QTableWidgetItem(str(row_data["el_nmb"]))
                 item_nmb.setFlags(item_nmb.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 1, item_nmb)
 
-                # Название
                 self.table.setItem(row_pos, 2, QTableWidgetItem(row_data["el_name"]))
-
-                # Сохраняем оригинальное значение
                 self.original_data[row_data["id"]] = row_data["el_name"]
+
+            # Формируем JSON после загрузки
+            self.export_to_json()
 
         except Exception as e:
             print(f"Ошибка при загрузке данных: {e}")
@@ -107,7 +102,7 @@ class ElementsPage(QWidget):
                     WHERE [id] = ?
                     """
                     self.db.execute(query, [new_name, row_id])
-                    self.original_data[row_id] = new_name  # Обновляем оригинал
+                    self.original_data[row_id] = new_name
                     updated_count += 1
                 except Exception as e:
                     print(f"Ошибка при обновлении строки ID={row_id}: {e}")
@@ -116,3 +111,36 @@ class ElementsPage(QWidget):
             print(f"Сохранено: {updated_count} строк")
         else:
             print("Изменений не было")
+
+        # После сохранения обновляем JSON
+        self.export_to_json()
+
+    def export_to_json(self):
+        """Формирует и сохраняет JSON-файл по пути Analitic_app/config/elements.json"""
+        try:
+            rows = []
+            for row in range(self.table.rowCount()):
+                item_id = self.table.item(row, 0)
+                item_nmb = self.table.item(row, 1)
+                item_name = self.table.item(row, 2)
+
+                if item_id and item_nmb and item_name:
+                    rows.append({
+                        "id": int(item_id.text()),
+                        "number": int(item_nmb.text()),
+                        "name": item_name.text()
+                    })
+
+            # Определяем путь к файлу относительно текущего скрипта
+            base_dir = os.path.dirname(os.path.abspath(__file__))  # Путь к папке views/measurement
+            config_dir = os.path.join(base_dir, "..", "..", "config")  # Поднимаемся к Analitic_app/config
+            os.makedirs(config_dir, exist_ok=True)  # Создаём папку, если её нет
+            json_path = os.path.join(config_dir, "elements.json")
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(rows, f, ensure_ascii=False, indent=4)
+
+            print(f"JSON успешно сохранён: {json_path}")
+
+        except Exception as e:
+            print(f"Ошибка при экспорте в JSON: {e}")
