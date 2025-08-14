@@ -613,6 +613,22 @@ class CompositionPage(QWidget):
         main_layout.addWidget(QLabel("Выберите продукт:"))
         main_layout.addWidget(self.product_combo)
 
+        # Измененная часть - кнопки выровнены по левому краю
+        btn_layout = QHBoxLayout()
+        btn_layout.setAlignment(Qt.AlignLeft)  # Выравнивание по левому краю
+        btn_layout.setSpacing(10)  # Добавляем отступ между кнопками
+
+        self.refresh_btn = QPushButton("Обновить")
+        self.refresh_btn.clicked.connect(self.load_data)
+
+        self.save_btn = QPushButton("Сохранить изменения")
+        self.save_btn.clicked.connect(self.save_data)
+
+        btn_layout.addWidget(self.refresh_btn)
+        btn_layout.addWidget(self.save_btn)
+        main_layout.addLayout(btn_layout)
+
+
         # Инициализация таблицы
         self.table = self.init_table()
         self.configure_table_normal()
@@ -626,18 +642,7 @@ class CompositionPage(QWidget):
 
         main_layout.addWidget(scroll_area)
 
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
 
-        self.refresh_btn = QPushButton("Обновить")
-        self.refresh_btn.clicked.connect(self.load_data)
-
-        self.save_btn = QPushButton("Сохранить изменения")
-        self.save_btn.clicked.connect(self.save_data)
-
-        btn_layout.addWidget(self.refresh_btn)
-        btn_layout.addWidget(self.save_btn)
-        main_layout.addLayout(btn_layout)
 
         self.date_from.dateTimeChanged.connect(self.validate_dates)
         self.time_from.timeChanged.connect(self.validate_dates)
