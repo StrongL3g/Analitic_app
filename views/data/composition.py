@@ -6,7 +6,9 @@ from PySide6.QtCore import Qt, QDateTime, QTime
 from PySide6.QtGui import QFontMetrics
 from database.db import Database
 import math
-
+import os
+import json
+from pathlib import Path
 
 class TimeEdit15Min(QTimeEdit):
     # Кастомный QTimeEdit с шагом 15 минут
@@ -48,35 +50,53 @@ class CompositionPage(QWidget):
         self.init_ui()
 
     def get_configured_elements(self):
-        """Получаем список сконфигурированных элементов из БД"""
+        """Получаем список сконфигурированных элементов из JSON-файла"""
         try:
-            query = """
-            SELECT [el_nmb], [el_name]
-            FROM [dbo].[SET05]
-            WHERE el_name NOT IN ('-', 'None', '')
-            ORDER BY ak_nmb, el_nmb
-            """
+            # Абсолютный путь к файлу
+            json_path = Path('/home/astra/Analitic_app/config/elements.json')
 
-            rows = self.db.fetch_all(query)
-
-            if not rows:
-                print("Предупреждение: Нет данных в результате запроса")
+            # Проверка существования файла
+            if not json_path.exists():
+                print(f"Файл не найден по пути: {json_path}")
                 return []
 
+            # Чтение файла
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Проверка структуры данных
+            if not isinstance(data, list):
+                print("Ошибка: JSON должен содержать список элементов")
+                return []
+
+            # Извлекаем имена элементов, исключая невалидные значения
             elements = []
-            for row in rows:
+            for item in data:
                 try:
-                    el_name = row['el_name'].strip() if 'el_name' in row else None
-                    if el_name and el_name not in ('-', 'None', ''):
-                        elements.append(el_name)
+                    if not isinstance(item, dict):
+                        continue
+
+                    # Используем поле 'name' вместо 'el_name'
+                    element_name = item.get('name', '').strip()
+                    if element_name and element_name not in ('-', 'None', ''):
+                        elements.append(element_name)
                 except Exception as e:
-                    print(f"Ошибка обработки строки {row}: {str(e)}")
+                    print(f"Ошибка обработки элемента {item}: {str(e)}")
                     continue
 
+            # Сортировка по полю 'number' (аналог el_nmb из БД)
+            if all('number' in item for item in data):
+                elements = sorted(elements,
+                                  key=lambda x: next(item['number'] for item in data if item.get('name') == x))
+
+            print(f"Успешно загружено {len(elements)} элементов: {elements}")
             return elements
 
+        except json.JSONDecodeError as e:
+            print(f"Ошибка формата JSON: {str(e)}")
+            return []
         except Exception as e:
-            print(f"Ошибка в get_configured_elements: {str(e)}", exc_info=True)
+            print(f"Ошибка в get_configured_elements: {str(e)}")
             return []
 
     def round_to_15_min(self, time):
