@@ -12,3 +12,7 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
     "driver": os.getenv("DB_DRIVER")
 }
+
+# Загружаем количество приборов
+# Второй аргумент - значение по умолчанию, если переменная не найдена
+AC_COUNT = int(os.getenv("AC_COUNT", 1))

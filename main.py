@@ -4,12 +4,12 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem,
     QStackedWidget, QWidget, QSplitter
 )
-from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtCore import Qt#, QCoreApplication
 
 # Настройки масштабирования для HighDPI
 # Эти атрибуты устарели в Qt6, но оставим на всякий случай
-QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+#QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
 app = QApplication(sys.argv)
 
