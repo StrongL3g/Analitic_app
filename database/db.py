@@ -6,6 +6,10 @@ from contextlib import contextmanager
 
 class Database:
     def __init__(self):
+
+        # Сохраняем имя базы как атрибут объекта
+        self.database_name = DB_CONFIG['database']
+
         self.connection_string = (
             f"DRIVER={{{DB_CONFIG['driver']}}};"
             f"SERVER={DB_CONFIG['server']},{DB_CONFIG['port']};"
