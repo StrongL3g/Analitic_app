@@ -1,0 +1,430 @@
+[
+    {
+        "number": 0,
+        "name": "None"
+    },
+    {
+        "number": 1,
+        "name": "INT"
+    },
+    {
+        "number": 2,
+        "name": "NC"
+    },
+    {
+        "number": 3,
+        "name": "S_Ka"
+    },
+    {
+        "number": 4,
+        "name": "S_Kb"
+    },
+    {
+        "number": 5,
+        "name": "Cl_Ka"
+    },
+    {
+        "number": 6,
+        "name": "Cl_Kb"
+    },
+    {
+        "number": 7,
+        "name": "K_Ka"
+    },
+    {
+        "number": 8,
+        "name": "K_Kb"
+    },
+    {
+        "number": 9,
+        "name": "Ca_Ka"
+    },
+    {
+        "number": 10,
+        "name": "Ca_Kb"
+    },
+    {
+        "number": 11,
+        "name": "Sc_Ka"
+    },
+    {
+        "number": 12,
+        "name": "Sc_Kb"
+    },
+    {
+        "number": 13,
+        "name": "Ti_Ka"
+    },
+    {
+        "number": 14,
+        "name": "Ti_Kb"
+    },
+    {
+        "number": 15,
+        "name": "V_Ka"
+    },
+    {
+        "number": 16,
+        "name": "V_Kb"
+    },
+    {
+        "number": 17,
+        "name": "Cr_Ka"
+    },
+    {
+        "number": 18,
+        "name": "Cr_Kb"
+    },
+    {
+        "number": 19,
+        "name": "Mn_Ka"
+    },
+    {
+        "number": 20,
+        "name": "Mn_Kb"
+    },
+    {
+        "number": 21,
+        "name": "Fe_Ka"
+    },
+    {
+        "number": 22,
+        "name": "Fe_Kb"
+    },
+    {
+        "number": 23,
+        "name": "Co_Ka"
+    },
+    {
+        "number": 24,
+        "name": "Co_Kb"
+    },
+    {
+        "number": 25,
+        "name": "Ni_Ka"
+    },
+    {
+        "number": 26,
+        "name": "Ni_Kb"
+    },
+    {
+        "number": 27,
+        "name": "Cu_Ka"
+    },
+    {
+        "number": 28,
+        "name": "Cu_Kb"
+    },
+    {
+        "number": 29,
+        "name": "Zn_Ka"
+    },
+    {
+        "number": 30,
+        "name": "Zn_Kb"
+    },
+    {
+        "number": 31,
+        "name": "Ga_Ka"
+    },
+    {
+        "number": 32,
+        "name": "Ga_Kb"
+    },
+    {
+        "number": 33,
+        "name": "Ge_Ka"
+    },
+    {
+        "number": 34,
+        "name": "Ge_Kb"
+    },
+    {
+        "number": 35,
+        "name": "As_Ka"
+    },
+    {
+        "number": 36,
+        "name": "As_Kb"
+    },
+    {
+        "number": 37,
+        "name": "Se_Ka"
+    },
+    {
+        "number": 38,
+        "name": "Se_Kb"
+    },
+    {
+        "number": 39,
+        "name": "Br_Ka"
+    },
+    {
+        "number": 40,
+        "name": "Br_Kb"
+    },
+    {
+        "number": 41,
+        "name": "Rb_Ka"
+    },
+    {
+        "number": 42,
+        "name": "Rb_Kb"
+    },
+    {
+        "number": 43,
+        "name": "Sr_Ka"
+    },
+    {
+        "number": 44,
+        "name": "Sr_Kb"
+    },
+    {
+        "number": 45,
+        "name": "Y_Ka"
+    },
+    {
+        "number": 46,
+        "name": "Y_Kb"
+    },
+    {
+        "number": 47,
+        "name": "Zr_Ka"
+    },
+    {
+        "number": 48,
+        "name": "Zr_Kb"
+    },
+    {
+        "number": 49,
+        "name": "Nb_Ka"
+    },
+    {
+        "number": 50,
+        "name": "Nb_Kb"
+    },
+    {
+        "number": 51,
+        "name": "Mo_Ka"
+    },
+    {
+        "number": 52,
+        "name": "Mo_Kb"
+    },
+    {
+        "number": 53,
+        "name": "Tc_Ka"
+    },
+    {
+        "number": 54,
+        "name": "Tc_Kb"
+    },
+    {
+        "number": 55,
+        "name": "Ru_Ka"
+    },
+    {
+        "number": 56,
+        "name": "Ru_Kb"
+    },
+    {
+        "number": 57,
+        "name": "Rh_Ka"
+    },
+    {
+        "number": 58,
+        "name": "Rh_Kb"
+    },
+    {
+        "number": 59,
+        "name": "Pd_Ka"
+    },
+    {
+        "number": 60,
+        "name": "Pd_Kb"
+    },
+    {
+        "number": 61,
+        "name": "Ag_Ka"
+    },
+    {
+        "number": 62,
+        "name": "Ag_Kb"
+    },
+    {
+        "number": 63,
+        "name": "Cd_Ka"
+    },
+    {
+        "number": 64,
+        "name": "Cd_Kb"
+    },
+    {
+        "number": 65,
+        "name": "In_Ka"
+    },
+    {
+        "number": 66,
+        "name": "In_Kb"
+    },
+    {
+        "number": 67,
+        "name": "Sn_Ka"
+    },
+    {
+        "number": 68,
+        "name": "Sn_Kb"
+    },
+    {
+        "number": 69,
+        "name": "Sb_Ka"
+    },
+    {
+        "number": 70,
+        "name": "Sb_Kb"
+    },
+    {
+        "number": 71,
+        "name": "I_Ka"
+    },
+    {
+        "number": 72,
+        "name": "I_Kb"
+    },
+    {
+        "number": 73,
+        "name": "Cs_Ka"
+    },
+    {
+        "number": 74,
+        "name": "Cs_Kb"
+    },
+    {
+        "number": 75,
+        "name": "Ba_Ka"
+    },
+    {
+        "number": 76,
+        "name": "Ba_Kb"
+    },
+    {
+        "number": 77,
+        "name": "La_La"
+    },
+    {
+        "number": 78,
+        "name": "La_Lb"
+    },
+    {
+        "number": 79,
+        "name": "Ce_La"
+    },
+    {
+        "number": 80,
+        "name": "Ce_Lb"
+    },
+    {
+        "number": 81,
+        "name": "Ta_La"
+    },
+    {
+        "number": 82,
+        "name": "Ta_Lb"
+    },
+    {
+        "number": 83,
+        "name": "W_La"
+    },
+    {
+        "number": 84,
+        "name": "W_Lb"
+    },
+    {
+        "number": 85,
+        "name": "Ir_La"
+    },
+    {
+        "number": 86,
+        "name": "Ir_Lb"
+    },
+    {
+        "number": 87,
+        "name": "Pt_La"
+    },
+    {
+        "number": 88,
+        "name": "Pt_Lb"
+    },
+    {
+        "number": 89,
+        "name": "Au_La"
+    },
+    {
+        "number": 90,
+        "name": "Au_Lb"
+    },
+    {
+        "number": 91,
+        "name": "Hg_La"
+    },
+    {
+        "number": 92,
+        "name": "Hg_Lb"
+    },
+    {
+        "number": 93,
+        "name": "Tl_La"
+    },
+    {
+        "number": 94,
+        "name": "Tl_Lb"
+    },
+    {
+        "number": 95,
+        "name": "Pb_La"
+    },
+    {
+        "number": 96,
+        "name": "Pb_Lb"
+    },
+    {
+        "number": 97,
+        "name": "Bi_La"
+    },
+    {
+        "number": 98,
+        "name": "Bi_Lb"
+    },
+    {
+        "number": 99,
+        "name": "Th_La"
+    },
+    {
+        "number": 100,
+        "name": "Th_Lb"
+    },
+    {
+        "number": 101,
+        "name": "U_La"
+    },
+    {
+        "number": 102,
+        "name": "U_Lb"
+    },
+    {
+        "number": 103,
+        "name": "BG1"
+    },
+    {
+        "number": 104,
+        "name": "BG2"
+    },
+    {
+        "number": 105,
+        "name": "BG3"
+    },
+    {
+        "number": 106,
+        "name": "BG4"
+    }
+]
