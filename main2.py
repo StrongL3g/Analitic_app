@@ -36,7 +36,7 @@ from views.logs import LogsPage
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Система анализа спектров")
+        self.setWindowTitle("Система анализа спasdров")
         self.resize(1200, 800)
 
         # Текущая роль пользователя
