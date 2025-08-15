@@ -297,13 +297,14 @@ class CompositionPage(QWidget):
 
                 self.table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
 
+                # Исправленная часть - правильное заполнение столбцов интенсивностей
                 for i in range(num_columns):
-                    col_name = f"i_00_{i:02d}"
-                val = row.get(col_name)
-                item_text = f"{float(val):.4f}" if val is not None else ""
-                self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
+                    col_name = f"i_00_{i:02d}"  # Формируем имя столбца
+                    val = row.get(col_name)  # Получаем значение из строки
+                    item_text = f"{float(val):.4f}" if val is not None else ""
+                    self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
 
-                self.table.resizeColumnsToContents()
+            self.table.resizeColumnsToContents()
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки данных интенсивностей: {str(e)}")
