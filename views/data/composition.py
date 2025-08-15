@@ -124,12 +124,6 @@ class CompositionPage(QWidget):
         self.date_to.setStyleSheet("")
         return True
 
-    def on_checkbox_change(self, state):
-        """Обработчик изменения состояния чекбокса"""
-        sender = self.sender()
-        if sender == self.check_man:
-            status = "включен" if state == 2 else "выключен"
-            print(f"Ручное измерение {status}")
 
     def init_table(self):
         """Инициализация таблицы с данными"""
@@ -559,8 +553,9 @@ class CompositionPage(QWidget):
         checkboxes.setSpacing(10)
 
         self.check_man = QCheckBox("Ручное измерение")
-        self.check_man.stateChanged.connect(self.on_checkbox_change)
+        self.check_man.stateChanged.connect(self.load_data)
         self.check_chem = QCheckBox("Наличие химии")
+        self.check_chem.stateChanged.connect(self.load_data)
         self.check_inten = QCheckBox("Интенсивности")
         self.check_inten.setChecked(False)
         self.check_inten.stateChanged.connect(self.toggle_intensity_mode)
@@ -649,4 +644,4 @@ class CompositionPage(QWidget):
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
 
-        self.load_data()
+        '''self.load_data()'''
