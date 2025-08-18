@@ -124,11 +124,10 @@ class CompositionPage(QWidget):
         self.date_to.setStyleSheet("")
         return True
 
-
     def init_table(self):
         """Инициализация таблицы с данными"""
         self.table = QTableWidget()
-        self.table.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.EditKeyPressed)
+        self.table.setEditTriggers(QTableWidget.AllEditTriggers)  # Разрешаем все виды редактирования
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
         self.table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
@@ -147,6 +146,10 @@ class CompositionPage(QWidget):
         for element in elements:
             headers.extend([f"С расч ({element})", f"С кор ({element})", f"С хим ({element})"])
         self.table.setHorizontalHeaderLabels(headers)
+
+        # Разрешаем редактирование всех ячеек
+        self.table.setEditTriggers(QTableWidget.AllEditTriggers)
+        self.table.setSelectionMode(QTableWidget.SingleSelection)
 
         # Устанавливаем ширину столбцов
         id_width = 50
@@ -297,13 +300,14 @@ class CompositionPage(QWidget):
 
                 self.table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
 
+                # Исправленная часть - правильное заполнение столбцов интенсивностей
                 for i in range(num_columns):
-                    col_name = f"i_00_{i:02d}"
-                val = row.get(col_name)
-                item_text = f"{float(val):.4f}" if val is not None else ""
-                self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
+                    col_name = f"i_00_{i:02d}"  # Формируем имя столбца
+                    val = row.get(col_name)  # Получаем значение из строки
+                    item_text = f"{float(val):.4f}" if val is not None else ""
+                    self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
 
-                self.table.resizeColumnsToContents()
+            self.table.resizeColumnsToContents()
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки данных интенсивностей: {str(e)}")
@@ -372,6 +376,7 @@ class CompositionPage(QWidget):
                 row_pos = self.table.rowCount()
                 self.table.insertRow(row_pos)
 
+                # Добавляем данные в таблицу
                 self.table.setItem(row_pos, 0, QTableWidgetItem(str(row.get('id', ''))))
                 self.table.setItem(row_pos, 1, QTableWidgetItem(str(row.get('mdl_nmb', ''))))
 
@@ -393,9 +398,18 @@ class CompositionPage(QWidget):
                     for prefix in ['c_', 'c_cor_', 'c_chem_']:
                         val = row.get(f"{prefix}{i:02d}")
                         item_text = f"{float(val):.4f}" if val is not None else ""
-                        self.table.setItem(row_pos, col_base, QTableWidgetItem(item_text))
+                        item = QTableWidgetItem(item_text)
+
+                        # Устанавливаем флаги редактирования только для столбцов "С хим"
+                        if prefix == 'c_chem_':
+                            item.setFlags(item.flags() | Qt.ItemIsEditable)
+                        else:
+                            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+
+                        self.table.setItem(row_pos, col_base, item)
                         col_base += 1
 
+            # Сохраняем исходные значения для сравнения при сохранении
             for row in range(self.table.rowCount()):
                 for col in range(self.table.columnCount()):
                     header = self.table.horizontalHeaderItem(col)
