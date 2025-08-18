@@ -23,7 +23,7 @@ class LinesPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        title = QLabel("Спектральные линии (SET01)")
+        title = QLabel("Спектральные линии")
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #333;")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
@@ -333,7 +333,7 @@ class LinesPage(QWidget):
             QMessageBox.critical(self, "Ошибка", error_msg)
 
     def export_to_json(self):
-        """Экспортирует данные в JSON файл"""
+        """Экспортирует данные в JSON файл, включая специальную запись для -1"""
         try:
             lines_data = []
             for row in range(self.table.rowCount()):
@@ -354,6 +354,11 @@ class LinesPage(QWidget):
 
             # Сортируем по номеру
             lines_data.sort(key=lambda x: x["number"])
+
+            # Добавляем специальную запись для ln_nmb = -1
+            # Проверяем, нет ли уже такой записи, чтобы не дублировать
+            if not any(item["number"] == -1 for item in lines_data):
+                lines_data.insert(0, {"number": -1, "name": "-"})
 
             # Определяем путь к JSON файлу
             base_dir = os.path.dirname(os.path.abspath(__file__))

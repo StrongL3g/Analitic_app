@@ -1,5 +1,9 @@
 [
     {
+        "number": -1,
+        "name": "-"
+    },
+    {
         "number": 0,
         "name": "None"
     },

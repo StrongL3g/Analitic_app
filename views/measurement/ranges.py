@@ -1,159 +1,353 @@
 # views/measurement/ranges.py
+import json
+import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QHBoxLayout
+    QPushButton, QLabel, QHBoxLayout, QComboBox, QMessageBox
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from database.db import Database
+# Импортируем AC_COUNT из конфигурации
+from config import get_config
 
 
 class RangesPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.original_data = {}  # id → {ln_nmb, ln_ch_min, ln_ch_max}
+        # Словарь для хранения данных по каждому ac_nmb
+        # Формат: {ac_nmb: {id_строки_в_бд: {sq_nmb, ln_nmb, ln_ch_min, ln_ch_max}}}
+        self.device_data = {i: {} for i in range(1, int(get_config("AC_COUNT", 1)) + 1)}
+        self.lines_names = {}  # ln_nmb -> name (из JSON)
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
-        title = QLabel("Спектральные диапазоны (SET02, ak_nmb = 1)")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        title = QLabel("Спектральные диапазоны")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #333;")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # Таблица
-        self.table = QTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["ID", "№", "Min", "Max"])
-        self.table.setEditTriggers(QTableWidget.DoubleClicked)
-        layout.addWidget(self.table)
-
-        # Кнопки
+        # Кнопки - теперь сверху, слева
         btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
+        btn_layout.setSpacing(10)
 
         refresh_btn = QPushButton("Обновить")
         refresh_btn.clicked.connect(self.load_data)
+        refresh_btn.setFixedWidth(120)
 
         save_btn = QPushButton("Сохранить изменения")
         save_btn.clicked.connect(self.save_data)
+        save_btn.setFixedWidth(180)
 
         btn_layout.addWidget(refresh_btn)
         btn_layout.addWidget(save_btn)
+        btn_layout.addStretch()  # Отступ справа
         layout.addLayout(btn_layout)
+
+        # Таблица
+        self.table = QTableWidget()
+        # Изначально создадим с 2 + 2*AC_COUNT столбцами
+        ac_count = int(get_config("AC_COUNT", 1))
+        self.table.setColumnCount(2 + 2 * ac_count)
+        self.update_column_headers() # Установим заголовки
+        self.table.setEditTriggers(QTableWidget.DoubleClicked)
+        # Убираем нумерацию строк
+        self.table.verticalHeader().setVisible(False)
+        # Высота строк
+        self.table.verticalHeader().setDefaultSectionSize(30)
+        layout.addWidget(self.table)
 
         self.setLayout(layout)
         self.load_data()
 
-    def load_data(self):
-        """Загружает диапазоны из SET02 где ak_nmb = 1"""
-        query = """
-        SELECT [id], [ln_nmb], [ln_ch_min], [ln_ch_max]
-        FROM [AMMKASAKDB01].[dbo].[SET02]
-        WHERE [ak_nmb] = 1
-        ORDER BY [ID]
-        """
+    def update_column_headers(self):
+        """Обновляет заголовки столбцов в зависимости от AC_COUNT"""
+        ac_count = int(get_config("AC_COUNT", 1))
+        headers = ["Порядковый №", "Название"]
+        for i in range(1, ac_count + 1):
+            headers.extend([f"Min (Прибор {i})", f"Max (Прибор {i})"])
+        self.table.setColumnCount(len(headers))
+        self.table.setHorizontalHeaderLabels(headers)
+
+    def load_lines_names(self):
+        """Загружает имена линий из JSON файла"""
         try:
-            data = self.db.fetch_all(query)
-            self.table.setRowCount(0)
-            self.original_data.clear()
+            # Определяем путь к JSON файлу
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            config_dir = os.path.join(base_dir, "..", "..", "config")
+            json_path = os.path.join(config_dir, "lines.json")
 
-            for row_data in data:
-                row_pos = self.table.rowCount()
-                self.table.insertRow(row_pos)
+            # Проверяем существование файла
+            if not os.path.exists(json_path):
+                print(f"Файл {json_path} не найден")
+                return
 
-                # ID (только для чтения)
-                item_id = QTableWidgetItem(str(row_data["id"]))
-                item_id.setFlags(item_id.flags() & ~Qt.ItemIsEditable)
-                self.table.setItem(row_pos, 0, item_id)
+            # Читаем JSON
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-                # Номер
-                item_nmb = QTableWidgetItem(str(row_data["ln_nmb"]))
-                item_nmb.setFlags(item_nmb.flags() & ~Qt.ItemIsEditable)  # Только для чтения
-                self.table.setItem(row_pos, 1, item_nmb)
+            # Создаем словарь ln_nmb -> name
+            self.lines_names.clear()
+            for item in data:
+                self.lines_names[item["number"]] = item["name"]
 
-                # Min
-                self.table.setItem(row_pos, 2, QTableWidgetItem("" if row_data["ln_ch_min"] is None else str(row_data["ln_ch_min"])))
+        except Exception as e:
+            print(f"Ошибка при загрузке имен линий из JSON: {e}")
+            self.lines_names.clear()
 
-                # Max
-                self.table.setItem(row_pos, 3, QTableWidgetItem("" if row_data["ln_ch_max"] is None else str(row_data["ln_ch_max"])))
+# views/measurement/ranges.py
+# ... (импорты и __init__ остаются без изменений) ...
 
-                # Сохраняем оригинальные данные
-                self.original_data[row_data["id"]] = {
+    def load_data(self):
+        """Загружает диапазоны из SET02 для всех ac_nmb от 1 до AC_COUNT"""
+        # Загружаем имена линий из JSON
+        self.load_lines_names()
+
+        # Обновляем заголовки столбцов
+        self.update_column_headers()
+
+        # Очищаем данные
+        ac_count = int(get_config("AC_COUNT", 1))
+        self.device_data = {i: {} for i in range(1, ac_count + 1)}
+        self.table.setRowCount(0)
+
+        try:
+            # Загружаем данные для ВСЕХ групп ac_nmb одним запросом
+            # ORDER BY важен: сначала по ac_nmb, потом по sq_nmb
+            query = f"""
+            SELECT [id], [ac_nmb], [sq_nmb], [ln_nmb], [ln_ch_min], [ln_ch_max]
+            FROM [{self.db.database_name}].[dbo].[SET02]
+            WHERE [ac_nmb] BETWEEN 1 AND ?
+            ORDER BY [ac_nmb], [sq_nmb]
+            """
+            # Передаем ac_count как параметр в запрос
+            all_data = self.db.fetch_all(query, [ac_count])
+
+            # Организуем загруженные данные по группам ac_nmb
+            for row_data in all_data:
+                ac_nmb = row_data["ac_nmb"]
+                row_id = row_data["id"]
+
+                # Сохраняем данные в соответствующую группу
+                if ac_nmb not in self.device_data:
+                    self.device_data[ac_nmb] = {}
+
+                self.device_data[ac_nmb][row_id] = {
+                    "sq_nmb": row_data["sq_nmb"],
+                    "ln_nmb": row_data["ln_nmb"],
                     "ln_ch_min": "" if row_data["ln_ch_min"] is None else str(row_data["ln_ch_min"]),
                     "ln_ch_max": "" if row_data["ln_ch_max"] is None else str(row_data["ln_ch_max"])
                 }
 
+            # Предполагаем, что структура (sq_nmb, ln_nmb) одинакова для всех ac_nmb
+            # Берем данные для ac_nmb=1 как базовые для отображения в таблице
+            base_data = self.device_data.get(1, {})
+
+            # Заполняем таблицу на основе базовой структуры
+            # Проходим по строкам базовой группы (ac_nmb=1)
+            for base_row_id, base_row_data in base_data.items():
+                row_pos = self.table.rowCount()
+                self.table.insertRow(row_pos)
+                sq_nmb = base_row_data["sq_nmb"]
+                ln_nmb = base_row_data["ln_nmb"]
+
+                # Порядковый номер (sq_nmb) - только для чтения
+                item_sq_nmb = QTableWidgetItem(str(sq_nmb))
+                item_sq_nmb.setFlags(item_sq_nmb.flags() & ~Qt.ItemIsEditable)
+                item_sq_nmb.setTextAlignment(Qt.AlignCenter)
+                item_sq_nmb.setBackground(QColor(240, 240, 240))
+                self.table.setItem(row_pos, 0, item_sq_nmb)
+
+                # Название (общее для всех приборов)
+                if sq_nmb == 0:
+                    item_name = QTableWidgetItem("None")
+                    item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
+                    item_name.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    self.table.setItem(row_pos, 1, item_name)
+                else:
+                    # Для остальных - комбо-бокс
+                    combo_name = QComboBox()
+                    display_names = [self.lines_names[nmb] for nmb in sorted(self.lines_names.keys())]
+                    combo_name.addItems(display_names)
+
+                    current_name = self.lines_names.get(ln_nmb, self.lines_names.get(-1, "-"))
+                    index = combo_name.findText(current_name)
+                    if index >= 0:
+                        combo_name.setCurrentIndex(index)
+                    else:
+                        combo_name.addItem(current_name)
+                        combo_name.setCurrentIndex(combo_name.count() - 1)
+
+                    self.table.setCellWidget(row_pos, 1, combo_name)
+
+                # Min/Max для каждого прибора
+                # Проходим по всем ac_nmb от 1 до AC_COUNT
+                for i, ac_nmb in enumerate(range(1, ac_count + 1)):
+                    # Находим соответствующую строку в данных этого прибора
+                    device_row_data = None
+                    device_row_id = None
+                    # Ищем строку с тем же sq_nmb в группе данного прибора
+                    for row_id, data in self.device_data[ac_nmb].items():
+                        if data["sq_nmb"] == sq_nmb:
+                            device_row_data = data
+                            device_row_id = row_id
+                            break
+
+                    if device_row_data:
+                        col_offset = 2 + i * 2 # Смещение для пары столбцов Min/Max
+
+                        # Min
+                        item_min = QTableWidgetItem(device_row_data.get("ln_ch_min", ""))
+                        item_min.setTextAlignment(Qt.AlignCenter)
+                        self.table.setItem(row_pos, col_offset, item_min)
+
+                        # Max
+                        item_max = QTableWidgetItem(device_row_data.get("ln_ch_max", ""))
+                        item_max.setTextAlignment(Qt.AlignCenter)
+                        self.table.setItem(row_pos, col_offset + 1, item_max)
+                    else:
+                        # Если для какого-то ac_nmb нет данных для этого sq_nmb
+                        # (что не должно происходить при правильной настройке)
+                        col_offset = 2 + i * 2
+                        item_min = QTableWidgetItem("Н/Д")
+                        item_min.setFlags(item_min.flags() & ~Qt.ItemIsEditable)
+                        item_min.setTextAlignment(Qt.AlignCenter)
+                        self.table.setItem(row_pos, col_offset, item_min)
+                        item_max = QTableWidgetItem("Н/Д")
+                        item_max.setFlags(item_max.flags() & ~Qt.ItemIsEditable)
+                        item_max.setTextAlignment(Qt.AlignCenter)
+                        self.table.setItem(row_pos, col_offset + 1, item_max)
+
         except Exception as e:
-            print(f"Ошибка при загрузке спектральных диапазонов: {e}")
+            error_msg = f"Ошибка при загрузке спектральных диапазонов: {e}"
+            print(error_msg)
+            QMessageBox.critical(self, "Ошибка", error_msg)
 
     def save_data(self):
-        """Сохраняет изменения в БД"""
-        updated_count = 0
+        """Сохраняет изменения в БД для всех приборов"""
+        try:
+            updated_count_total = 0
+            ac_count = int(get_config("AC_COUNT", 1))
 
-        for row in range(self.table.rowCount()):
-            item_id = self.table.item(row, 0)
-            if not item_id:
-                continue
+            # Проходим по всем строкам таблицы
+            for row in range(self.table.rowCount()):
+                item_sq_nmb = self.table.item(row, 0)
+                if not item_sq_nmb:
+                    continue
 
-            row_id = int(item_id.text())
-            original = self.original_data.get(row_id)
-            if not original:
-                continue
+                sq_nmb = int(item_sq_nmb.text())
 
-            changes = []
-            params = []
+                # Определяем базовый ID (для ac_nmb=1) для поиска соответствий
+                base_id = None
+                for row_id, data in self.device_data[1].items():
+                    if data["sq_nmb"] == sq_nmb:
+                        base_id = row_id
+                        break
 
-            # Проверяем Min
-            item_min = self.table.item(row, 2)
-            if item_min:
-                new_min = item_min.text().strip()
-                old_min = original["ln_ch_min"]
-                if new_min != old_min:
-                    if new_min == "":
-                        changes.append("[ln_ch_min] = NULL")
-                    else:
-                        changes.append("[ln_ch_min] = ?")
-                        try:
-                            params.append(float(new_min))
-                        except ValueError:
-                            params.append(new_min)
+                if not base_id:
+                    continue
 
-            # Проверяем Max
-            item_max = self.table.item(row, 3)
-            if item_max:
-                new_max = item_max.text().strip()
-                old_max = original["ln_ch_max"]
-                if new_max != old_max:
-                    if new_max == "":
-                        changes.append("[ln_ch_max] = NULL")
-                    else:
-                        changes.append("[ln_ch_max] = ?")
-                        try:
-                            params.append(float(new_max))
-                        except ValueError:
-                            params.append(new_max)
+                # Обновляем название (ln_nmb) для всех групп
+                if sq_nmb != 0:
+                    combo_name = self.table.cellWidget(row, 1)
+                    if combo_name:
+                        new_display_name = combo_name.currentText()
+                        new_ln_nmb = None
+                        for nmb, name in self.lines_names.items():
+                            if name == new_display_name:
+                                new_ln_nmb = nmb
+                                break
 
-            if changes:
-                try:
-                    query = f"""
-                    UPDATE [AMMKASAKDB01].[dbo].[SET02]
-                    SET {', '.join(changes)}
-                    WHERE [id] = ? AND [ak_nmb] = 1
-                    """
-                    params.append(row_id)
-                    self.db.execute(query, params)
-                    # Обновляем оригинал
+                        if new_ln_nmb is not None:
+                            # Обновляем ln_nmb во всех группах
+                            for ac_nmb in range(1, ac_count + 1):
+                                # Находим соответствующий ID в этой группе
+                                target_id = None
+                                for row_id, data in self.device_data[ac_nmb].items():
+                                    if data["sq_nmb"] == sq_nmb:
+                                        target_id = row_id
+                                        break
+
+                                if target_id:
+                                    old_ln_nmb = self.device_data[ac_nmb][target_id]["ln_nmb"]
+                                    if new_ln_nmb != old_ln_nmb:
+                                        try:
+                                            query = f"""
+                                            UPDATE [{self.db.database_name}].[dbo].[SET02]
+                                            SET [ln_nmb] = ?
+                                            WHERE [id] = ? AND [ac_nmb] = ?
+                                            """
+                                            self.db.execute(query, [new_ln_nmb, target_id, ac_nmb])
+                                            self.device_data[ac_nmb][target_id]["ln_nmb"] = new_ln_nmb
+                                        except Exception as e:
+                                            print(f"Ошибка при обновлении ln_nmb для ID={target_id}, ac_nmb={ac_nmb}: {e}")
+
+                # Обновляем Min/Max для каждого прибора
+                for i, ac_nmb in enumerate(range(1, ac_count + 1)):
+                    target_id = None
+                    for row_id, data in self.device_data[ac_nmb].items():
+                        if data["sq_nmb"] == sq_nmb:
+                            target_id = row_id
+                            break
+
+                    if not target_id:
+                        continue
+
+                    col_offset = 2 + i * 2
+
+                    # Min
+                    item_min = self.table.item(row, col_offset)
                     if item_min:
-                        original["ln_ch_min"] = item_min.text().strip()
-                    if item_max:
-                        original["ln_ch_max"] = item_max.text().strip()
-                    updated_count += 1
-                except Exception as e:
-                    print(f"Ошибка при обновлении диапазона ID={row_id}: {e}")
+                        new_min = item_min.text().strip()
+                        old_min = self.device_data[ac_nmb][target_id]["ln_ch_min"]
+                        if new_min != old_min:
+                            try:
+                                query = f"""
+                                UPDATE [{self.db.database_name}].[dbo].[SET02]
+                                SET [ln_ch_min] = ?
+                                WHERE [id] = ? AND [ac_nmb] = ?
+                                """
+                                if new_min == "":
+                                    self.db.execute(query, [None, target_id, ac_nmb])
+                                else:
+                                    self.db.execute(query, [float(new_min), target_id, ac_nmb])
+                                self.device_data[ac_nmb][target_id]["ln_ch_min"] = new_min
+                                updated_count_total += 1
+                            except Exception as e:
+                                print(f"Ошибка при обновлении ln_ch_min для ID={target_id}, ac_nmb={ac_nmb}: {e}")
 
-        if updated_count > 0:
-            print(f"Сохранено: {updated_count} строк")
-        else:
-            print("Изменений не было")
+                    # Max
+                    item_max = self.table.item(row, col_offset + 1)
+                    if item_max:
+                        new_max = item_max.text().strip()
+                        old_max = self.device_data[ac_nmb][target_id]["ln_ch_max"]
+                        if new_max != old_max:
+                            try:
+                                query = f"""
+                                UPDATE [{self.db.database_name}].[dbo].[SET02]
+                                SET [ln_ch_max] = ?
+                                WHERE [id] = ? AND [ac_nmb] = ?
+                                """
+                                if new_max == "":
+                                    self.db.execute(query, [None, target_id, ac_nmb])
+                                else:
+                                    self.db.execute(query, [float(new_max), target_id, ac_nmb])
+                                self.device_data[ac_nmb][target_id]["ln_ch_max"] = new_max
+                                updated_count_total += 1
+                            except Exception as e:
+                                print(f"Ошибка при обновлении ln_ch_max для ID={target_id}, ac_nmb={ac_nmb}: {e}")
+
+            if updated_count_total > 0:
+                QMessageBox.information(self, "Успех", f"Сохранено {updated_count_total} изменений")
+            else:
+                QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
+
+        except Exception as e:
+            error_msg = f"Ошибка при сохранении данных: {e}"
+            print(error_msg)
+            QMessageBox.critical(self, "Ошибка", error_msg)
