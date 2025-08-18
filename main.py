@@ -120,7 +120,7 @@ class MainWindow(QMainWindow):
         # Страницы, требующие подключения к БД
         self.db_pages = {
             "lines", "ranges", "background", "params",
-            "elements", "criteria", "composition", "regression"
+            "elements", "criteria", "composition", "regression", "settings"
         }
 
         # Кэш созданных страниц
