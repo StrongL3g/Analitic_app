@@ -315,6 +315,15 @@ class CompositionPage(QWidget):
             self.original_data = {}
 
     def load_data(self):
+        """Загрузка данных с автоматической проверкой конфигурации элементов"""
+        # Всегда проверяем актуальную конфигурацию элементов перед загрузкой
+        current_elements = self.get_configured_elements()
+
+        # Если режим интенсивности выключен, перестраиваем таблицу
+        if not self.check_inten.isChecked():
+            self.configure_table_normal()
+
+        # Загружаем данные в соответствии с текущим режимом
         if self.check_inten.isChecked():
             self.load_intensity_data()
         else:
@@ -549,6 +558,24 @@ class CompositionPage(QWidget):
             print(f"Ошибка при проверке обновления ID {record_id}: {str(e)}")
             return False
 
+    def force_reload_data(self):
+        """Принудительная перезагрузка данных с проверкой конфигурации"""
+        try:
+            # Получаем текущие элементы для сравнения
+            prev_elements = self.get_configured_elements()
+
+            # Перестраиваем таблицу, если изменилась конфигурация элементов
+            if not self.check_inten.isChecked():
+                current_elements = self.get_configured_elements()
+                if prev_elements != current_elements:
+                    self.configure_table_normal()
+
+            # Загружаем данные
+            self.load_data()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении данных: {str(e)}")
+
     def init_ui(self):
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
@@ -619,6 +646,9 @@ class CompositionPage(QWidget):
         self.product_combo.addItems(products)
         self.product_combo.setFixedWidth(150)
 
+        # Подключаем сигнал изменения выбора продукта
+        self.product_combo.currentIndexChanged.connect(self.force_reload_data)
+
         main_layout.addWidget(QLabel("Выберите продукт:"))
         main_layout.addWidget(self.product_combo)
 
@@ -627,8 +657,9 @@ class CompositionPage(QWidget):
         btn_layout.setAlignment(Qt.AlignLeft)  # Выравнивание по левому краю
         btn_layout.setSpacing(10)  # Добавляем отступ между кнопками
 
+        # Изменяем подключение кнопки "Обновить"
         self.refresh_btn = QPushButton("Обновить")
-        self.refresh_btn.clicked.connect(self.load_data)
+        self.refresh_btn.clicked.connect(self.force_reload_data)  # Изменяем здесь
 
         self.save_btn = QPushButton("Сохранить изменения")
         self.save_btn.clicked.connect(self.save_data)
