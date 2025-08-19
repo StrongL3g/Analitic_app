@@ -100,9 +100,6 @@ class RangesPage(QWidget):
             print(f"Ошибка при загрузке имен линий из JSON: {e}")
             self.lines_names.clear()
 
-# views/measurement/ranges.py
-# ... (импорты и __init__ остаются без изменений) ...
-
     def load_data(self):
         """Загружает диапазоны из SET02 для всех ac_nmb от 1 до AC_COUNT"""
         # Загружаем имена линий из JSON
@@ -150,7 +147,10 @@ class RangesPage(QWidget):
 
             # Заполняем таблицу на основе базовой структуры
             # Проходим по строкам базовой группы (ac_nmb=1)
-            for base_row_id, base_row_data in base_data.items():
+            # Сортируем по sq_nmb для правильного порядка
+            sorted_base_items = sorted(base_data.items(), key=lambda item: item[1]['sq_nmb'])
+
+            for base_row_id, base_row_data in sorted_base_items:
                 row_pos = self.table.rowCount()
                 self.table.insertRow(row_pos)
                 sq_nmb = base_row_data["sq_nmb"]
@@ -223,6 +223,9 @@ class RangesPage(QWidget):
                         item_max.setTextAlignment(Qt.AlignCenter)
                         self.table.setItem(row_pos, col_offset + 1, item_max)
 
+            # После загрузки данных экспортируем в JSON
+            self.export_ranges_to_json()
+
         except Exception as e:
             error_msg = f"Ошибка при загрузке спектральных диапазонов: {e}"
             print(error_msg)
@@ -234,6 +237,52 @@ class RangesPage(QWidget):
             updated_count_total = 0
             ac_count = int(get_config("AC_COUNT", 1))
 
+            # Сначала проверим, что Max >= Min для всех ячеек
+            validation_errors = []
+            for row in range(self.table.rowCount()):
+                item_sq_nmb = self.table.item(row, 0)
+                if not item_sq_nmb:
+                    continue
+                sq_nmb = int(item_sq_nmb.text())
+
+                # Проверяем Min/Max для каждого прибора
+                for i, ac_nmb in enumerate(range(1, ac_count + 1)):
+                    col_offset = 2 + i * 2
+
+                    item_min = self.table.item(row, col_offset)
+                    item_max = self.table.item(row, col_offset + 1)
+
+                    if item_min and item_max:
+                        try:
+                            min_val_str = item_min.text().strip()
+                            max_val_str = item_max.text().strip()
+
+                            if min_val_str and max_val_str:
+                                min_val = float(min_val_str)
+                                max_val = float(max_val_str)
+                                if max_val < min_val:
+                                    # Найдем имя линии для сообщения об ошибке
+                                    combo_name = self.table.cellWidget(row, 1)
+                                    line_name = "Неизвестная линия"
+                                    if combo_name:
+                                        line_name = combo_name.currentText()
+                                    elif sq_nmb == 0:
+                                        line_name = "None"
+
+                                    validation_errors.append(
+                                        f"Прибор {ac_nmb}, линия '{line_name}' (sq_nmb={sq_nmb}): "
+                                        f"Max ({max_val}) не может быть меньше Min ({min_val})"
+                                    )
+                        except ValueError:
+                            # Если не удалось преобразовать в число, пропускаем проверку для этой ячейки
+                            pass
+
+            if validation_errors:
+                error_msg = "Обнаружены ошибки в данных:\n\n" + "\n".join(validation_errors)
+                QMessageBox.warning(self, "Ошибка валидации", error_msg)
+                return  # Прерываем сохранение, если есть ошибки
+
+            # Если проверка пройдена, продолжаем сохранение
             # Проходим по всем строкам таблицы
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
@@ -344,6 +393,8 @@ class RangesPage(QWidget):
 
             if updated_count_total > 0:
                 QMessageBox.information(self, "Успех", f"Сохранено {updated_count_total} изменений")
+                # После сохранения обновляем JSON
+                self.export_ranges_to_json()
             else:
                 QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
 
@@ -351,3 +402,59 @@ class RangesPage(QWidget):
             error_msg = f"Ошибка при сохранении данных: {e}"
             print(error_msg)
             QMessageBox.critical(self, "Ошибка", error_msg)
+
+    def export_ranges_to_json(self):
+        """Экспортирует имена линий (из комбобоксов строк sq_nmb 1-20) в config/range.json в формате [{"number": 1, "name": "..."}, ...]"""
+        try:
+            range_data = []
+            # Проходим по строкам таблицы, соответствующим sq_nmb 1-20
+            # Предполагаем, что строки упорядочены по sq_nmb
+            for row in range(self.table.rowCount()):
+                item_sq_nmb = self.table.item(row, 0)
+                if not item_sq_nmb:
+                    continue
+
+                try:
+                    sq_nmb = int(item_sq_nmb.text())
+                    # Обрабатываем только строки с sq_nmb от 1 до 20
+                    if 1 <= sq_nmb <= 20:
+                        combo_name = self.table.cellWidget(row, 1)
+                        if combo_name:
+                            # Получаем выбранное имя из комбобокса
+                            selected_name = combo_name.currentText()
+                            range_data.append({
+                                "number": sq_nmb,
+                                "name": selected_name
+                            })
+                        else:
+                            # Если комбобокса нет (например, для sq_nmb=0, хотя мы его не обрабатываем)
+                            # Все равно добавляем, но с дефолтным именем
+                            item_name = self.table.item(row, 1)
+                            name = item_name.text() if item_name else f"Линия {sq_nmb}"
+                            range_data.append({
+                                "number": sq_nmb,
+                                "name": name
+                            })
+                except ValueError:
+                    # Пропускаем строки с некорректным sq_nmb
+                    continue
+
+            # Сортируем по номеру на случай, если порядок строк в таблице нарушен
+            range_data.sort(key=lambda x: x["number"])
+
+            # Определяем путь к JSON файлу
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            config_dir = os.path.join(base_dir, "..", "..", "config")
+            os.makedirs(config_dir, exist_ok=True) # Создаем папку, если её нет
+            json_path = os.path.join(config_dir, "range.json")
+
+            # Записываем в файл
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(range_data, f, ensure_ascii=False, indent=4)
+
+            print(f"JSON файл диапазонов успешно сохранён: {json_path}")
+
+        except Exception as e:
+            error_msg = f"Ошибка при экспорте диапазонов в JSON: {e}"
+            print(error_msg)
+            # Не показываем QMessageBox здесь, чтобы не перегружать UI, просто логируем
