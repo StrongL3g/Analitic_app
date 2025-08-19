@@ -212,24 +212,52 @@ class CompositionPage(QWidget):
 
     def load_intensity_columns(self):
         try:
-            query = "SELECT [ln_name] FROM [dbo].[LN_SET01] WHERE ln_nmb > 0 ORDER BY id"
-            rows = self.db.fetch_all(query)
+            # Путь к файлу range.json
+            json_path = Path('/home/astra/Analitic_app/config/range.json')
 
-            if not rows:
+            # Проверка существования файла
+            if not json_path.exists():
                 QMessageBox.warning(self, "Ошибка",
-                                    "Не найдены столбцы интенсивностей в базе данных.\n"
-                                    "Проверьте таблицу LN_SET01.")
+                                    f"Файл range.json не найден по пути: {json_path}")
                 self.intensity_columns = []
                 return False
 
-            self.intensity_columns = [row['ln_name'] for row in rows if 'ln_name' in row]
+            # Чтение файла
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Проверка структуры данных
+            if not isinstance(data, list):
+                QMessageBox.warning(self, "Ошибка",
+                                    "Некорректный формат файла range.json: ожидается список")
+                self.intensity_columns = []
+                return False
+
+            # Извлекаем имена, исключая пустые значения ("-")
+            self.intensity_columns = []
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+
+                name = item.get('name', '').strip()
+                if name and name != '-':
+                    self.intensity_columns.append(name)
+
+            if not self.intensity_columns:
+                QMessageBox.warning(self, "Ошибка",
+                                    "Не найдено ни одного валидного имени столбца в range.json")
+                return False
+
             return True
 
+        except json.JSONDecodeError as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка формата JSON в range.json: {str(e)}")
+            self.intensity_columns = []
+            return False
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки столбцов интенсивностей: {str(e)}")
             self.intensity_columns = []
             return False
-
     def load_intensity_data(self):
         try:
             self.table.setRowCount(0)
@@ -261,7 +289,7 @@ class CompositionPage(QWidget):
                 [id], [mdl_nmb], [meas_dt], {select_columns}
             FROM [dbo].[PR_MEAS]
             WHERE [meas_dt] BETWEEN ? AND ?
-            AND [pr_nmb] = ?
+            AND [pr_nmb] = ? AND [active_model] = 1
             """
 
             params = [dt_from, dt_to, pr_nmb]
@@ -275,7 +303,7 @@ class CompositionPage(QWidget):
             if conditions:
                 query += " AND " + " AND ".join(conditions)
 
-            query += " ORDER BY [meas_dt]"
+            query += " ORDER BY [timestamp]"
 
             rows = self.db.fetch_all(query, params)
 
@@ -355,7 +383,7 @@ class CompositionPage(QWidget):
                 [c_chem_01],[c_chem_02],[c_chem_03],[c_chem_04],[c_chem_05],[c_chem_06],[c_chem_07],[c_chem_08]
             FROM [dbo].[PR_MEAS]
             WHERE [meas_dt] BETWEEN ? AND ?
-            AND [pr_nmb] = ?
+            AND [pr_nmb] = ? AND [active_model] = 1 
             """
 
             params = [dt_from, dt_to, pr_nmb]
@@ -370,7 +398,7 @@ class CompositionPage(QWidget):
             if conditions:
                 query += " AND " + " AND ".join(conditions)
 
-            query += " ORDER BY [meas_dt]"
+            query += " ORDER BY [timestamp]"
 
             rows = self.db.fetch_all(query, params)
 
