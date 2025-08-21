@@ -6,19 +6,20 @@ from PySide6.QtCore import Qt, QDateTime, QTime
 from PySide6.QtGui import QFontMetrics
 from database.db import Database
 import math
-import os
 import json
 from pathlib import Path
 
+
 class TimeEdit15Min(QTimeEdit):
-    # Кастомный QTimeEdit с шагом 15 минут
+    """Кастомный QTimeEdit с шагом 15 минут"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setDisplayFormat("HH:mm")
         self.setTime(QTime(0, 0))
 
     def stepBy(self, steps):
-        # Переопределяем изменение значения стрелочками
+        """Переопределяем изменение значения стрелочками с шагом 15 минут"""
         current_time = self.time()
         minutes = current_time.minute()
         hours = current_time.hour()
@@ -42,31 +43,53 @@ class TimeEdit15Min(QTimeEdit):
 
 
 class CompositionPage(QWidget):
+    """Виджет для работы с химическим составом"""
+
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
         self.original_data = {}
-        self.intensity_columns = []  # Список столбцов интенсивностей
+        self.intensity_columns = []
+        self._config_dir = self._get_config_directory()
         self.init_ui()
 
-    def get_configured_elements(self):
-        """Получаем список сконфигурированных элементов из JSON-файла"""
+    def _get_config_directory(self) -> Path:
+        """Получает путь к директории конфигурации"""
+        base_dir = Path(__file__).parent
+        config_dir = base_dir.parent.parent / "config"
+        config_dir.mkdir(exist_ok=True)
+        return config_dir
+
+    def _load_config_file(self, filename: str) -> list:
+        """Загружает конфигурационный файл JSON"""
+        config_path = self._config_dir / filename
+
+        if not config_path.exists():
+            print(f"Файл конфигурации не найден: {config_path}")
+            return []
+
         try:
-            # Абсолютный путь к файлу
-            json_path = Path('/home/astra/Analitic_app/config/elements.json')
-
-            # Проверка существования файла
-            if not json_path.exists():
-                print(f"Файл не найден по пути: {json_path}")
-                return []
-
-            # Чтение файла
-            with open(json_path, 'r', encoding='utf-8') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # Проверка структуры данных
             if not isinstance(data, list):
-                print("Ошибка: JSON должен содержать список элементов")
+                print(f"Ошибка: {filename} должен содержать список")
+                return []
+
+            return data
+
+        except json.JSONDecodeError as e:
+            print(f"Ошибка формата JSON в файле {filename}: {str(e)}")
+            return []
+        except Exception as e:
+            print(f"Ошибка загрузки файла {filename}: {str(e)}")
+            return []
+
+    def get_configured_elements(self) -> list:
+        """Получает список сконфигурированных элементов из JSON-файла"""
+        try:
+            data = self._load_config_file("elements.json")
+            if not data:
                 return []
 
             # Извлекаем имена элементов, исключая невалидные значения
@@ -76,7 +99,6 @@ class CompositionPage(QWidget):
                     if not isinstance(item, dict):
                         continue
 
-                    # Используем поле 'name' вместо 'el_name'
                     element_name = item.get('name', '').strip()
                     if element_name and element_name not in ('-', 'None', ''):
                         elements.append(element_name)
@@ -84,37 +106,28 @@ class CompositionPage(QWidget):
                     print(f"Ошибка обработки элемента {item}: {str(e)}")
                     continue
 
-            # Сортировка по полю 'number' (аналог el_nmb из БД)
+            # Сортировка по полю 'number'
             if all('number' in item for item in data):
                 elements = sorted(elements,
                                   key=lambda x: next(item['number'] for item in data if item.get('name') == x))
 
-            print(f"Успешно загружено {len(elements)} элементов: {elements}")
+            print(f"Успешно загружено {len(elements)} элементов")
             return elements
 
-        except json.JSONDecodeError as e:
-            print(f"Ошибка формата JSON: {str(e)}")
-            return []
         except Exception as e:
             print(f"Ошибка в get_configured_elements: {str(e)}")
             return []
 
-    def round_to_15_min(self, time):
+    def round_to_15_min(self, time: QTime) -> QTime:
         """Округляет время до ближайших 15 минут"""
         minute = time.minute()
         rounded_minute = (minute // 15) * 15
         return QTime(time.hour(), rounded_minute)
 
-    def validate_dates(self):
+    def validate_dates(self) -> bool:
         """Проверяет корректность периода"""
-        dt_from = QDateTime(
-            self.date_from.date(),
-            self.time_from.time()
-        )
-        dt_to = QDateTime(
-            self.date_to.date(),
-            self.time_to.time()
-        )
+        dt_from = QDateTime(self.date_from.date(), self.time_from.time())
+        dt_to = QDateTime(self.date_to.date(), self.time_to.time())
 
         if dt_to < dt_from:
             self.date_to.setStyleSheet("background-color: #ffdddd;")
@@ -124,16 +137,16 @@ class CompositionPage(QWidget):
         self.date_to.setStyleSheet("")
         return True
 
-    def init_table(self):
+    def init_table(self) -> QTableWidget:
         """Инициализация таблицы с данными"""
-        self.table = QTableWidget()
-        self.table.setEditTriggers(QTableWidget.AllEditTriggers)  # Разрешаем все виды редактирования
-        self.table.setSelectionMode(QTableWidget.SingleSelection)
-        self.table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
-        self.table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.table.verticalHeader().setVisible(False)
-        return self.table
+        table = QTableWidget()
+        table.setEditTriggers(QTableWidget.AllEditTriggers)
+        table.setSelectionMode(QTableWidget.SingleSelection)
+        table.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
+        table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table.verticalHeader().setVisible(False)
+        return table
 
     def configure_table_normal(self):
         """Настройка таблицы в обычном режиме"""
@@ -188,8 +201,9 @@ class CompositionPage(QWidget):
             self.table.setColumnWidth(i, 100)
 
     def toggle_intensity_mode(self):
+        """Переключает режим отображения таблицы"""
         try:
-            self.table.setRowCount(0)  # очищаем строки
+            self.table.setRowCount(0)
 
             if self.check_inten.isChecked():
                 self.save_btn.hide()
@@ -210,26 +224,11 @@ class CompositionPage(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Не удалось переключить режим: {str(e)}")
             self.check_inten.setChecked(False)
 
-    def load_intensity_columns(self):
+    def load_intensity_columns(self) -> bool:
+        """Загружает названия столбцов интенсивностей"""
         try:
-            # Путь к файлу range.json
-            json_path = Path('/home/astra/Analitic_app/config/range.json')
-
-            # Проверка существования файла
-            if not json_path.exists():
-                QMessageBox.warning(self, "Ошибка",
-                                    f"Файл range.json не найден по пути: {json_path}")
-                self.intensity_columns = []
-                return False
-
-            # Чтение файла
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            # Проверка структуры данных
-            if not isinstance(data, list):
-                QMessageBox.warning(self, "Ошибка",
-                                    "Некорректный формат файла range.json: ожидается список")
+            data = self._load_config_file("range.json")
+            if not data:
                 self.intensity_columns = []
                 return False
 
@@ -250,15 +249,13 @@ class CompositionPage(QWidget):
 
             return True
 
-        except json.JSONDecodeError as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка формата JSON в range.json: {str(e)}")
-            self.intensity_columns = []
-            return False
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки столбцов интенсивностей: {str(e)}")
             self.intensity_columns = []
             return False
+
     def load_intensity_data(self):
+        """Загружает данные интенсивностей"""
         try:
             self.table.setRowCount(0)
             self.original_data = {}
@@ -328,10 +325,10 @@ class CompositionPage(QWidget):
 
                 self.table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
 
-                # Исправленная часть - правильное заполнение столбцов интенсивностей
+                # Заполнение столбцов интенсивностей
                 for i in range(num_columns):
-                    col_name = f"i_00_{i:02d}"  # Формируем имя столбца
-                    val = row.get(col_name)  # Получаем значение из строки
+                    col_name = f"i_00_{i:02d}"
+                    val = row.get(col_name)
                     item_text = f"{float(val):.4f}" if val is not None else ""
                     self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
 
@@ -344,20 +341,13 @@ class CompositionPage(QWidget):
 
     def load_data(self):
         """Загрузка данных с автоматической проверкой конфигурации элементов"""
-        # Всегда проверяем актуальную конфигурацию элементов перед загрузкой
-        current_elements = self.get_configured_elements()
-
-        # Если режим интенсивности выключен, перестраиваем таблицу
-        if not self.check_inten.isChecked():
-            self.configure_table_normal()
-
-        # Загружаем данные в соответствии с текущим режимом
         if self.check_inten.isChecked():
             self.load_intensity_data()
         else:
             self.load_normal_data()
 
     def load_normal_data(self):
+        """Загружает данные в обычном режиме"""
         try:
             self.table.setRowCount(0)
             self.original_data = {}
@@ -466,6 +456,7 @@ class CompositionPage(QWidget):
             self.original_data = {}
 
     def save_data(self):
+        """Сохраняет изменения в базу данных"""
         try:
             if not hasattr(self.db, 'execute'):
                 QMessageBox.critical(self, "Ошибка", "Нет подключения к базе данных")
@@ -563,7 +554,8 @@ class CompositionPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
 
-    def verify_update_in_db(self, record_id, update_data):
+    def verify_update_in_db(self, record_id: int, update_data: dict) -> bool:
+        """Проверяет, что данные были успешно обновлены в БД"""
         try:
             query = f"""
             SELECT [c_chem_{update_data['element_num']:02d}]
@@ -587,24 +579,16 @@ class CompositionPage(QWidget):
             return False
 
     def force_reload_data(self):
-        """Принудительная перезагрузка данных с проверкой конфигурации"""
+        """Принудительная перезагрузка данных"""
         try:
-            # Получаем текущие элементы для сравнения
-            prev_elements = self.get_configured_elements()
-
-            # Перестраиваем таблицу, если изменилась конфигурация элементов
             if not self.check_inten.isChecked():
-                current_elements = self.get_configured_elements()
-                if prev_elements != current_elements:
-                    self.configure_table_normal()
-
-            # Загружаем данные
+                self.configure_table_normal()
             self.load_data()
-
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении данных: {str(e)}")
 
     def init_ui(self):
+        """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
         self.setMinimumWidth(800)
@@ -614,10 +598,12 @@ class CompositionPage(QWidget):
         title.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(title)
 
+        # Верхняя панель с настройками
         container = QHBoxLayout()
         container.setAlignment(Qt.AlignLeft)
         container.setSpacing(10)
 
+        # Чекбоксы
         checkboxes = QVBoxLayout()
         checkboxes.setSpacing(10)
 
@@ -635,6 +621,7 @@ class CompositionPage(QWidget):
 
         container.addLayout(checkboxes)
 
+        # Даты и время
         dates_layout = QVBoxLayout()
         dates_layout.setSpacing(10)
 
@@ -669,25 +656,23 @@ class CompositionPage(QWidget):
         container.addLayout(dates_layout)
         main_layout.addLayout(container)
 
+        # Выбор продукта
         self.product_combo = QComboBox()
         products = [f"Продукт {i}" for i in range(1, 9)]
         self.product_combo.addItems(products)
         self.product_combo.setFixedWidth(150)
-
-        # Подключаем сигнал изменения выбора продукта
         self.product_combo.currentIndexChanged.connect(self.force_reload_data)
 
         main_layout.addWidget(QLabel("Выберите продукт:"))
         main_layout.addWidget(self.product_combo)
 
-        # Измененная часть - кнопки выровнены по левому краю
+        # Кнопки
         btn_layout = QHBoxLayout()
-        btn_layout.setAlignment(Qt.AlignLeft)  # Выравнивание по левому краю
-        btn_layout.setSpacing(10)  # Добавляем отступ между кнопками
+        btn_layout.setAlignment(Qt.AlignLeft)
+        btn_layout.setSpacing(10)
 
-        # Изменяем подключение кнопки "Обновить"
         self.refresh_btn = QPushButton("Обновить")
-        self.refresh_btn.clicked.connect(self.force_reload_data)  # Изменяем здесь
+        self.refresh_btn.clicked.connect(self.force_reload_data)
 
         self.save_btn = QPushButton("Сохранить изменения")
         self.save_btn.clicked.connect(self.save_data)
@@ -696,12 +681,10 @@ class CompositionPage(QWidget):
         btn_layout.addWidget(self.save_btn)
         main_layout.addLayout(btn_layout)
 
-
-        # Инициализация таблицы
+        # Таблица
         self.table = self.init_table()
         self.configure_table_normal()
 
-        # Добавляем таблицу в скролл-область
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.table)
         scroll_area.setWidgetResizable(True)
@@ -710,11 +693,8 @@ class CompositionPage(QWidget):
 
         main_layout.addWidget(scroll_area)
 
-
-
+        # Связывание валидации дат
         self.date_from.dateTimeChanged.connect(self.validate_dates)
         self.time_from.timeChanged.connect(self.validate_dates)
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
-
-        '''self.load_data()'''
