@@ -179,20 +179,20 @@ class EquationsPage(QWidget):
 
         # Критерий Вода и C мин
         water_layout = QHBoxLayout()
-        water_layout.setSpacing(1)  # <-- Уменьшено до 3
+        water_layout.setSpacing(1)
         water_label = QLabel("Критерий \"Вода\", NC >")
         self.water_crit_edit = QLineEdit()
-        self.water_crit_edit.setFixedWidth(70)  # <-- Уменьшено до 70
+        self.water_crit_edit.setFixedWidth(100)
         self.water_crit_edit.setValidator(QDoubleValidator())
         water_layout.addWidget(water_label)
         water_layout.addWidget(self.water_crit_edit)
 
         cmin_layout = QHBoxLayout()
-        cmin_layout.setSpacing(1)  # <-- Уменьшено до 3
-        cmin_layout.addSpacing(20)
+        cmin_layout.setSpacing(1)
+        cmin_layout.addSpacing(30)
         cmin_label = QLabel("C мин:")
         self.c_min_edit = QLineEdit()
-        self.c_min_edit.setFixedWidth(70)  # <-- Уменьшено до 70
+        self.c_min_edit.setFixedWidth(100)
         self.c_min_edit.setValidator(QDoubleValidator())
         cmin_layout.addWidget(cmin_label)
         cmin_layout.addWidget(self.c_min_edit)
@@ -207,20 +207,20 @@ class EquationsPage(QWidget):
 
         # Критерий Пусто и C макс
         empty_crit_layout = QHBoxLayout()
-        empty_crit_layout.setSpacing(1)  # <-- Уменьшено до 3
+        empty_crit_layout.setSpacing(1)
         empty_label = QLabel("Критерий \"Пусто\", Fe <")
         self.empty_crit_edit = QLineEdit()
-        self.empty_crit_edit.setFixedWidth(70)  # <-- Уменьшено до 70
+        self.empty_crit_edit.setFixedWidth(100)
         self.empty_crit_edit.setValidator(QDoubleValidator())
         empty_crit_layout.addWidget(empty_label)
         empty_crit_layout.addWidget(self.empty_crit_edit)
 
         cmax_layout = QHBoxLayout()
-        cmax_layout.setSpacing(1)  # <-- Уменьшено до 3
-        cmax_layout.addSpacing(20)
+        cmax_layout.setSpacing(1)
+        cmax_layout.addSpacing(30)
         cmax_label = QLabel("C макс:")
         self.c_max_edit = QLineEdit()
-        self.c_max_edit.setFixedWidth(70)  # <-- Уменьшено до 70
+        self.c_max_edit.setFixedWidth(100)
         self.c_max_edit.setValidator(QDoubleValidator())
         cmax_layout.addWidget(cmax_label)
         cmax_layout.addWidget(self.c_max_edit)
@@ -234,10 +234,10 @@ class EquationsPage(QWidget):
         corr_group = QGroupBox("Коэффициенты корректировки")
         corr_layout = QHBoxLayout()
         self.k0_edit = QLineEdit()
-        self.k0_edit.setFixedWidth(100)
+        self.k0_edit.setFixedWidth(120)
         self.k0_edit.setValidator(QDoubleValidator())
         self.k1_edit = QLineEdit()
-        self.k1_edit.setFixedWidth(100)
+        self.k1_edit.setFixedWidth(120)
         self.k1_edit.setValidator(QDoubleValidator())
         corr_layout.addWidget(QLabel("k0:"))
         corr_layout.addWidget(self.k0_edit)
@@ -341,7 +341,7 @@ class EquationsPage(QWidget):
                 number = item.get('number', 0)
                 name = item.get('name', '').strip()
                 if name and name != '-':
-                    # Используем оригинальный номер
+                    # Добавляем 1 к номеру для соответствия базе данных
                     combo1.addItem(name, number)
                     combo2.addItem(name, number)
 
@@ -547,7 +547,7 @@ class EquationsPage(QWidget):
     def save_equation_changes(self):
         """Сохраняет изменения уравнения в базу"""
         try:
-            if self.current_editing_row is None or not self.current_equation_row:
+            if self.current_editing_row is None or not self.current_equation_data:
                 return
 
             # Собираем данные из полей редактора
@@ -678,10 +678,10 @@ class EquationsPage(QWidget):
             # Обновляем таблицу
             self.load_equations()
 
-            # Скрываем область редактирования
-            self.edit_widget.setVisible(False)
-            self.current_editing_row = None
-            self.current_equation_data = None
+            # Не скрываем область редактирования - оставляем открытой
+            # self.edit_widget.setVisible(False)
+            # self.current_editing_row = None
+            # self.current_equation_data = None
 
             QMessageBox.information(self, "Успех", "Уравнение успешно сохранено!")
 
@@ -808,46 +808,46 @@ class EquationsPage(QWidget):
 
         elif operator == 1:  # 1 - берем только operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
                 return f"{prefix}{name1}"
             return "0"
 
         elif operator == 2:  # 2 - operand_i_01_01 * operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
-                name2 = self._get_range_name(operand2 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
+                name2 = self._get_range_name(operand2)
                 return f"{prefix}{name1}*{prefix}{name2}"
             return "0"
 
         elif operator == 3:  # 3 - operand_i_01_01 / operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
-                name2 = self._get_range_name(operand2 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
+                name2 = self._get_range_name(operand2)
                 return f"{prefix}{name1}/{prefix}{name2}"
             return "0"
 
         elif operator == 4:  # 4 - operand_i_01_01 * operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
                 return f"{prefix}{name1}*{prefix}{name1}"
             return "0"
 
         elif operator == 5:  # 5 - 1 / operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
                 return f"1/{prefix}{name1}"
             return "0"
 
         elif operator == 6:  # 6 - operand_i_01_01 / operand_i_02_01 * operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
-                name2 = self._get_range_name(operand2 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
+                name2 = self._get_range_name(operand2)
                 return f"{prefix}{name1}/{prefix}{name2}*{prefix}{name2}"
             return "0"
 
         elif operator == 7:  # 7 - 1 / operand_i_01_01 * operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1 + 1)  # Прибавляем 1 для корректного отображения
+                name1 = self._get_range_name(operand1)
                 return f"1/{prefix}{name1}*{prefix}{name1}"
             return "0"
 
@@ -866,7 +866,7 @@ class EquationsPage(QWidget):
             return ""
 
         for range_item in self.range_config:
-            if isinstance(range_item, dict) and range_item.get('number') == range_nmb:
+            if isinstance(range_item, dict) and range_item.get('number') == range_nmb + 1:
                 return range_item.get('name', f"Range_{range_nmb}")
         return f"Range_{range_nmb}"
 
