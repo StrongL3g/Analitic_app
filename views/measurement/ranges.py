@@ -226,6 +226,12 @@ class RangesPage(QWidget):
             # После загрузки данных экспортируем в JSON
             self.export_ranges_to_json()
 
+            # ПРОВЕРЯЕМ СОГЛАСОВАННОСТЬ МЕЖДУ ТАБЛИЦАМИ
+            if not self.validate_cross_table_consistency():
+                QMessageBox.warning(self, "Внимание",
+                    "Обнаружены несоответствия между таблицами SET02 и SET03. "
+                    "Рекомендуется выполнить полную синхронизацию.")
+
         except Exception as e:
             error_msg = f"Ошибка при загрузке спектральных диапазонов: {e}"
             print(error_msg)
@@ -237,12 +243,13 @@ class RangesPage(QWidget):
             updated_count_total = 0
             ac_count = int(get_config("AC_COUNT", 1))
 
-            # Сначала проверим, что Max >= Min для всех ячеек
+            # Валидация Min/Max
             validation_errors = []
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
                 if not item_sq_nmb:
                     continue
+
                 sq_nmb = int(item_sq_nmb.text())
 
                 # Проверяем Min/Max для каждого прибора
@@ -253,37 +260,87 @@ class RangesPage(QWidget):
                     item_max = self.table.item(row, col_offset + 1)
 
                     if item_min and item_max:
-                        try:
-                            min_val_str = item_min.text().strip()
-                            max_val_str = item_max.text().strip()
+                        min_val_str = item_min.text().strip()
+                        max_val_str = item_max.text().strip()
 
-                            if min_val_str and max_val_str:
+                        # Если оба поля заполнены, проверяем что Max >= Min
+                        if min_val_str and max_val_str:
+                            try:
                                 min_val = float(min_val_str)
                                 max_val = float(max_val_str)
                                 if max_val < min_val:
-                                    # Найдем имя линии для сообщения об ошибке
-                                    combo_name = self.table.cellWidget(row, 1)
+                                    # Находим имя линии для сообщения об ошибке
                                     line_name = "Неизвестная линия"
-                                    if combo_name:
-                                        line_name = combo_name.currentText()
-                                    elif sq_nmb == 0:
+                                    if sq_nmb == 0:
                                         line_name = "None"
+                                    else:
+                                        combo_name = self.table.cellWidget(row, 1)
+                                        if combo_name:
+                                            line_name = combo_name.currentText()
 
                                     validation_errors.append(
-                                        f"Прибор {ac_nmb}, линия '{line_name}' (sq_nmb={sq_nmb}): "
+                                        f"Прибор {ac_nmb}, линия '{line_name}': "
                                         f"Max ({max_val}) не может быть меньше Min ({min_val})"
                                     )
-                        except ValueError:
-                            # Если не удалось преобразовать в число, пропускаем проверку для этой ячейки
-                            pass
+                            except ValueError:
+                                # Если не числа, пропускаем проверку
+                                pass
 
             if validation_errors:
-                error_msg = "Обнаружены ошибки в данных:\n\n" + "\n".join(validation_errors)
-                QMessageBox.warning(self, "Ошибка валидации", error_msg)
-                return  # Прерываем сохранение, если есть ошибки
+                QMessageBox.warning(self, "Ошибка валидации", "\n".join(validation_errors))
+                return
 
-            # Если проверка пройдена, продолжаем сохранение
-            # Проходим по всем строкам таблицы
+            # Обновляем названия линий для ВСЕХ приборов
+            for row in range(self.table.rowCount()):
+                item_sq_nmb = self.table.item(row, 0)
+                if not item_sq_nmb:
+                    continue
+
+                sq_nmb = int(item_sq_nmb.text())
+                if sq_nmb == 0:  # Пропускаем "None"
+                    continue
+
+                combo_name = self.table.cellWidget(row, 1)
+                if not combo_name:
+                    continue
+
+                new_display_name = combo_name.currentText()
+
+                # Находим новый ln_nmb
+                new_ln_nmb = None
+                for nmb, name in self.lines_names.items():
+                    if name == new_display_name:
+                        new_ln_nmb = nmb
+                        break
+
+                if new_ln_nmb is None:
+                    continue
+
+                # Находим старый ln_nmb (из первого прибора)
+                old_ln_nmb = None
+                for data in self.device_data[1].values():
+                    if data["sq_nmb"] == sq_nmb:
+                        old_ln_nmb = data["ln_nmb"]
+                        break
+
+                if old_ln_nmb is None or new_ln_nmb == old_ln_nmb:
+                    continue
+
+                # СИНХРОНИЗИРУЕМ ОБЕ ТАБЛИЦЫ!
+                try:
+                    updated_count = self.synchronize_line_changes(old_ln_nmb, new_ln_nmb, sq_nmb)
+                    updated_count_total += updated_count
+
+                    # Обновляем кэш для всех приборов
+                    for ac_nmb in range(1, ac_count + 1):
+                        for data in self.device_data[ac_nmb].values():
+                            if data["sq_nmb"] == sq_nmb and data["ln_nmb"] == old_ln_nmb:
+                                data["ln_nmb"] = new_ln_nmb
+
+                except Exception as e:
+                    print(f"Ошибка синхронизации для sq_nmb={sq_nmb}: {e}")
+
+            # Обновляем Min/Max значений для каждого прибора
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
                 if not item_sq_nmb:
@@ -291,53 +348,8 @@ class RangesPage(QWidget):
 
                 sq_nmb = int(item_sq_nmb.text())
 
-                # Определяем базовый ID (для ac_nmb=1) для поиска соответствий
-                base_id = None
-                for row_id, data in self.device_data[1].items():
-                    if data["sq_nmb"] == sq_nmb:
-                        base_id = row_id
-                        break
-
-                if not base_id:
-                    continue
-
-                # Обновляем название (ln_nmb) для всех групп
-                if sq_nmb != 0:
-                    combo_name = self.table.cellWidget(row, 1)
-                    if combo_name:
-                        new_display_name = combo_name.currentText()
-                        new_ln_nmb = None
-                        for nmb, name in self.lines_names.items():
-                            if name == new_display_name:
-                                new_ln_nmb = nmb
-                                break
-
-                        if new_ln_nmb is not None:
-                            # Обновляем ln_nmb во всех группах
-                            for ac_nmb in range(1, ac_count + 1):
-                                # Находим соответствующий ID в этой группе
-                                target_id = None
-                                for row_id, data in self.device_data[ac_nmb].items():
-                                    if data["sq_nmb"] == sq_nmb:
-                                        target_id = row_id
-                                        break
-
-                                if target_id:
-                                    old_ln_nmb = self.device_data[ac_nmb][target_id]["ln_nmb"]
-                                    if new_ln_nmb != old_ln_nmb:
-                                        try:
-                                            query = f"""
-                                            UPDATE [{self.db.database_name}].[dbo].[SET02]
-                                            SET [ln_nmb] = ?
-                                            WHERE [id] = ? AND [ac_nmb] = ?
-                                            """
-                                            self.db.execute(query, [new_ln_nmb, target_id, ac_nmb])
-                                            self.device_data[ac_nmb][target_id]["ln_nmb"] = new_ln_nmb
-                                        except Exception as e:
-                                            print(f"Ошибка при обновлении ln_nmb для ID={target_id}, ac_nmb={ac_nmb}: {e}")
-
-                # Обновляем Min/Max для каждого прибора
                 for i, ac_nmb in enumerate(range(1, ac_count + 1)):
+                    # Находим ID строки в этом приборе
                     target_id = None
                     for row_id, data in self.device_data[ac_nmb].items():
                         if data["sq_nmb"] == sq_nmb:
@@ -393,15 +405,12 @@ class RangesPage(QWidget):
 
             if updated_count_total > 0:
                 QMessageBox.information(self, "Успех", f"Сохранено {updated_count_total} изменений")
-                # После сохранения обновляем JSON
-                self.export_ranges_to_json()
+                self.load_data()  # Полная перезагрузка
             else:
                 QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
 
         except Exception as e:
-            error_msg = f"Ошибка при сохранении данных: {e}"
-            print(error_msg)
-            QMessageBox.critical(self, "Ошибка", error_msg)
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
 
     def export_ranges_to_json(self):
         """Экспортирует имена линий (из комбобоксов строк sq_nmb 1-20) в config/range.json в формате [{"number": 1, "name": "..."}, ...]"""
@@ -458,3 +467,96 @@ class RangesPage(QWidget):
             error_msg = f"Ошибка при экспорте диапазонов в JSON: {e}"
             print(error_msg)
             # Не показываем QMessageBox здесь, чтобы не перегружать UI, просто логируем
+
+    def synchronize_line_changes(self, old_ln_nmb, new_ln_nmb, sq_nmb):
+        """Синхронизирует изменения линий между SET02 и SET03 для всех приборов"""
+        try:
+            ac_count = int(get_config("AC_COUNT", 1))
+            updated_count = 0
+
+            with self.db.connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute("BEGIN TRANSACTION")
+
+                # 1. Обновляем SET02 для всех приборов
+                for ac_nmb in range(1, ac_count + 1):
+                    # Находим ID строки в SET02
+                    target_id = None
+                    for row_id, data in self.device_data[ac_nmb].items():
+                        if data["sq_nmb"] == sq_nmb and data["ln_nmb"] == old_ln_nmb:
+                            target_id = row_id
+                            break
+
+                    if target_id:
+                        query_set02 = f"""
+                        UPDATE [{self.db.database_name}].[dbo].[SET02]
+                        SET [ln_nmb] = ?
+                        WHERE [id] = ? AND [ac_nmb] = ?
+                        """
+                        cursor.execute(query_set02, [new_ln_nmb, target_id, ac_nmb])
+                        updated_count += 1
+
+                # 2. Обновляем SET03 для всех приборов
+                for ac_nmb in range(1, ac_count + 1):
+                    query_set03 = f"""
+                    UPDATE [{self.db.database_name}].[dbo].[SET03]
+                    SET [ln_nmb] = ?
+                    WHERE [ac_nmb] = ? AND [sq_nmb] = ? AND [ln_nmb] = ?
+                    """
+                    cursor.execute(query_set03, [new_ln_nmb, ac_nmb, sq_nmb, old_ln_nmb])
+                    updated_count += cursor.rowcount
+
+                cursor.execute("COMMIT")
+                conn.commit()
+
+            return updated_count
+
+        except Exception as e:
+            try:
+                cursor.execute("ROLLBACK")
+            except:
+                pass
+            raise e
+
+    def validate_cross_table_consistency(self):
+        """Проверяет согласованность между SET02 и SET03"""
+        try:
+            ac_count = int(get_config("AC_COUNT", 1))
+            inconsistencies = []
+
+            for ac_nmb in range(1, ac_count + 1):
+                # Проверяем SET02
+                set02_lines = {}
+                for data in self.device_data[ac_nmb].values():
+                    set02_lines[data["sq_nmb"]] = data["ln_nmb"]
+
+                # Проверяем SET03
+                query = f"""
+                SELECT [sq_nmb], [ln_nmb]
+                FROM [{self.db.database_name}].[dbo].[SET03]
+                WHERE [ac_nmb] = ? AND [ln_nmb] != -1
+                """
+                set03_data = self.db.fetch_all(query, [ac_nmb])
+                set03_lines = {row["sq_nmb"]: row["ln_nmb"] for row in set03_data}
+
+                # Сравниваем
+                for sq_nmb, ln_nmb_set02 in set02_lines.items():
+                    if sq_nmb in set03_lines:
+                        if set03_lines[sq_nmb] != ln_nmb_set02:
+                            inconsistencies.append(
+                                f"Прибор {ac_nmb}, sq_nmb={sq_nmb}: "
+                                f"SET02={ln_nmb_set02} vs SET03={set03_lines[sq_nmb]}"
+                            )
+                    else:
+                        inconsistencies.append(f"Прибор {ac_nmb}: sq_nmb={sq_nmb} отсутствует в SET03")
+
+            if inconsistencies:
+                print("Обнаружены несоответствия между SET02 и SET03:")
+                for issue in inconsistencies:
+                    print(f"  - {issue}")
+                return False
+            return True
+
+        except Exception as e:
+            print(f"Ошибка проверки согласованности: {e}")
+            return False
