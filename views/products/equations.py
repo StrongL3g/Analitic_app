@@ -178,56 +178,50 @@ class EquationsPage(QWidget):
         criteria_layout = QHBoxLayout()
 
         # Критерий Вода и C мин
-        water_layout = QHBoxLayout()
-        water_layout.setSpacing(1)
         water_label = QLabel("Критерий \"Вода\", NC >")
+        water_label.setFixedWidth(150)  # Фиксированная ширина для критерия воды
         self.water_crit_edit = QLineEdit()
         self.water_crit_edit.setFixedWidth(100)
         self.water_crit_edit.setValidator(QDoubleValidator())
-        water_layout.addWidget(water_label)
-        water_layout.addWidget(self.water_crit_edit)
 
-        cmin_layout = QHBoxLayout()
-        cmin_layout.setSpacing(1)
-        cmin_layout.addSpacing(30)
         cmin_label = QLabel("C мин:")
+        cmin_label.setFixedWidth(50)  # Фиксированная ширина для C мин
         self.c_min_edit = QLineEdit()
         self.c_min_edit.setFixedWidth(100)
         self.c_min_edit.setValidator(QDoubleValidator())
-        cmin_layout.addWidget(cmin_label)
-        cmin_layout.addWidget(self.c_min_edit)
 
-        criteria_layout.addLayout(water_layout)
-        criteria_layout.addLayout(cmin_layout)
+        criteria_layout.addWidget(water_label)
+        criteria_layout.addWidget(self.water_crit_edit)
+        criteria_layout.addSpacing(10)
+        criteria_layout.addWidget(cmin_label)
+        criteria_layout.addWidget(self.c_min_edit)
         criteria_layout.addStretch()
+
         edit_layout.addLayout(criteria_layout)
 
         # Четвертая строка: Критерий Пусто и C макс
         empty_layout = QHBoxLayout()
 
         # Критерий Пусто и C макс
-        empty_crit_layout = QHBoxLayout()
-        empty_crit_layout.setSpacing(1)
         empty_label = QLabel("Критерий \"Пусто\", Fe <")
+        empty_label.setFixedWidth(150)  # Та же ширина, что и у water_label
         self.empty_crit_edit = QLineEdit()
         self.empty_crit_edit.setFixedWidth(100)
         self.empty_crit_edit.setValidator(QDoubleValidator())
-        empty_crit_layout.addWidget(empty_label)
-        empty_crit_layout.addWidget(self.empty_crit_edit)
 
-        cmax_layout = QHBoxLayout()
-        cmax_layout.setSpacing(1)
-        cmax_layout.addSpacing(30)
         cmax_label = QLabel("C макс:")
+        cmax_label.setFixedWidth(50)  # Та же ширина, что и у cmin_label
         self.c_max_edit = QLineEdit()
         self.c_max_edit.setFixedWidth(100)
         self.c_max_edit.setValidator(QDoubleValidator())
-        cmax_layout.addWidget(cmax_label)
-        cmax_layout.addWidget(self.c_max_edit)
 
-        empty_layout.addLayout(empty_crit_layout)
-        empty_layout.addLayout(cmax_layout)
+        empty_layout.addWidget(empty_label)
+        empty_layout.addWidget(self.empty_crit_edit)
+        empty_layout.addSpacing(10)
+        empty_layout.addWidget(cmax_label)
+        empty_layout.addWidget(self.c_max_edit)
         empty_layout.addStretch()
+
         edit_layout.addLayout(empty_layout)
 
         # Коэффициенты корректировки
@@ -423,7 +417,7 @@ class EquationsPage(QWidget):
 
                 # Колонка с коэффициентами корректировки
                 coeff_item = QTableWidgetItem(correction_coeffs)
-                coeff_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                coeff_item.setTextAlignment(Qt.AlignCenter)
                 self.table_widget.setItem(row_idx, 0, coeff_item)
 
                 # Колонка с уравнениями
