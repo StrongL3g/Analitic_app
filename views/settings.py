@@ -156,7 +156,7 @@ class SettingsPage(QWidget):
                 reply = QMessageBox.question(
                     self,
                     "Подтверждение удаления",
-                    f"Будут удалены группы данных для приборов: {delete_list} из таблицы {table_name}.\n"
+                    f"Будут удалены группы данных для приборов: {delete_list} из таблице {table_name}.\n"
                     f"Это действие необратимо!\nПродолжить?",
                     QMessageBox.Yes | QMessageBox.No,
                     QMessageBox.No
@@ -245,7 +245,7 @@ class SettingsPage(QWidget):
                 params_k2 = [1, sq_nmb, -1, 2] + [0.0] * 20
                 self.db.execute(insert_query, params_k2)
 
-            print(f"Базовая группа (ac_nmb=1) успешно создана в SET03")
+            print(f"Базовая группы (ac_nmb=1) успешно создана в SET03")
             return True
         except Exception as e:
             error_msg = f"Ошибка при создании базовой группы в SET03: {e}"
@@ -265,7 +265,7 @@ class SettingsPage(QWidget):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
-            # Значения по умолчанию (аналогично вашим данным)
+            # Значения по умолчанию
             default_values = [
                 1,  # ac_nmb
                 30, 30, 30, 30, 30, 30, 30, 30, 30,  # current_00 - current_08
@@ -291,7 +291,7 @@ class SettingsPage(QWidget):
             VALUES (?, ?, ?, ?, ?)
             """
 
-            # Данные по умолчанию (аналогично вашим данным)
+            # Данные по умолчанию
             default_data = [
                 [1, 1, 17, 5.41, 656],
                 [1, 2, 18, 5.95, 719],
