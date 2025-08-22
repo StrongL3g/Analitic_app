@@ -178,11 +178,23 @@ class EquationsPage(QWidget):
         criteria_layout = QHBoxLayout()
 
         # Критерий Вода и C мин
-        water_label = QLabel("Критерий \"Вода\", NC >")
+        water_label = QLabel("Критерий \"Вода\":")
         water_label.setFixedWidth(150)  # Фиксированная ширина для критерия воды
         self.water_crit_edit = QLineEdit()
         self.water_crit_edit.setFixedWidth(100)
         self.water_crit_edit.setValidator(QDoubleValidator())
+
+        # Выбор линии для критерия
+        self.w_element_combo = QComboBox()
+        self.w_element_combo.setFixedWidth(100)
+        # Заполняем комбобоксы через функцию
+        self.populate_operand_combos(self.w_element_combo)
+
+        # Выбор знака <= 0 ; > 1 bool
+        self.w_operator_combo = QComboBox()
+        self.w_operator_combo.setFixedWidth(50)
+        # Заполняем комбобокс через функцию
+        self.populate_operator_combos(self.w_operator_combo)
 
         cmin_label = QLabel("C мин:")
         cmin_label.setFixedWidth(50)  # Фиксированная ширина для C мин
@@ -191,6 +203,8 @@ class EquationsPage(QWidget):
         self.c_min_edit.setValidator(QDoubleValidator())
 
         criteria_layout.addWidget(water_label)
+        criteria_layout.addWidget(self.w_element_combo)
+        criteria_layout.addWidget(self.w_operator_combo)
         criteria_layout.addWidget(self.water_crit_edit)
         criteria_layout.addSpacing(10)
         criteria_layout.addWidget(cmin_label)
@@ -203,11 +217,23 @@ class EquationsPage(QWidget):
         empty_layout = QHBoxLayout()
 
         # Критерий Пусто и C макс
-        empty_label = QLabel("Критерий \"Пусто\", Fe <")
+        empty_label = QLabel("Критерий \"Пусто\"")
         empty_label.setFixedWidth(150)  # Та же ширина, что и у water_label
         self.empty_crit_edit = QLineEdit()
         self.empty_crit_edit.setFixedWidth(100)
         self.empty_crit_edit.setValidator(QDoubleValidator())
+
+        # Выбор линии для критерия
+        self.e_element_combo = QComboBox()
+        self.e_element_combo.setFixedWidth(100)
+        # Заполняем комбобоксы через функцию
+        self.populate_operand_combos(self.e_element_combo)
+
+        # Выбор знака <= 0 ; > 1 bool
+        self.e_operator_combo = QComboBox()
+        self.e_operator_combo.setFixedWidth(50)
+        # Заполняем комбобокс через функцию
+        self.populate_operator_combos(self.e_operator_combo)
 
         cmax_label = QLabel("C макс:")
         cmax_label.setFixedWidth(50)  # Та же ширина, что и у cmin_label
@@ -216,6 +242,8 @@ class EquationsPage(QWidget):
         self.c_max_edit.setValidator(QDoubleValidator())
 
         empty_layout.addWidget(empty_label)
+        empty_layout.addWidget(self.e_element_combo)
+        empty_layout.addWidget(self.e_operator_combo)
         empty_layout.addWidget(self.empty_crit_edit)
         empty_layout.addSpacing(10)
         empty_layout.addWidget(cmax_label)
@@ -293,7 +321,8 @@ class EquationsPage(QWidget):
             operation_combo.setFixedWidth(200)
 
             # Заполняем комбобоксы
-            self.populate_operand_combos(element1_combo, element2_combo)
+            self.populate_operand_combos(element1_combo)
+            self.populate_operand_combos(element2_combo)
             self.populate_operation_combo(operation_combo)
 
             layout.addWidget(QLabel("Элемент №1:"))
@@ -323,12 +352,10 @@ class EquationsPage(QWidget):
 
         return widget
 
-    def populate_operand_combos(self, combo1, combo2):
+    def populate_operand_combos(self, combo):
         """Заполняет комбобоксы операндов"""
-        combo1.clear()
-        combo2.clear()
-        combo1.addItem("---", 0)
-        combo2.addItem("---", 0)
+        combo.clear()
+        combo.addItem("---", 0)
 
         for item in self.range_config:
             if isinstance(item, dict):
@@ -336,8 +363,13 @@ class EquationsPage(QWidget):
                 name = item.get('name', '').strip()
                 if name and name != '-':
                     # Добавляем 1 к номеру для соответствия базе данных
-                    combo1.addItem(name, number)
-                    combo2.addItem(name, number)
+                    combo.addItem(name, number)
+
+    def populate_operator_combos(self, combo):
+        """Заполняет комбобокс неравенством"""
+        combo.clear()
+        combo.addItem("≤", 0)  # Меньше или равно
+        combo.addItem(">", 1)  # Строго больше
 
     def populate_operation_combo(self, combo):
         """Заполняет комбобокс операций"""
@@ -477,7 +509,12 @@ class EquationsPage(QWidget):
 
             # Заполняем критерии и диапазоны
             self.water_crit_edit.setText(str(equation_data.get('water_crit', 0)))
+            self.set_combo_value(self.w_element_combo, equation_data.get('w_sq_nmb', 0))
+            self.set_combo_value(self.w_operator_combo, equation_data.get('w_operator', 0))
             self.empty_crit_edit.setText(str(equation_data.get('empty_crit', 0)))
+            self.set_combo_value(self.e_element_combo, equation_data.get('e_sq_nmb', 0))
+            self.set_combo_value(self.e_operator_combo, equation_data.get('e_operator', 0))
+
             self.c_min_edit.setText(str(equation_data.get('c_min', 0)))
             self.c_max_edit.setText(str(equation_data.get('c_max', 0)))
 
@@ -526,9 +563,12 @@ class EquationsPage(QWidget):
         # Обновляем комбобоксы операндов для каждого члена уравнения
         for member_widget in self.equation_members:
             if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                self.populate_operand_combos(member_widget.element1_combo, member_widget.element2_combo)
+                self.populate_operand_combos(member_widget.element1_combo)
+                self.populate_operand_combos(member_widget.element2_combo)
             if hasattr(member_widget, 'operation_combo') and member_widget.operation_combo:
                 self.populate_operation_combo(member_widget.operation_combo)
+        self.populate_operand_combos(self.e_element_combo)
+        self.populate_operand_combos(self.w_element_combo)
 
     def set_combo_value(self, combo, value):
         """Устанавливает значение в комбобокс по данным"""
@@ -557,7 +597,11 @@ class EquationsPage(QWidget):
                 'mdl_nmb': mdl_nmb,
                 'el_nmb': el_nmb,
                 'water_crit': float(self.water_crit_edit.text()) if self.water_crit_edit.text() else 0,
+                'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
+                'w_operator': self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()),
                 'empty_crit': float(self.empty_crit_edit.text()) if self.empty_crit_edit.text() else 0,
+                'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
+                'e_operator': self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()),
                 'c_min': float(self.c_min_edit.text()) if self.c_min_edit.text() else 0,
                 'c_max': float(self.c_max_edit.text()) if self.c_max_edit.text() else 0
             }
@@ -608,7 +652,8 @@ class EquationsPage(QWidget):
             if meas_type == 0:
                 query = """
                 UPDATE PR_SET SET 
-                meas_type = ?, water_crit = ?, empty_crit = ?, c_min = ?, c_max = ?,
+                meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?, 
+                e_operator = ?, c_min = ?, c_max = ?,                
                 k_i_klin00 = ?, k_i_klin01 = ?,
                 k_i_alin00 = ?, 
                 k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
@@ -620,7 +665,9 @@ class EquationsPage(QWidget):
                 """
                 params = [
                     meas_type,
-                    update_data['water_crit'], update_data['empty_crit'], update_data['c_min'], update_data['c_max'],
+                    update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                    update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                    update_data['c_min'], update_data['c_max'],
                     update_data['k_i_klin00'], update_data['k_i_klin01'],
                     update_data['k_i_alin00'],
                     update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
@@ -638,8 +685,9 @@ class EquationsPage(QWidget):
             else:
                 query = """
                 UPDATE PR_SET SET 
-                meas_type = ?, water_crit = ?, empty_crit = ?, c_min = ?, c_max = ?,
-                k_c_klin00 = ?, k_c_klin01 = ?,
+                meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?, 
+                e_operator = ?, c_min = ?, c_max = ?,                
+                k_i_klin00 = ?, k_i_klin01 = ?,
                 k_c_alin00 = ?, 
                 k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
                 k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
@@ -650,8 +698,10 @@ class EquationsPage(QWidget):
                 """
                 params = [
                     meas_type,
-                    update_data['water_crit'], update_data['empty_crit'], update_data['c_min'], update_data['c_max'],
-                    update_data['k_c_klin00'], update_data['k_c_klin01'],
+                    update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                    update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                    update_data['c_min'], update_data['c_max'],
+                    update_data['k_i_klin00'], update_data['k_i_klin01'],
                     update_data['k_c_alin00'],
                     update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
                     update_data['operator_c_01'],
@@ -691,16 +741,6 @@ class EquationsPage(QWidget):
     def clear_equation(self):
         """Очищает введенное уравнение"""
         try:
-            # Очищаем коэффициенты корректировки
-            self.k0_edit.setText("0")
-            self.k1_edit.setText("0")
-
-            # Очищаем критерии и диапазоны
-            self.water_crit_edit.setText("0")
-            self.empty_crit_edit.setText("0")
-            self.c_min_edit.setText("0")
-            self.c_max_edit.setText("0")
-
             # Очищаем члены уравнения
             for i in range(6):
                 member_widget = self.equation_members[i]
