@@ -6,6 +6,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt#, QCoreApplication
 
+# Импортируем конфиг БД
+from config import DB_CONFIG
+
 # Настройки масштабирования для HighDPI
 # Эти атрибуты устарели в Qt6, но оставим на всякий случай
 #QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
@@ -45,7 +48,7 @@ class MainWindow(QMainWindow):
         self.current_role = "Инженер-программист"
 
         # Подключение к БД
-        self.db = Database()
+        self.db = Database(DB_CONFIG)
 
         # Основной разделитель
         splitter = QSplitter(Qt.Horizontal)

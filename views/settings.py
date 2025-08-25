@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from database.db import Database
-from config import get_config, set_config
+from config import get_config, set_config, AC_COUNT, PR_COUNT
 import os
 
 
@@ -16,6 +16,9 @@ class SettingsPage(QWidget):
         self.init_ui()
 
     def init_ui(self):
+
+        print(f"AC_COUNT: {AC_COUNT}, PR_COUNT: {PR_COUNT}")  # Доступ к переменным
+
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
