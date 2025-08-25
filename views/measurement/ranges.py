@@ -229,7 +229,7 @@ class RangesPage(QWidget):
             # ПРОВЕРЯЕМ СОГЛАСОВАННОСТЬ МЕЖДУ ТАБЛИЦАМИ
             if not self.validate_cross_table_consistency():
                 QMessageBox.warning(self, "Внимание",
-                    "Обнаружены несоответствия между таблицами SET02 и SET03. "
+                    "Обнаружены несоответствия между таблицами SET02, SET03 и SET07. "
                     "Рекомендуется выполнить полную синхронизацию.")
 
         except Exception as e:
@@ -469,42 +469,40 @@ class RangesPage(QWidget):
             # Не показываем QMessageBox здесь, чтобы не перегружать UI, просто логируем
 
     def synchronize_line_changes(self, old_ln_nmb, new_ln_nmb, sq_nmb):
-        """Синхронизирует изменения линий между SET02 и SET03 для всех приборов"""
+        """Синхронизирует изменения линий между SET02, SET03 и SET07 для всех записей с данным sq_nmb"""
         try:
-            ac_count = int(get_config("AC_COUNT", 1))
             updated_count = 0
 
             with self.db.connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute("BEGIN TRANSACTION")
 
-                # 1. Обновляем SET02 для всех приборов
-                for ac_nmb in range(1, ac_count + 1):
-                    # Находим ID строки в SET02
-                    target_id = None
-                    for row_id, data in self.device_data[ac_nmb].items():
-                        if data["sq_nmb"] == sq_nmb and data["ln_nmb"] == old_ln_nmb:
-                            target_id = row_id
-                            break
+                # 1. Обновляем SET02 для всех записей с данным sq_nmb и старым ln_nmb
+                query_set02 = f"""
+                UPDATE [{self.db.database_name}].[dbo].[SET02]
+                SET [ln_nmb] = ?
+                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
+                """
+                cursor.execute(query_set02, [new_ln_nmb, sq_nmb, old_ln_nmb])
+                updated_count += cursor.rowcount
 
-                    if target_id:
-                        query_set02 = f"""
-                        UPDATE [{self.db.database_name}].[dbo].[SET02]
-                        SET [ln_nmb] = ?
-                        WHERE [id] = ? AND [ac_nmb] = ?
-                        """
-                        cursor.execute(query_set02, [new_ln_nmb, target_id, ac_nmb])
-                        updated_count += 1
+                # 2. Обновляем SET03 для всех записей с данным sq_nmb и старым ln_nmb
+                query_set03 = f"""
+                UPDATE [{self.db.database_name}].[dbo].[SET03]
+                SET [ln_nmb] = ?
+                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
+                """
+                cursor.execute(query_set03, [new_ln_nmb, sq_nmb, old_ln_nmb])
+                updated_count += cursor.rowcount
 
-                # 2. Обновляем SET03 для всех приборов
-                for ac_nmb in range(1, ac_count + 1):
-                    query_set03 = f"""
-                    UPDATE [{self.db.database_name}].[dbo].[SET03]
-                    SET [ln_nmb] = ?
-                    WHERE [ac_nmb] = ? AND [sq_nmb] = ? AND [ln_nmb] = ?
-                    """
-                    cursor.execute(query_set03, [new_ln_nmb, ac_nmb, sq_nmb, old_ln_nmb])
-                    updated_count += cursor.rowcount
+                # 3. Обновляем SET07 для всех записей с данным sq_nmb и старым ln_nmb
+                query_set07 = f"""
+                UPDATE [{self.db.database_name}].[dbo].[SET07]
+                SET [ln_nmb] = ?
+                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
+                """
+                cursor.execute(query_set07, [new_ln_nmb, sq_nmb, old_ln_nmb])
+                updated_count += cursor.rowcount
 
                 cursor.execute("COMMIT")
                 conn.commit()
@@ -519,39 +517,66 @@ class RangesPage(QWidget):
             raise e
 
     def validate_cross_table_consistency(self):
-        """Проверяет согласованность между SET02 и SET03"""
+        """Проверяет согласованность ln_nmb для каждого sq_nmb между SET02, SET03 и SET07"""
         try:
-            ac_count = int(get_config("AC_COUNT", 1))
             inconsistencies = []
 
-            for ac_nmb in range(1, ac_count + 1):
-                # Проверяем SET02
-                set02_lines = {}
-                for data in self.device_data[ac_nmb].values():
-                    set02_lines[data["sq_nmb"]] = data["ln_nmb"]
+            # Получаем уникальные sq_nmb из SET02 (основная таблица)
+            query_sq_nmb = f"""
+            SELECT DISTINCT [sq_nmb]
+            FROM [{self.db.database_name}].[dbo].[SET02]
+            WHERE [sq_nmb] != 0
+            ORDER BY [sq_nmb]
+            """
+            sq_nmb_list = [row["sq_nmb"] for row in self.db.fetch_all(query_sq_nmb)]
+
+            for sq_nmb in sq_nmb_list:
+                # Получаем эталонное значение ln_nmb из SET02
+                query_set02 = f"""
+                SELECT DISTINCT [ln_nmb]
+                FROM [{self.db.database_name}].[dbo].[SET02]
+                WHERE [sq_nmb] = ?
+                """
+                set02_data = self.db.fetch_all(query_set02, [sq_nmb])
+
+                if len(set02_data) != 1:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: в SET02 найдено {len(set02_data)} различных ln_nmb")
+                    continue
+
+                expected_ln_nmb = set02_data[0]["ln_nmb"]
 
                 # Проверяем SET03
-                query = f"""
-                SELECT [sq_nmb], [ln_nmb]
+                query_set03 = f"""
+                SELECT DISTINCT [ln_nmb]
                 FROM [{self.db.database_name}].[dbo].[SET03]
-                WHERE [ac_nmb] = ? AND [ln_nmb] != -1
+                WHERE [sq_nmb] = ?
                 """
-                set03_data = self.db.fetch_all(query, [ac_nmb])
-                set03_lines = {row["sq_nmb"]: row["ln_nmb"] for row in set03_data}
+                set03_data = self.db.fetch_all(query_set03, [sq_nmb])
 
-                # Сравниваем
-                for sq_nmb, ln_nmb_set02 in set02_lines.items():
-                    if sq_nmb in set03_lines:
-                        if set03_lines[sq_nmb] != ln_nmb_set02:
-                            inconsistencies.append(
-                                f"Прибор {ac_nmb}, sq_nmb={sq_nmb}: "
-                                f"SET02={ln_nmb_set02} vs SET03={set03_lines[sq_nmb]}"
-                            )
-                    else:
-                        inconsistencies.append(f"Прибор {ac_nmb}: sq_nmb={sq_nmb} отсутствует в SET03")
+                if len(set03_data) == 0:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: отсутствует в SET03")
+                elif len(set03_data) > 1:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: в SET03 найдено {len(set03_data)} различных ln_nmb")
+                elif set03_data[0]["ln_nmb"] != expected_ln_nmb:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: SET02={expected_ln_nmb} vs SET03={set03_data[0]['ln_nmb']}")
+
+                # Проверяем SET07
+                query_set07 = f"""
+                SELECT DISTINCT [ln_nmb]
+                FROM [{self.db.database_name}].[dbo].[SET07]
+                WHERE [sq_nmb] = ?
+                """
+                set07_data = self.db.fetch_all(query_set07, [sq_nmb])
+
+                if len(set07_data) == 0:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: отсутствует в SET07")
+                elif len(set07_data) > 1:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: в SET07 найдено {len(set07_data)} различных ln_nmb")
+                elif set07_data[0]["ln_nmb"] != expected_ln_nmb:
+                    inconsistencies.append(f"sq_nmb={sq_nmb}: SET02={expected_ln_nmb} vs SET07={set07_data[0]['ln_nmb']}")
 
             if inconsistencies:
-                print("Обнаружены несоответствия между SET02 и SET03:")
+                print("Обнаружены несоответствия между таблицами:")
                 for issue in inconsistencies:
                     print(f"  - {issue}")
                 return False
