@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 import json
 from database.db import Database
 from pathlib import Path
+from config import AC_COUNT, PR_COUNT, DB_CONFIG
 
 
 class EquationsPage(QWidget):
@@ -82,6 +83,10 @@ class EquationsPage(QWidget):
         self.setMinimumWidth(1200)
         self.setMinimumHeight(800)
 
+        # Используем переменные из config
+        ac_count = AC_COUNT
+        pr_count = PR_COUNT
+
         title = QLabel("Ввод уравнений связи")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         title.setAlignment(Qt.AlignCenter)
@@ -103,7 +108,7 @@ class EquationsPage(QWidget):
         product_label.setFixedHeight(20)
 
         self.product_combo = QComboBox()
-        products = [f"Продукт {i}" for i in range(1, 9)]
+        products = [f"Продукт {i}" for i in range(1, pr_count + 1)]
         self.product_combo.addItems(products)
         self.product_combo.setFixedSize(150, 30)
 
