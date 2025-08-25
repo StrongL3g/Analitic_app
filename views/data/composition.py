@@ -312,8 +312,14 @@ class CompositionPage(QWidget):
             for row in rows:
                 row_pos = self.table.rowCount()
                 self.table.insertRow(row_pos)
-                self.table.setItem(row_pos, 0, QTableWidgetItem(str(row.get('id', ''))))
-                self.table.setItem(row_pos, 1, QTableWidgetItem(str(row.get('mdl_nmb', ''))))
+
+                id_item = QTableWidgetItem(str(row.get('id', '')))
+                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования ID
+                self.table.setItem(row_pos, 0, id_item)
+
+                model_item = QTableWidgetItem(str(row.get('mdl_nmb', '')))
+                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования модели
+                self.table.setItem(row_pos, 1, model_item)
 
                 meas_dt = row.get('meas_dt')
                 if isinstance(meas_dt, str):
@@ -323,7 +329,9 @@ class CompositionPage(QWidget):
                 else:
                     dt_str = str(meas_dt) if meas_dt else ""
 
-                self.table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
+                time_item = QTableWidgetItem(dt_str)
+                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
+                self.table.setItem(row_pos, 2, time_item)
 
                 # Заполнение столбцов интенсивностей
                 for i in range(num_columns):
@@ -404,8 +412,13 @@ class CompositionPage(QWidget):
                 self.table.insertRow(row_pos)
 
                 # Добавляем данные в таблицу
-                self.table.setItem(row_pos, 0, QTableWidgetItem(str(row.get('id', ''))))
-                self.table.setItem(row_pos, 1, QTableWidgetItem(str(row.get('mdl_nmb', ''))))
+                id_item = QTableWidgetItem(str(row.get('id', '')))
+                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования ID
+                self.table.setItem(row_pos, 0, id_item)
+
+                model_item = QTableWidgetItem(str(row.get('mdl_nmb', '')))
+                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования модели
+                self.table.setItem(row_pos, 1, model_item)
 
                 meas_dt = row.get('meas_dt')
                 if isinstance(meas_dt, str):
@@ -415,7 +428,9 @@ class CompositionPage(QWidget):
                 else:
                     dt_str = str(meas_dt) if meas_dt else ""
 
-                self.table.setItem(row_pos, 2, QTableWidgetItem(dt_str))
+                time_item = QTableWidgetItem(dt_str)
+                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
+                self.table.setItem(row_pos, 2, time_item)
 
                 for i, element in enumerate(elements, 1):
                     if i > 8:
