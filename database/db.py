@@ -1,21 +1,20 @@
 # database/db.py
 import pyodbc
-from config import DB_CONFIG
 from contextlib import contextmanager
 
+# Убрали импорт из config здесь, будем передавать конфиг через конструктор
 
 class Database:
-    def __init__(self):
-
-        # Сохраняем имя базы как атрибут объекта
-        self.database_name = DB_CONFIG['database']
+    def __init__(self, db_config):
+        self.db_config = db_config
+        self.database_name = db_config['database']
 
         self.connection_string = (
-            f"DRIVER={{{DB_CONFIG['driver']}}};"
-            f"SERVER={DB_CONFIG['server']},{DB_CONFIG['port']};"
-            f"DATABASE={DB_CONFIG['database']};"
-            f"UID={DB_CONFIG['user']};"
-            f"PWD={DB_CONFIG['password']};"
+            f"DRIVER={{{db_config['driver']}}};"
+            f"SERVER={db_config['server']},{db_config['port']};"
+            f"DATABASE={db_config['database']};"
+            f"UID={db_config['user']};"
+            f"PWD={db_config['password']};"
             f"Encrypt=no;"
             f"TrustServerCertificate=yes;"
         )
