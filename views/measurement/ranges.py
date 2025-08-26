@@ -225,6 +225,8 @@ class RangesPage(QWidget):
 
             # После загрузки данных экспортируем в JSON
             self.export_ranges_to_json()
+            # Генерируем математические взаимодействия линий
+            self.generate_lines_math_interactions_json()
 
             # ПРОВЕРЯЕМ СОГЛАСОВАННОСТЬ МЕЖДУ ТАБЛИЦАМИ
             if not self.validate_cross_table_consistency():
@@ -406,6 +408,8 @@ class RangesPage(QWidget):
             if updated_count_total > 0:
                 QMessageBox.information(self, "Успех", f"Сохранено {updated_count_total} изменений")
                 self.load_data()  # Полная перезагрузка
+                # После перезагрузки генерируем математические взаимодействия линий
+                self.generate_lines_math_interactions_json()
             else:
                 QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
 
@@ -585,3 +589,140 @@ class RangesPage(QWidget):
         except Exception as e:
             print(f"Ошибка проверки согласованности: {e}")
             return False
+
+    def generate_lines_math_interactions_json(self):
+        """Генерирует JSON-файл с математическими взаимодействиями линий"""
+        try:
+            # Загружаем данные из range.json
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            config_dir = os.path.join(base_dir, "..", "..", "config")
+            range_json_path = os.path.join(config_dir, "range.json")
+
+            if not os.path.exists(range_json_path):
+                print(f"Файл {range_json_path} не найден")
+                return
+
+            with open(range_json_path, "r", encoding="utf-8") as f:
+                range_data = json.load(f)
+
+            # Фильтруем активные линии (исключая "-")
+            active_lines = []
+            for line in range_data:
+                if line["name"] != "-":
+                    # Нумерация начинается с 0
+                    adjusted_number = line["number"] - 1
+                    active_lines.append({
+                        "original_number": line["number"],
+                        "adjusted_number": adjusted_number,
+                        "name": line["name"]
+                    })
+
+            # Создаем структуру данных для математических взаимодействий
+            interactions = []
+
+            # Операции: 0=пустая строка, 1=линия, 2=умножение, 3=деление, 4=возведение в квадрат,
+            # 5=обратное значение, 6=деление на квадрат, 7=обратное значение квадрата
+            operations = [
+                {"code": 0, "description": "Пустая строка"},
+                {"code": 1, "description": "Линия"},
+                {"code": 2, "description": "Умножение"},
+                {"code": 3, "description": "Деление"},
+                {"code": 4, "description": "Квадрат"},
+                {"code": 5, "description": "Обратное значение"},
+                {"code": 6, "description": "Деление на квадрат"},
+                {"code": 7, "description": "Обратное значение квадрата"}
+            ]
+
+            # 0. Пустая строка (первая всегда)
+            interactions.append({
+                "description": "",
+                "x1": 0,
+                "x2": 0,
+                "op": 0
+            })
+
+            # 1. Линии
+            for line in active_lines:
+                interactions.append({
+                    "description": line["name"],
+                    "x1": line["adjusted_number"],
+                    "x2": 0,
+                    "op": 1
+                })
+
+            # 2. Умножение линий
+            for i, line1 in enumerate(active_lines):
+                for j, line2 in enumerate(active_lines):
+                    if i < j:  # Исключаем дубликаты и умножение на себя
+                        interactions.append({
+                            "description": f"{line1['name']} * {line2['name']}",
+                            "x1": line1["adjusted_number"],
+                            "x2": line2["adjusted_number"],
+                            "op": 2
+                        })
+
+            # 3. Деление линий
+            for line1 in active_lines:
+                for line2 in active_lines:
+                    if line1["adjusted_number"] != line2["adjusted_number"]:
+                        interactions.append({
+                            "description": f"{line1['name']} / {line2['name']}",
+                            "x1": line1["adjusted_number"],
+                            "x2": line2["adjusted_number"],
+                            "op": 3
+                        })
+
+            # 4. Квадраты линий
+            for line in active_lines:
+                interactions.append({
+                    "description": f"{line['name']} ^ 2",
+                    "x1": line["adjusted_number"],
+                    "x2": 0,
+                    "op": 4
+                })
+
+            # 5. Обратные значения линий
+            for line in active_lines:
+                interactions.append({
+                    "description": f"1 / {line['name']}",
+                    "x1": line["adjusted_number"],
+                    "x2": 0,
+                    "op": 5
+                })
+
+            # 6. Деление на квадраты линий
+            for line1 in active_lines:
+                for line2 in active_lines:
+                    if line1["adjusted_number"] != line2["adjusted_number"]:
+                        interactions.append({
+                            "description": f"{line1['name']} / {line2['name']} ^ 2",
+                            "x1": line1["adjusted_number"],
+                            "x2": line2["adjusted_number"],
+                            "op": 6
+                        })
+
+            # 7. Обратные значения квадратов линий
+            for line in active_lines:
+                interactions.append({
+                    "description": f"1 / {line['name']} ^ 2",
+                    "x1": line["adjusted_number"],
+                    "x2": 0,
+                    "op": 7
+                })
+
+            # Сохраняем в файл
+            output_json_path = os.path.join(config_dir, "lines_math_interactions.json")
+
+            with open(output_json_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "operations": operations,
+                    "lines": active_lines,
+                    "interactions": interactions
+                }, f, ensure_ascii=False, indent=4)
+
+            print(f"JSON математических взаимодействий линий сохранён: {output_json_path}")
+            print(f"Создано {len(interactions)} взаимодействий")
+
+        except Exception as e:
+            error_msg = f"Ошибка при генерации JSON математических взаимодействий линий: {e}"
+            print(error_msg)

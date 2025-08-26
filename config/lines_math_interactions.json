@@ -1,0 +1,879 @@
+{
+    "operations": [
+        {
+            "code": 0,
+            "description": "Пустая строка"
+        },
+        {
+            "code": 1,
+            "description": "Линия"
+        },
+        {
+            "code": 2,
+            "description": "Умножение"
+        },
+        {
+            "code": 3,
+            "description": "Деление"
+        },
+        {
+            "code": 4,
+            "description": "Квадрат"
+        },
+        {
+            "code": 5,
+            "description": "Обратное значение"
+        },
+        {
+            "code": 6,
+            "description": "Деление на квадрат"
+        },
+        {
+            "code": 7,
+            "description": "Обратное значение квадрата"
+        }
+    ],
+    "lines": [
+        {
+            "original_number": 1,
+            "adjusted_number": 0,
+            "name": "NC"
+        },
+        {
+            "original_number": 2,
+            "adjusted_number": 1,
+            "name": "INT"
+        },
+        {
+            "original_number": 3,
+            "adjusted_number": 2,
+            "name": "Fe_Ka"
+        },
+        {
+            "original_number": 4,
+            "adjusted_number": 3,
+            "name": "Co_Ka"
+        },
+        {
+            "original_number": 5,
+            "adjusted_number": 4,
+            "name": "Ni_Ka"
+        },
+        {
+            "original_number": 6,
+            "adjusted_number": 5,
+            "name": "Cu_Ka"
+        },
+        {
+            "original_number": 12,
+            "adjusted_number": 11,
+            "name": "Zn_Ka"
+        }
+    ],
+    "interactions": [
+        {
+            "description": "",
+            "x1": 0,
+            "x2": 0,
+            "op": 0
+        },
+        {
+            "description": "NC",
+            "x1": 0,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "INT",
+            "x1": 1,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Fe_Ka",
+            "x1": 2,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Co_Ka",
+            "x1": 3,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Ni_Ka",
+            "x1": 4,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Cu_Ka",
+            "x1": 5,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Zn_Ka",
+            "x1": 11,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "NC * INT",
+            "x1": 0,
+            "x2": 1,
+            "op": 2
+        },
+        {
+            "description": "NC * Fe_Ka",
+            "x1": 0,
+            "x2": 2,
+            "op": 2
+        },
+        {
+            "description": "NC * Co_Ka",
+            "x1": 0,
+            "x2": 3,
+            "op": 2
+        },
+        {
+            "description": "NC * Ni_Ka",
+            "x1": 0,
+            "x2": 4,
+            "op": 2
+        },
+        {
+            "description": "NC * Cu_Ka",
+            "x1": 0,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "NC * Zn_Ka",
+            "x1": 0,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "INT * Fe_Ka",
+            "x1": 1,
+            "x2": 2,
+            "op": 2
+        },
+        {
+            "description": "INT * Co_Ka",
+            "x1": 1,
+            "x2": 3,
+            "op": 2
+        },
+        {
+            "description": "INT * Ni_Ka",
+            "x1": 1,
+            "x2": 4,
+            "op": 2
+        },
+        {
+            "description": "INT * Cu_Ka",
+            "x1": 1,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "INT * Zn_Ka",
+            "x1": 1,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Co_Ka",
+            "x1": 2,
+            "x2": 3,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Ni_Ka",
+            "x1": 2,
+            "x2": 4,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Cu_Ka",
+            "x1": 2,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Zn_Ka",
+            "x1": 2,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * Ni_Ka",
+            "x1": 3,
+            "x2": 4,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * Cu_Ka",
+            "x1": 3,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * Zn_Ka",
+            "x1": 3,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "Ni_Ka * Cu_Ka",
+            "x1": 4,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Ni_Ka * Zn_Ka",
+            "x1": 4,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "Cu_Ka * Zn_Ka",
+            "x1": 5,
+            "x2": 11,
+            "op": 2
+        },
+        {
+            "description": "NC / INT",
+            "x1": 0,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "NC / Fe_Ka",
+            "x1": 0,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "NC / Co_Ka",
+            "x1": 0,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "NC / Ni_Ka",
+            "x1": 0,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "NC / Cu_Ka",
+            "x1": 0,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "NC / Zn_Ka",
+            "x1": 0,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "INT / NC",
+            "x1": 1,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "INT / Fe_Ka",
+            "x1": 1,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "INT / Co_Ka",
+            "x1": 1,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "INT / Ni_Ka",
+            "x1": 1,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "INT / Cu_Ka",
+            "x1": 1,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "INT / Zn_Ka",
+            "x1": 1,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / NC",
+            "x1": 2,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / INT",
+            "x1": 2,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Co_Ka",
+            "x1": 2,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Ni_Ka",
+            "x1": 2,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Cu_Ka",
+            "x1": 2,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Zn_Ka",
+            "x1": 2,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / NC",
+            "x1": 3,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / INT",
+            "x1": 3,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Fe_Ka",
+            "x1": 3,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Ni_Ka",
+            "x1": 3,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Cu_Ka",
+            "x1": 3,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Zn_Ka",
+            "x1": 3,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / NC",
+            "x1": 4,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / INT",
+            "x1": 4,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Fe_Ka",
+            "x1": 4,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Co_Ka",
+            "x1": 4,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Cu_Ka",
+            "x1": 4,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Zn_Ka",
+            "x1": 4,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / NC",
+            "x1": 5,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / INT",
+            "x1": 5,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Fe_Ka",
+            "x1": 5,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Co_Ka",
+            "x1": 5,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Ni_Ka",
+            "x1": 5,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Zn_Ka",
+            "x1": 5,
+            "x2": 11,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / NC",
+            "x1": 11,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / INT",
+            "x1": 11,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Fe_Ka",
+            "x1": 11,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Co_Ka",
+            "x1": 11,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Ni_Ka",
+            "x1": 11,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Cu_Ka",
+            "x1": 11,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "NC ^ 2",
+            "x1": 0,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "INT ^ 2",
+            "x1": 1,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Fe_Ka ^ 2",
+            "x1": 2,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Co_Ka ^ 2",
+            "x1": 3,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Ni_Ka ^ 2",
+            "x1": 4,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Cu_Ka ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Zn_Ka ^ 2",
+            "x1": 11,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "1 / NC",
+            "x1": 0,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / INT",
+            "x1": 1,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Fe_Ka",
+            "x1": 2,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Co_Ka",
+            "x1": 3,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Ni_Ka",
+            "x1": 4,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Cu_Ka",
+            "x1": 5,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Zn_Ka",
+            "x1": 11,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "NC / INT ^ 2",
+            "x1": 0,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "NC / Fe_Ka ^ 2",
+            "x1": 0,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "NC / Co_Ka ^ 2",
+            "x1": 0,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "NC / Ni_Ka ^ 2",
+            "x1": 0,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "NC / Cu_Ka ^ 2",
+            "x1": 0,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "NC / Zn_Ka ^ 2",
+            "x1": 0,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "INT / NC ^ 2",
+            "x1": 1,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "INT / Fe_Ka ^ 2",
+            "x1": 1,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "INT / Co_Ka ^ 2",
+            "x1": 1,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "INT / Ni_Ka ^ 2",
+            "x1": 1,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "INT / Cu_Ka ^ 2",
+            "x1": 1,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "INT / Zn_Ka ^ 2",
+            "x1": 1,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / NC ^ 2",
+            "x1": 2,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / INT ^ 2",
+            "x1": 2,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Co_Ka ^ 2",
+            "x1": 2,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Ni_Ka ^ 2",
+            "x1": 2,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Cu_Ka ^ 2",
+            "x1": 2,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Zn_Ka ^ 2",
+            "x1": 2,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / NC ^ 2",
+            "x1": 3,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / INT ^ 2",
+            "x1": 3,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Fe_Ka ^ 2",
+            "x1": 3,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Ni_Ka ^ 2",
+            "x1": 3,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Cu_Ka ^ 2",
+            "x1": 3,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Zn_Ka ^ 2",
+            "x1": 3,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / NC ^ 2",
+            "x1": 4,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / INT ^ 2",
+            "x1": 4,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Fe_Ka ^ 2",
+            "x1": 4,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Co_Ka ^ 2",
+            "x1": 4,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Cu_Ka ^ 2",
+            "x1": 4,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Zn_Ka ^ 2",
+            "x1": 4,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / NC ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / INT ^ 2",
+            "x1": 5,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Fe_Ka ^ 2",
+            "x1": 5,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Co_Ka ^ 2",
+            "x1": 5,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Ni_Ka ^ 2",
+            "x1": 5,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Zn_Ka ^ 2",
+            "x1": 5,
+            "x2": 11,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / NC ^ 2",
+            "x1": 11,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / INT ^ 2",
+            "x1": 11,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Fe_Ka ^ 2",
+            "x1": 11,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Co_Ka ^ 2",
+            "x1": 11,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Ni_Ka ^ 2",
+            "x1": 11,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Cu_Ka ^ 2",
+            "x1": 11,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "1 / NC ^ 2",
+            "x1": 0,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / INT ^ 2",
+            "x1": 1,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Fe_Ka ^ 2",
+            "x1": 2,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Co_Ka ^ 2",
+            "x1": 3,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Ni_Ka ^ 2",
+            "x1": 4,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Cu_Ka ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Zn_Ka ^ 2",
+            "x1": 11,
+            "x2": 0,
+            "op": 7
+        }
+    ]
+}
