@@ -117,7 +117,8 @@ class ElementsPage(QWidget):
 
             # Формируем JSON после загрузки
             self.export_to_json()
-
+            # Обновляем JSON с математическими взаимодействиями
+            self.generate_math_interactions_json()
             # Показываем сообщение об успешной загрузке только если это не первое открытие
             if not self.first_load:
                 QMessageBox.information(self, "Успех", f"Загружено {len(data)} элементов")
@@ -169,6 +170,8 @@ class ElementsPage(QWidget):
                 print(f"Сохранено: {updated_count} строк")
                 # После сохранения обновляем JSON
                 self.export_to_json()
+                # Обновляем JSON с математическими взаимодействиями
+                self.generate_math_interactions_json()
                 # Показываем сообщение об успешном сохранении
                 QMessageBox.information(self, "Успех", f"Сохранено {updated_count} изменений")
             else:
@@ -207,4 +210,163 @@ class ElementsPage(QWidget):
 
         except Exception as e:
             error_msg = f"Ошибка при экспорте в JSON: {e}"
+            print(error_msg)
+
+    def generate_math_interactions_json(self):
+        """Генерирует JSON-файл с математическими взаимодействиями элементов"""
+        try:
+            # Получаем активные элементы (исключая "-" и "INT")
+            active_elements = []
+            for row in range(self.table.rowCount()):
+                item_nmb = self.table.item(row, 0)
+                combo = self.table.cellWidget(row, 1)
+
+                if item_nmb and combo:
+                    element_name = combo.currentText()
+                    if element_name != "-" and element_name != "INT":
+                        # Нумерация начинается с 0
+                        adjusted_number = int(item_nmb.text()) - 1
+                        active_elements.append({
+                            "original_number": int(item_nmb.text()),
+                            "adjusted_number": adjusted_number,
+                            "name": element_name
+                        })
+
+            # Создаем структуру данных для математических взаимодействий
+            math_interactions = []
+
+            # Операции: 0=пустая строка, 1=элемент, 2=умножение, 3=деление, 4=возведение в квадрат,
+            # 5=обратное значение, 6=деление на квадрат, 7=обратное значение квадрата
+            operations = [
+                {"code": 0, "description": "Пустая строка"},
+                {"code": 1, "description": "Элемент"},
+                {"code": 2, "description": "Умножение"},
+                {"code": 3, "description": "Деление"},
+                {"code": 4, "description": "Квадрат"},
+                {"code": 5, "description": "Обратное значение"},
+                {"code": 6, "description": "Деление на квадрат"},
+                {"code": 7, "description": "Обратное значение квадрата"}
+            ]
+
+            # Для каждого активного элемента создаем набор взаимодействий
+            for i, element in enumerate(active_elements):
+                element_set = {
+                    "element_name": element["name"],
+                    "element_original_number": element["original_number"],
+                    "element_adjusted_number": element["adjusted_number"],
+                    "interactions": []
+                }
+
+                # 0. Пустая строка (первая всегда)
+                element_set["interactions"].append({
+                    "description": "",
+                    "x1": 0,
+                    "x2": 0,
+                    "op": 0
+                })
+
+                # 1. Элементы (кроме текущего)
+                for other_element in active_elements:
+                    if other_element["adjusted_number"] != element["adjusted_number"]:
+                        element_set["interactions"].append({
+                            "description": other_element["name"],
+                            "x1": other_element["adjusted_number"],
+                            "x2": 0,
+                            "op": 1
+                        })
+
+                # 2. Умножение с другими элементами
+                for other_element1 in active_elements:
+                    for other_element2 in active_elements:
+                        if (other_element1["adjusted_number"] != element["adjusted_number"] and
+                            other_element2["adjusted_number"] != element["adjusted_number"]):
+                            # Исключаем умножение элемента на самого себя
+                            if other_element1["adjusted_number"] != other_element2["adjusted_number"]:
+                                element_set["interactions"].append({
+                                    "description": f"{other_element1['name']} * {other_element2['name']}",
+                                    "x1": other_element1["adjusted_number"],
+                                    "x2": other_element2["adjusted_number"],
+                                    "op": 2
+                                })
+
+                # 3. Деление элементов
+                for other_element1 in active_elements:
+                    for other_element2 in active_elements:
+                        if (other_element1["adjusted_number"] != element["adjusted_number"] and
+                            other_element2["adjusted_number"] != element["adjusted_number"]):
+                            # Исключаем деление элемента на самого себя
+                            if other_element1["adjusted_number"] != other_element2["adjusted_number"]:
+                                element_set["interactions"].append({
+                                    "description": f"{other_element1['name']} / {other_element2['name']}",
+                                    "x1": other_element1["adjusted_number"],
+                                    "x2": other_element2["adjusted_number"],
+                                    "op": 3
+                                })
+
+                # 4. Квадраты элементов (кроме текущего)
+                for other_element in active_elements:
+                    if other_element["adjusted_number"] != element["adjusted_number"]:
+                        element_set["interactions"].append({
+                            "description": f"{other_element['name']} ^ 2",
+                            "x1": other_element["adjusted_number"],
+                            "x2": 0,
+                            "op": 4
+                        })
+
+                # 5. Обратные значения элементов (кроме текущего)
+                for other_element in active_elements:
+                    if other_element["adjusted_number"] != element["adjusted_number"]:
+                        element_set["interactions"].append({
+                            "description": f"1 / {other_element['name']}",
+                            "x1": other_element["adjusted_number"],
+                            "x2": 0,
+                            "op": 5
+                        })
+
+                # 6. Деление на квадраты элементов
+                for other_element1 in active_elements:
+                    for other_element2 in active_elements:
+                        if (other_element1["adjusted_number"] != element["adjusted_number"] and
+                            other_element2["adjusted_number"] != element["adjusted_number"]):
+                            # Исключаем деление элемента на свой собственный квадрат
+                            if other_element1["adjusted_number"] != other_element2["adjusted_number"]:
+                                element_set["interactions"].append({
+                                    "description": f"{other_element1['name']} / {other_element2['name']} ^ 2",
+                                    "x1": other_element1["adjusted_number"],
+                                    "x2": other_element2["adjusted_number"],
+                                    "op": 6
+                                })
+
+                # 7. Обратные значения квадратов элементов (кроме текущего)
+                for other_element in active_elements:
+                    if other_element["adjusted_number"] != element["adjusted_number"]:
+                        element_set["interactions"].append({
+                            "description": f"1 / {other_element['name']} ^ 2",
+                            "x1": other_element["adjusted_number"],
+                            "x2": 0,
+                            "op": 7
+                        })
+
+                math_interactions.append(element_set)
+
+            # Сохраняем в файл
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            config_dir = os.path.join(base_dir, "..", "..", "config")
+            os.makedirs(config_dir, exist_ok=True)
+            json_path = os.path.join(config_dir, "math_interactions.json")
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "operations": operations,
+                    "elements": active_elements,
+                    "interactions": math_interactions
+                }, f, ensure_ascii=False, indent=4)
+
+            print(f"JSON математических взаимодействий сохранён: {json_path}")
+            print(f"Создано {len(math_interactions)} наборов взаимодействий")
+            if math_interactions:
+                print(f"Всего операций в каждом наборе: {len(math_interactions[0]['interactions'])}")
+
+        except Exception as e:
+            error_msg = f"Ошибка при генерации JSON математических взаимодействий: {e}"
             print(error_msg)
