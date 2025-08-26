@@ -596,48 +596,34 @@ class EquationsPage(QWidget):
         Сохраняет изменения уравнения в базу.
         Если product_numbers и model_numbers переданы, применяет изменения массово.
         """
+        import traceback
+        print("Вызов save_equation_changes с:")
+        print("product_numbers:", product_numbers)
+        print("model_numbers:", model_numbers)
+        traceback.print_stack()
+
         try:
             if self.current_editing_row is None or not self.current_equation_data:
-                # Можно добавить проверку, если это массовое применение, то current_editing_row может быть None
-                # Но для простоты оставим как есть, предполагая, что данные берутся из полей редактирования
-                # Даже при массовом применении. Если нужно брать из другого источника, логику нужно адаптировать.
-                 # Для массового применения current_editing_row может не использоваться, но current_equation_data
-                 # всё равно нужно для получения el_nmb.
-                 if product_numbers is None or model_numbers is None:
-                     # Режим обычного сохранения
-                     QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
-                     return
-                 # Если это массовое применение, продолжаем, используя current_equation_data для el_nmb
+                if product_numbers is False or model_numbers is None:
+                    QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
+                    return
 
-            # Собираем данные из полей редактора (это общая часть)
+            # Собираем данные из полей редактора
             meas_type = 0 if self.regression_radio.isChecked() else 1
-            # el_nmb всегда берется из текущего редактируемого уравнения
             el_nmb = self.current_equation_data.get('el_nmb', 0)
 
-
-            # Подготавливаем данные для обновления (это общая часть)
+            # Подготавливаем данные для обновления
             update_data = {
-                # meas_type, el_nmb фиксированы для обновления
                 'meas_type': meas_type,
                 'el_nmb': el_nmb,
-                # Поля критериев и диапазонов (если нужно обновлять их тоже при массовом применении - оставляем,
-                # если только коэффициенты и члены - можно закомментировать или удалить эти строки)
-                # 'water_crit': float(self.water_crit_edit.text()) if self.water_crit_edit.text() else 0,
-                # 'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
-                # 'w_operator': self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()),
-                # 'empty_crit': float(self.empty_crit_edit.text()) if self.empty_crit_edit.text() else 0,
-                # 'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                # 'e_operator': self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()),
-                # 'c_min': float(self.c_min_edit.text()) if self.c_min_edit.text() else 0,
-                # 'c_max': float(self.c_max_edit.text()) if self.c_max_edit.text() else 0
             }
 
-            # --- Добавлено: Определяем, обновлять ли критерии и диапазоны ---
-            update_criteria = product_numbers is None and model_numbers is None
+            # Определяем, обновлять ли критерии и диапазоны
+            update_criteria = product_numbers is False and model_numbers is None
 
             if update_criteria:
-                 # Обычное сохранение - обновляем все поля
-                 update_data.update({
+                # Обычное сохранение - обновляем ВСЕ поля
+                update_data.update({
                     'water_crit': float(self.water_crit_edit.text()) if self.water_crit_edit.text() else 0,
                     'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
                     'w_operator': self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()),
@@ -646,10 +632,9 @@ class EquationsPage(QWidget):
                     'e_operator': self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()),
                     'c_min': float(self.c_min_edit.text()) if self.c_min_edit.text() else 0,
                     'c_max': float(self.c_max_edit.text()) if self.c_max_edit.text() else 0
-                 })
-            # --- Конец добавления ---
+                })
 
-            # Коэффициенты корректировки (общая часть)
+            # Коэффициенты корректировки
             if meas_type == 0:
                 update_data['k_i_klin00'] = float(self.k0_edit.text()) if self.k0_edit.text() else 0
                 update_data['k_i_klin01'] = float(self.k1_edit.text()) if self.k1_edit.text() else 0
@@ -657,13 +642,13 @@ class EquationsPage(QWidget):
                 update_data['k_c_klin00'] = float(self.k0_edit.text()) if self.k0_edit.text() else 0
                 update_data['k_c_klin01'] = float(self.k1_edit.text()) if self.k1_edit.text() else 0
 
-            # Члены уравнения (общая часть)
+            # Члены уравнения
             for i in range(6):
                 member_widget = self.equation_members[i]
                 coeff_value = float(member_widget.coeff_edit.text()) if member_widget.coeff_edit.text() else 0
+
                 if meas_type == 0:
                     update_data[f'k_i_alin{i:02d}'] = coeff_value
-                    # Операнды и операции только для A1-A5
                     if i > 0 and member_widget.element1_combo:
                         element1_value = member_widget.element1_combo.itemData(
                             member_widget.element1_combo.currentIndex())
@@ -671,13 +656,11 @@ class EquationsPage(QWidget):
                             member_widget.element2_combo.currentIndex())
                         operation_value = member_widget.operation_combo.itemData(
                             member_widget.operation_combo.currentIndex())
-                        # Вычитаем 1 из номера для соответствия базе данных
                         update_data[f'operand_i_01_{i:02d}'] = element1_value - 1 if element1_value > 0 else 0
                         update_data[f'operand_i_02_{i:02d}'] = element2_value - 1 if element2_value > 0 else 0
                         update_data[f'operator_i_{i:02d}'] = operation_value if operation_value else 0
                 else:
                     update_data[f'k_c_alin{i:02d}'] = coeff_value
-                    # Операнды и операции только для A1-A5
                     if i > 0 and member_widget.element1_combo:
                         element1_value = member_widget.element1_combo.itemData(
                             member_widget.element1_combo.currentIndex())
@@ -685,16 +668,13 @@ class EquationsPage(QWidget):
                             member_widget.element2_combo.currentIndex())
                         operation_value = member_widget.operation_combo.itemData(
                             member_widget.operation_combo.currentIndex())
-                        # Вычитаем 1 из номера для соответствия базе данных
                         update_data[f'operand_c_01_{i:02d}'] = element1_value - 1 if element1_value > 0 else 0
                         update_data[f'operand_c_02_{i:02d}'] = element2_value - 1 if element2_value > 0 else 0
                         update_data[f'operator_c_{i:02d}'] = operation_value if operation_value else 0
 
-            # --- Формируем SQL запрос ---
-            # Определяем, какие поля обновлять
+            # Формируем SQL запрос
             if meas_type == 0:
                 if update_criteria:
-                    # Полный запрос для обычного сохранения
                     base_fields = """
                     meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?,
                     e_operator = ?, c_min = ?, c_max = ?,
@@ -725,7 +705,6 @@ class EquationsPage(QWidget):
                         update_data['operator_i_05']
                     ]
                 else:
-                    # Запрос только для коэффициентов и членов уравнения
                     base_fields = """
                     k_i_klin00 = ?, k_i_klin01 = ?,
                     k_i_alin00 = ?,
@@ -749,9 +728,8 @@ class EquationsPage(QWidget):
                         update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
                         update_data['operator_i_05']
                     ]
-            else: # meas_type == 1
-                 if update_criteria:
-                    # Полный запрос для обычного сохранения
+            else:
+                if update_criteria:
                     base_fields = """
                     meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?,
                     e_operator = ?, c_min = ?, c_max = ?,
@@ -781,8 +759,7 @@ class EquationsPage(QWidget):
                         update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
                         update_data['operator_c_05']
                     ]
-                 else:
-                    # Запрос только для коэффициентов и членов уравнения
+                else:
                     base_fields = """
                     k_c_klin00 = ?, k_c_klin01 = ?,
                     k_c_alin00 = ?,
@@ -807,10 +784,9 @@ class EquationsPage(QWidget):
                         update_data['operator_c_05']
                     ]
 
-
-            # --- Выполняем запрос ---
-            if product_numbers is not None and model_numbers is not None:
-                # --- Режим массового применения ---
+            # Выполняем запрос
+            if product_numbers is not False and model_numbers is not None:
+                # Режим массового применения
                 if not product_numbers or not model_numbers:
                     QMessageBox.warning(self, "Ошибка", "Списки продуктов и моделей не могут быть пустыми.")
                     return
@@ -819,11 +795,10 @@ class EquationsPage(QWidget):
                 product_placeholders = ','.join(['?' for _ in product_numbers])
                 model_placeholders = ','.join(['?' for _ in model_numbers])
 
-                # Подготавливаем параметры: сначала данные для обновления, потом списки продуктов и моделей
+                # Подготавливаем параметры
                 params = base_params.copy()
                 params.extend(product_numbers)
                 params.extend(model_numbers)
-                # el_nmb остается фиксированным для текущего редактируемого уравнения
                 params.append(el_nmb)
 
                 query = f"""
@@ -837,15 +812,14 @@ class EquationsPage(QWidget):
 
                 # Уведомление об успехе
                 QMessageBox.information(self, "Успех", f"Коэффициенты и члены уравнения успешно применены "
-                                                      f"для продуктов {', '.join(map(str, product_numbers))} "
-                                                      f"и моделей {', '.join(map(str, model_numbers))}!")
-
+                                                       f"для продуктов {', '.join(map(str, product_numbers))} "
+                                                       f"и моделей {', '.join(map(str, model_numbers))}!")
             else:
-                # --- Режим обычного сохранения ---
+                # Режим обычного сохранения
                 pr_nmb = self.current_equation_data.get('pr_nmb', 0)
                 mdl_nmb = self.current_equation_data.get('mdl_nmb', 0)
 
-                # Добавляем параметры WHERE для обычного сохранения
+                # Добавляем параметры WHERE
                 params = base_params + [pr_nmb, mdl_nmb, el_nmb]
 
                 query = f"""
