@@ -409,6 +409,9 @@ class EquationsPage(QWidget):
         self.save_btn.clicked.connect(self.save_equation_changes)
         self.cancel_btn.clicked.connect(self.cancel_editing)
         self.clear_btn.clicked.connect(self.clear_equation)
+        # Добавляем обработчики переключения радиокнопок
+        self.regression_radio.toggled.connect(self.on_measurement_type_changed)
+        self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
 
     def on_product_or_model_changed(self, index):
         """Обработчик изменения продукта или модели - скрывает окно редактирования и перезагружает конфигурации"""
@@ -423,6 +426,86 @@ class EquationsPage(QWidget):
 
         # Перезагружаем данные
         self.load_equations()
+
+    def on_measurement_type_changed(self):
+        """Обработчик изменения типа измерения - переключает коэффициенты и комбобоксы"""
+        if self.current_equation_data is None:
+            return
+
+        # Получаем выбранный тип измерения
+        meas_type = 0 if self.regression_radio.isChecked() else 1
+
+        # Обновляем комбобоксы в соответствии с выбранным типом
+        current_el_nmb = self.current_equation_data.get('el_nmb', 0)
+
+        if meas_type == 0:
+            # Для регрессии - диапазоны
+            for member_widget in self.equation_members:
+                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                    self.populate_operand_combos(member_widget.element1_combo)
+                    self.populate_operand_combos(member_widget.element2_combo)
+        else:
+            # Для корреляции - элементы (исключая текущий)
+            for member_widget in self.equation_members:
+                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                    self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
+                    self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
+
+        # Обновляем коэффициенты в соответствии с выбранным типом
+        self.update_coefficients_display(meas_type)
+
+    def update_coefficients_display(self, meas_type):
+        """Обновляет отображение коэффициентов в соответствии с типом измерения"""
+        current_el_nmb = self.current_equation_data.get('el_nmb', 0)
+
+        if meas_type == 0:  # Регрессия
+            self.k0_edit.setText(str(self.current_equation_data.get('k_i_klin00', 0)))
+            self.k1_edit.setText(str(self.current_equation_data.get('k_i_klin01', 0)))
+
+            # Для регрессии используем диапазоны
+            for member_widget in self.equation_members:
+                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                    self.populate_operand_combos(member_widget.element1_combo)
+                    self.populate_operand_combos(member_widget.element2_combo)
+
+            for i in range(6):
+                coeff_value = self.current_equation_data.get(f'k_i_alin{i:02d}', 0)
+                self.equation_members[i].coeff_edit.setText(str(coeff_value))
+
+                if i > 0:  # Для A1-A5 также обновляем операнды и операции
+                    element1_value = self.current_equation_data.get(f'operand_i_01_{i:02d}', 0)
+                    element2_value = self.current_equation_data.get(f'operand_i_02_{i:02d}', 0)
+                    operation_value = self.current_equation_data.get(f'operator_i_{i:02d}', 0)
+
+                    # Устанавливаем значения в комбобоксы (прибавляем 1 для диапазонов)
+                    self.set_combo_value(self.equation_members[i].element1_combo,
+                                         element1_value + 1 if element1_value > 0 else 0)
+                    self.set_combo_value(self.equation_members[i].element2_combo,
+                                         element2_value + 1 if element2_value > 0 else 0)
+                    self.set_combo_value(self.equation_members[i].operation_combo, operation_value)
+        else:  # Корреляция
+            self.k0_edit.setText(str(self.current_equation_data.get('k_c_klin00', 0)))
+            self.k1_edit.setText(str(self.current_equation_data.get('k_c_klin01', 0)))
+
+            # Для корреляции используем элементы (исключая текущий элемент)
+            for member_widget in self.equation_members:
+                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                    self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
+                    self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
+
+            for i in range(6):
+                coeff_value = self.current_equation_data.get(f'k_c_alin{i:02d}', 0)
+                self.equation_members[i].coeff_edit.setText(str(coeff_value))
+
+                if i > 0:  # Для A1-A5 также обновляем операнды и операции
+                    element1_value = self.current_equation_data.get(f'operand_c_01_{i:02d}', 0)
+                    element2_value = self.current_equation_data.get(f'operand_c_02_{i:02d}', 0)
+                    operation_value = self.current_equation_data.get(f'operator_c_{i:02d}', 0)
+
+                    # Устанавливаем значения в комбобоксы (для элементов используем номер как есть)
+                    self.set_combo_value(self.equation_members[i].element1_combo, element1_value)
+                    self.set_combo_value(self.equation_members[i].element2_combo, element2_value)
+                    self.set_combo_value(self.equation_members[i].operation_combo, operation_value)
 
     def load_equations(self):
         """Загружает уравнения из базы данных только для сконфигурированных элементов"""
@@ -531,40 +614,34 @@ class EquationsPage(QWidget):
             self.c_min_edit.setText(str(equation_data.get('c_min', 0)))
             self.c_max_edit.setText(str(equation_data.get('c_max', 0)))
 
-            # Заполняем коэффициенты корректировки
+            # Инициализируем комбобоксы в соответствии с типом измерения
+            current_el_nmb = equation_data.get('el_nmb', 0)
             if meas_type == 0:
-                self.k0_edit.setText(str(equation_data.get('k_i_klin00', 0)))
-                self.k1_edit.setText(str(equation_data.get('k_i_klin01', 0)))
+                # Для регрессии - диапазоны
+                for member_widget in self.equation_members:
+                    if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                        self.populate_operand_combos(member_widget.element1_combo)
+                        self.populate_operand_combos(member_widget.element2_combo)
             else:
-                self.k0_edit.setText(str(equation_data.get('k_c_klin00', 0)))
-                self.k1_edit.setText(str(equation_data.get('k_c_klin01', 0)))
+                # Для корреляции - элементы (исключая текущий)
+                for member_widget in self.equation_members:
+                    if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
+                        self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
+                        self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
 
-            # Заполняем члены уравнения
-            for i in range(6):
-                member_widget = self.equation_members[i]
 
-                # Коэффициент
-                if meas_type == 0:
-                    coeff_value = equation_data.get(f'k_i_alin{i:02d}', 0)
-                else:
-                    coeff_value = equation_data.get(f'k_c_alin{i:02d}', 0)
-                member_widget.coeff_edit.setText(str(coeff_value))
+            # Заполняем коэффициенты в соответствии с текущим типом измерения
+            self.update_coefficients_display(meas_type)
 
-                # Операнды и операции (только для A1-A5)
-                if i > 0 and member_widget.element1_combo:  # Для A1-A5
-                    if meas_type == 0:
-                        element1_value = equation_data.get(f'operand_i_01_{i:02d}', 0)
-                        element2_value = equation_data.get(f'operand_i_02_{i:02d}', 0)
-                        operation_value = equation_data.get(f'operator_i_{i:02d}', 0)
-                    else:
-                        element1_value = equation_data.get(f'operand_c_01_{i:02d}', 0)
-                        element2_value = equation_data.get(f'operand_c_02_{i:02d}', 0)
-                        operation_value = equation_data.get(f'operator_c_{i:02d}', 0)
+            # Подключаем обработчики (убедитесь, что они не подключены ранее)
+            try:
+                self.regression_radio.toggled.disconnect(self.on_measurement_type_changed)
+                self.correlation_radio.toggled.disconnect(self.on_measurement_type_changed)
+            except:
+                pass
 
-                    # Устанавливаем значения в комбобоксы (прибавляем 1 для корректного отображения)
-                    self.set_combo_value(member_widget.element1_combo, element1_value + 1 if element1_value > 0 else 0)
-                    self.set_combo_value(member_widget.element2_combo, element2_value + 1 if element2_value > 0 else 0)
-                    self.set_combo_value(member_widget.operation_combo, operation_value)
+            self.regression_radio.toggled.connect(self.on_measurement_type_changed)
+            self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
 
             self.edit_widget.setVisible(True)
 
@@ -590,6 +667,19 @@ class EquationsPage(QWidget):
                 combo.setCurrentIndex(i)
                 return
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
+
+    def populate_element_combos(self, combo, exclude_element_nmb=None):
+        """Заполняет комбобоксы элементами (исключая указанный элемент)"""
+        combo.clear()
+        combo.addItem("---", 0)
+
+        for element in self.elements_config:
+            if isinstance(element, dict):
+                number = element.get('number', 0)
+                name = element.get('name', '').strip()
+                if name and name != '-' and number != exclude_element_nmb:
+                    # Для элементов используем номер как есть (без +1)
+                    combo.addItem(name, number)
 
     def save_equation_changes(self, product_numbers: list[int] | None = None, model_numbers: list[int] | None = None):
         """
@@ -828,8 +918,12 @@ class EquationsPage(QWidget):
                 WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
                 """
 
-                # Выполняем обновление
+                # Выполняем загрузку в базу
                 self.db.execute(query, params)
+
+                # ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ СОХРАНЕНИЯ
+                # Загружаем обновленные данные из базы
+                self.refresh_current_equation_data(pr_nmb, mdl_nmb, el_nmb)
 
                 # Обновляем таблицу
                 self.load_equations()
@@ -838,6 +932,21 @@ class EquationsPage(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения/применения уравнения: {str(e)}")
+
+    def refresh_current_equation_data(self, pr_nmb, mdl_nmb, el_nmb):
+        """Обновляет текущие данные уравнения из базы после сохранения"""
+        try:
+            query = """
+            SELECT * FROM PR_SET 
+            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
+            """
+            params = [pr_nmb, mdl_nmb, el_nmb]
+            result = self.db.fetch_one(query, params)
+
+            if result:
+                self.current_equation_data = result.copy()
+        except Exception as e:
+            print(f"Ошибка обновления данных уравнения: {str(e)}")
 
 
     def show_apply_to_dialog(self):
@@ -862,9 +971,16 @@ class EquationsPage(QWidget):
 
     def cancel_editing(self):
         """Отменяет редактирование"""
+        try:
+            self.regression_radio.toggled.disconnect(self.on_measurement_type_changed)
+            self.correlation_radio.toggled.disconnect(self.on_measurement_type_changed)
+        except:
+            pass  # Игнорируем ошибки если обработчики не подключены
+
         self.edit_widget.setVisible(False)
         self.current_editing_row = None
         self.current_equation_data = None
+
 
     def clear_equation(self):
         """Очищает введенное уравнение"""
