@@ -503,6 +503,10 @@ class EquationsPage(QWidget):
                     operation_value = self.current_equation_data.get(f'operator_c_{i:02d}', 0)
 
                     # Устанавливаем значения в комбобоксы (для элементов используем номер как есть)
+                    # Исправляем проблему с -1: если значение отрицательное, устанавливаем 0
+                    element1_value = element1_value if element1_value >= 0 else 0
+                    element2_value = element2_value if element2_value >= 0 else 0
+
                     self.set_combo_value(self.equation_members[i].element1_combo, element1_value)
                     self.set_combo_value(self.equation_members[i].element2_combo, element2_value)
                     self.set_combo_value(self.equation_members[i].operation_combo, operation_value)
@@ -746,6 +750,7 @@ class EquationsPage(QWidget):
                             member_widget.element2_combo.currentIndex())
                         operation_value = member_widget.operation_combo.itemData(
                             member_widget.operation_combo.currentIndex())
+                        # Для регрессии вычитаем 1 (диапазоны)
                         update_data[f'operand_i_01_{i:02d}'] = element1_value - 1 if element1_value > 0 else 0
                         update_data[f'operand_i_02_{i:02d}'] = element2_value - 1 if element2_value > 0 else 0
                         update_data[f'operator_i_{i:02d}'] = operation_value if operation_value else 0
@@ -758,8 +763,9 @@ class EquationsPage(QWidget):
                             member_widget.element2_combo.currentIndex())
                         operation_value = member_widget.operation_combo.itemData(
                             member_widget.operation_combo.currentIndex())
-                        update_data[f'operand_c_01_{i:02d}'] = element1_value - 1 if element1_value > 0 else 0
-                        update_data[f'operand_c_02_{i:02d}'] = element2_value - 1 if element2_value > 0 else 0
+                        # Для корреляции используем как есть (элементы)
+                        update_data[f'operand_c_01_{i:02d}'] = element1_value
+                        update_data[f'operand_c_02_{i:02d}'] = element2_value
                         update_data[f'operator_c_{i:02d}'] = operation_value if operation_value else 0
 
             # Формируем SQL запрос
@@ -1061,6 +1067,7 @@ class EquationsPage(QWidget):
             operand1 = row.get(operand1_key, 0)
             operand2 = row.get(operand2_key, 0)
 
+            # Для корреляции используем имена элементов вместо диапазонов
             expression = self._build_expression(operand1, operand2, operator, meas_type)
 
             if expression == "0":
@@ -1075,7 +1082,13 @@ class EquationsPage(QWidget):
 
     def _build_expression(self, operand1: int, operand2: int, operator: int, meas_type: int) -> str:
         """Формирует математическое выражение на основе operand'ов и operator"""
-        prefix = "I_" if meas_type == 0 else "C_"
+        # Для корреляции используем префикс C_ и имена элементов
+        if meas_type == 0:
+            prefix = "I_"
+            get_name_func = self._get_range_name
+        else:
+            prefix = "C_"
+            get_name_func = self._get_element_name
 
         # Проверка на допустимость оператора
         if operator == 7 and meas_type != 0:
@@ -1086,46 +1099,46 @@ class EquationsPage(QWidget):
 
         elif operator == 1:  # 1 - берем только operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1)
+                name1 = get_name_func(operand1)
                 return f"{prefix}{name1}"
             return "0"
 
         elif operator == 2:  # 2 - operand_i_01_01 * operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1)
-                name2 = self._get_range_name(operand2)
+                name1 = get_name_func(operand1)
+                name2 = get_name_func(operand2)
                 return f"{prefix}{name1}*{prefix}{name2}"
             return "0"
 
         elif operator == 3:  # 3 - operand_i_01_01 / operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1)
-                name2 = self._get_range_name(operand2)
+                name1 = get_name_func(operand1)
+                name2 = get_name_func(operand2)
                 return f"{prefix}{name1}/{prefix}{name2}"
             return "0"
 
         elif operator == 4:  # 4 - operand_i_01_01 * operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1)
+                name1 = get_name_func(operand1)
                 return f"{prefix}{name1}*{prefix}{name1}"
             return "0"
 
         elif operator == 5:  # 5 - 1 / operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1)
+                name1 = get_name_func(operand1)
                 return f"1/{prefix}{name1}"
             return "0"
 
         elif operator == 6:  # 6 - operand_i_01_01 / operand_i_02_01 * operand_i_02_01
             if operand1 > 0 and operand2 > 0:
-                name1 = self._get_range_name(operand1)
-                name2 = self._get_range_name(operand2)
+                name1 = get_name_func(operand1)
+                name2 = get_name_func(operand2)
                 return f"{prefix}{name1}/{prefix}{name2}*{prefix}{name2}"
             return "0"
 
         elif operator == 7:  # 7 - 1 / operand_i_01_01 * operand_i_01_01
             if operand1 > 0:
-                name1 = self._get_range_name(operand1)
+                name1 = get_name_func(operand1)
                 return f"1/{prefix}{name1}*{prefix}{name1}"
             return "0"
 
