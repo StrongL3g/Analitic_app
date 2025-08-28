@@ -36,7 +36,7 @@ def get_ln_name(ln_nmb: int) -> str:
         query = """
         SELECT [ln_name]
         FROM [AMMKASAKDB01].[dbo].[LN_SET01]
-        WHERE [ln_nmb] = ? AND [ak_nmb] = 1
+        WHERE [ln_nmb] = ? AND [ac_nmb] = 1
         """
         # Исправлено: добавлена открывающая скобка для fetch_one(
         result = _db_instance.fetch_one(query, [ln_nmb])

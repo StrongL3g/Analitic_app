@@ -115,26 +115,27 @@ class SampleDialog(QDialog):
     def load_products(self):
         """Загружает список продуктов из базы данных"""
         try:
-            # TODO: Заменить на реальный запрос к таблице продуктов
-            # Пока используем тестовые данные
-            products = [
-                (1, "Продукт 1"),
-                (2, "Продукт 2"),
-                (3, "Продукт 3"),
-                (4, "Продукт 4"),
-                (5, "Продукт 5"),
-                (6, "Продукт 6"),
-                (7, "Продукт 7"),
-                (8, "Продукт 8")
-            ]
+            # Импортируем PR_COUNT из config
+            from config import PR_COUNT
 
             self.combo_products.clear()
-            for product_id, product_name in products:
+
+            # Создаем список продуктов от 1 до PR_COUNT
+            for product_id in range(1, PR_COUNT + 1):
+                product_name = f"Продукт {product_id}"
                 self.combo_products.addItem(f"{product_id} - {product_name}", product_id)
 
+            print(f"Загружено продуктов: {PR_COUNT}")
+
+        except ImportError:
+            print("Ошибка: Не удалось импортировать PR_COUNT из config")
+            # Fallback: используем тестовые данные
+            self.combo_products.clear()
+            for i in range(1, 6):
+                self.combo_products.addItem(f"{i} - Тестовый продукт {i}", i)
         except Exception as e:
             print(f"Ошибка загрузки продуктов: {e}")
-            # В случае ошибки добавим тестовые значения
+            # Fallback: используем тестовые данные
             self.combo_products.clear()
             for i in range(1, 6):
                 self.combo_products.addItem(f"{i} - Тестовый продукт {i}", i)
@@ -263,10 +264,9 @@ class SampleDialog(QDialog):
             self.table_sample.setItem(row, 3, QTableWidgetItem(item['date_to']))
             self.table_sample.setItem(row, 4, QTableWidgetItem(item['time_to']))
 
-            # Кнопка удаления
+            # Кнопка удаления - используем лямбду с явным захватом row
             btn_delete = QPushButton("Удалить")
-            # Используем замыкание для правильной передачи row
-            btn_delete.clicked.connect(self.make_delete_handler(row))
+            btn_delete.clicked.connect(lambda checked, r=row: self.delete_row(r))
             self.table_sample.setCellWidget(row, 5, btn_delete)
 
     def make_delete_handler(self, row):
