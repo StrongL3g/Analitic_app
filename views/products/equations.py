@@ -987,10 +987,13 @@ class EquationsPage(QWidget):
         self.current_editing_row = None
         self.current_equation_data = None
 
-
     def clear_equation(self):
-        """Очищает введенное уравнение"""
+        """Очищает введенное уравнение и сбрасывает коэффициенты корректировки"""
         try:
+            # Сбрасываем коэффициенты корректировки
+            self.k0_edit.setText("0")
+            self.k1_edit.setText("1")
+
             # Очищаем члены уравнения
             for i in range(6):
                 member_widget = self.equation_members[i]
