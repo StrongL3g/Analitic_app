@@ -53,11 +53,6 @@
             "original_number": 4,
             "adjusted_number": 3,
             "name": "ТФ"
-        },
-        {
-            "original_number": 5,
-            "adjusted_number": 4,
-            "name": "Ga"
         }
     ],
     "interactions": [
@@ -91,12 +86,6 @@
                     "op": 1
                 },
                 {
-                    "description": "Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
                     "description": "Ni * Fe",
                     "x1": 1,
                     "x2": 2,
@@ -106,12 +95,6 @@
                     "description": "Ni * ТФ",
                     "x1": 1,
                     "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Ga",
-                    "x1": 1,
-                    "x2": 4,
                     "op": 2
                 },
                 {
@@ -127,12 +110,6 @@
                     "op": 2
                 },
                 {
-                    "description": "Fe * Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
                     "description": "ТФ * Ni",
                     "x1": 3,
                     "x2": 1,
@@ -142,30 +119,6 @@
                     "description": "ТФ * Fe",
                     "x1": 3,
                     "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 2
                 },
                 {
@@ -181,12 +134,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni / Ga",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "Fe / Ni",
                     "x1": 2,
                     "x2": 1,
@@ -199,12 +146,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Fe / Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "ТФ / Ni",
                     "x1": 3,
                     "x2": 1,
@@ -214,30 +155,6 @@
                     "description": "ТФ / Fe",
                     "x1": 3,
                     "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 3
                 },
                 {
@@ -255,12 +172,6 @@
                 {
                     "description": "ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 4
                 },
@@ -283,12 +194,6 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
                     "description": "Ni / Fe ^ 2",
                     "x1": 1,
                     "x2": 2,
@@ -298,12 +203,6 @@
                     "description": "Ni / ТФ ^ 2",
                     "x1": 1,
                     "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Ga ^ 2",
-                    "x1": 1,
-                    "x2": 4,
                     "op": 6
                 },
                 {
@@ -319,12 +218,6 @@
                     "op": 6
                 },
                 {
-                    "description": "Fe / Ga ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
                     "description": "ТФ / Ni ^ 2",
                     "x1": 3,
                     "x2": 1,
@@ -334,30 +227,6 @@
                     "description": "ТФ / Fe ^ 2",
                     "x1": 3,
                     "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ga ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 6
                 },
                 {
@@ -375,12 +244,6 @@
                 {
                     "description": "1 / ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 7
                 }
@@ -416,12 +279,6 @@
                     "op": 1
                 },
                 {
-                    "description": "Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
                     "description": "Cu * Fe",
                     "x1": 0,
                     "x2": 2,
@@ -431,12 +288,6 @@
                     "description": "Cu * ТФ",
                     "x1": 0,
                     "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ga",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 2
                 },
                 {
@@ -452,12 +303,6 @@
                     "op": 2
                 },
                 {
-                    "description": "Fe * Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
                     "description": "ТФ * Cu",
                     "x1": 3,
                     "x2": 0,
@@ -467,30 +312,6 @@
                     "description": "ТФ * Fe",
                     "x1": 3,
                     "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 2
                 },
                 {
@@ -506,12 +327,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Cu / Ga",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "Fe / Cu",
                     "x1": 2,
                     "x2": 0,
@@ -524,12 +339,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Fe / Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "ТФ / Cu",
                     "x1": 3,
                     "x2": 0,
@@ -539,30 +348,6 @@
                     "description": "ТФ / Fe",
                     "x1": 3,
                     "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 3
                 },
                 {
@@ -580,12 +365,6 @@
                 {
                     "description": "ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 4
                 },
@@ -608,12 +387,6 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
                     "description": "Cu / Fe ^ 2",
                     "x1": 0,
                     "x2": 2,
@@ -623,12 +396,6 @@
                     "description": "Cu / ТФ ^ 2",
                     "x1": 0,
                     "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ga ^ 2",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 6
                 },
                 {
@@ -644,12 +411,6 @@
                     "op": 6
                 },
                 {
-                    "description": "Fe / Ga ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
                     "description": "ТФ / Cu ^ 2",
                     "x1": 3,
                     "x2": 0,
@@ -659,30 +420,6 @@
                     "description": "ТФ / Fe ^ 2",
                     "x1": 3,
                     "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ga ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 6
                 },
                 {
@@ -700,12 +437,6 @@
                 {
                     "description": "1 / ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 7
                 }
@@ -741,12 +472,6 @@
                     "op": 1
                 },
                 {
-                    "description": "Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
                     "description": "Cu * Ni",
                     "x1": 0,
                     "x2": 1,
@@ -756,12 +481,6 @@
                     "description": "Cu * ТФ",
                     "x1": 0,
                     "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ga",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 2
                 },
                 {
@@ -777,12 +496,6 @@
                     "op": 2
                 },
                 {
-                    "description": "Ni * Ga",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
                     "description": "ТФ * Cu",
                     "x1": 3,
                     "x2": 0,
@@ -792,30 +505,6 @@
                     "description": "ТФ * Ni",
                     "x1": 3,
                     "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 2
                 },
                 {
@@ -831,12 +520,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Cu / Ga",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "Ni / Cu",
                     "x1": 1,
                     "x2": 0,
@@ -849,12 +532,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni / Ga",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "ТФ / Cu",
                     "x1": 3,
                     "x2": 0,
@@ -864,30 +541,6 @@
                     "description": "ТФ / Ni",
                     "x1": 3,
                     "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ga",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / ТФ",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 3
                 },
                 {
@@ -905,12 +558,6 @@
                 {
                     "description": "ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 4
                 },
@@ -933,12 +580,6 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
                     "description": "Cu / Ni ^ 2",
                     "x1": 0,
                     "x2": 1,
@@ -948,12 +589,6 @@
                     "description": "Cu / ТФ ^ 2",
                     "x1": 0,
                     "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ga ^ 2",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 6
                 },
                 {
@@ -969,12 +604,6 @@
                     "op": 6
                 },
                 {
-                    "description": "Ni / Ga ^ 2",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
                     "description": "ТФ / Cu ^ 2",
                     "x1": 3,
                     "x2": 0,
@@ -984,30 +613,6 @@
                     "description": "ТФ / Ni ^ 2",
                     "x1": 3,
                     "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ga ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 3,
                     "op": 6
                 },
                 {
@@ -1025,12 +630,6 @@
                 {
                     "description": "1 / ТФ ^ 2",
                     "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 7
                 }
@@ -1066,12 +665,6 @@
                     "op": 1
                 },
                 {
-                    "description": "Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
                     "description": "Cu * Ni",
                     "x1": 0,
                     "x2": 1,
@@ -1081,12 +674,6 @@
                     "description": "Cu * Fe",
                     "x1": 0,
                     "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ga",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 2
                 },
                 {
@@ -1102,12 +689,6 @@
                     "op": 2
                 },
                 {
-                    "description": "Ni * Ga",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
                     "description": "Fe * Cu",
                     "x1": 2,
                     "x2": 0,
@@ -1117,30 +698,6 @@
                     "description": "Fe * Ni",
                     "x1": 2,
                     "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ga * Fe",
-                    "x1": 4,
-                    "x2": 2,
                     "op": 2
                 },
                 {
@@ -1156,12 +713,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Cu / Ga",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "Ni / Cu",
                     "x1": 1,
                     "x2": 0,
@@ -1174,12 +725,6 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni / Ga",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
                     "description": "Fe / Cu",
                     "x1": 2,
                     "x2": 0,
@@ -1189,30 +734,6 @@
                     "description": "Fe / Ni",
                     "x1": 2,
                     "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ga",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Cu",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Ni",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ga / Fe",
-                    "x1": 4,
-                    "x2": 2,
                     "op": 3
                 },
                 {
@@ -1230,12 +751,6 @@
                 {
                     "description": "Fe ^ 2",
                     "x1": 2,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Ga ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 4
                 },
@@ -1258,12 +773,6 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ga",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
                     "description": "Cu / Ni ^ 2",
                     "x1": 0,
                     "x2": 1,
@@ -1273,12 +782,6 @@
                     "description": "Cu / Fe ^ 2",
                     "x1": 0,
                     "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ga ^ 2",
-                    "x1": 0,
-                    "x2": 4,
                     "op": 6
                 },
                 {
@@ -1294,12 +797,6 @@
                     "op": 6
                 },
                 {
-                    "description": "Ni / Ga ^ 2",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
                     "description": "Fe / Cu ^ 2",
                     "x1": 2,
                     "x2": 0,
@@ -1309,30 +806,6 @@
                     "description": "Fe / Ni ^ 2",
                     "x1": 2,
                     "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ga ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ga / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
                     "op": 6
                 },
                 {
@@ -1350,337 +823,6 @@
                 {
                     "description": "1 / Fe ^ 2",
                     "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Ga ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                }
-            ]
-        },
-        {
-            "element_name": "Ga",
-            "element_original_number": 5,
-            "element_adjusted_number": 4,
-            "interactions": [
-                {
-                    "description": "",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 0
-                },
-                {
-                    "description": "Cu",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * ТФ",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Cu",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * ТФ",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Cu",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / ТФ",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Cu",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / ТФ",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Cu",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Cu ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Cu",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Fe ^ 2",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Fe ^ 2",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Cu ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / ТФ ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Cu ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / ТФ ^ 2",
-                    "x1": 3,
                     "x2": 0,
                     "op": 7
                 }

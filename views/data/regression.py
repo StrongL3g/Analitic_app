@@ -219,15 +219,6 @@ class RegressionPage(QWidget):
         # TODO: Реализовать загрузку данных
         # Используем self.current_sample для формирования запроса к БД
 
-    def open_sample_dialog(self):
-        """Открывает диалог формирования выборки"""
-        dialog = SampleDialog(self.db, self)
-        if dialog.exec() == QDialog.Accepted:
-            # Обновляем выборку из файла
-            self.load_sample_from_file()
-            print(f"Получена выборка: {len(self.current_sample)} строк")
-            self.update_sample_table()
-
     def load_sample_from_file(self):
         """Загружает выборку из файла"""
         try:
