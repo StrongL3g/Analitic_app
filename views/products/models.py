@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                               QTableWidget, QTableWidgetItem, QHeaderView)
+                               QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy)
 from PySide6.QtCore import Qt
 from pathlib import Path
 
@@ -37,13 +37,13 @@ class ModelsPage(QWidget):
         cuv1_title.setStyleSheet("font-size: 14px; font-weight: bold;")
         cuv1_layout.addWidget(cuv1_title)
 
+
         self.table_cuv1 = QTableWidget()
         self.table_cuv1.setColumnCount(4)
         self.table_cuv1.setHorizontalHeaderLabels(["Прибор №", "Продукт №", "Модель №", "Описание"])
         self.table_cuv1.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.table_cuv1.verticalHeader().setVisible(False)
         cuv1_layout.addWidget(self.table_cuv1)
-
         tables_layout.addLayout(cuv1_layout)
 
         # Таблица для кюветы 2
@@ -60,6 +60,18 @@ class ModelsPage(QWidget):
         cuv2_layout.addWidget(self.table_cuv2)
 
         tables_layout.addLayout(cuv2_layout)
+
+        # Для заголовков таблиц
+        cuv1_title.setAlignment(Qt.AlignTop)
+        cuv2_title.setAlignment(Qt.AlignTop)
+
+        # Для таблиц
+        self.table_cuv1.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.table_cuv2.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
+        # Для layout таблиц
+        cuv1_layout.setAlignment(Qt.AlignTop)
+        cuv2_layout.setAlignment(Qt.AlignTop)
 
     def load_data_from_db(self):
         """Загрузка данных из базы данных"""
@@ -89,6 +101,16 @@ class ModelsPage(QWidget):
 
             if rows and len(rows) > 0:
                 table_widget.setRowCount(len(rows))
+
+                # Высота одной строки
+                row_height = 30
+                # Высота заголовка таблицы
+                header_height = table_widget.horizontalHeader().height()
+                # Общая высота таблицы
+                total_height = header_height + (len(rows) * row_height)
+
+                # Устанавливаем фиксированную высоту таблицы
+                table_widget.setFixedHeight(total_height)
 
                 for i, row in enumerate(rows):
                     table_widget.setItem(i, 0, QTableWidgetItem(str(row['ac_nmb'])))  # Прибор №
