@@ -1,4 +1,3 @@
-# config.py
 from dotenv import load_dotenv, set_key
 import os
 
@@ -19,17 +18,36 @@ def set_config(key, value):
 def unset_config(key):
     if key in os.environ:
         del os.environ[key]
-    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
-# Конфигурация БД (только из .env)
-DB_CONFIG = {
-    "server": get_config("DB_SERVER"),
-    "port": get_config("DB_PORT"),
-    "database": get_config("DB_NAME"),
-    "user": get_config("DB_USER"),
-    "password": get_config("DB_PASSWORD"),
-    "driver": get_config("DB_DRIVER")
-}
+# Тип базы данных (mssql/postgres)
+DB_TYPE = get_config("DB_TYPE", "mssql").lower()
+
+# Конфигурация для разных БД
+def get_db_config():
+    db_type = get_config("DB_TYPE", "mssql").lower()
+
+    if db_type == "postgres":
+        return {
+            "host": get_config("DB_HOST"),
+            "port": get_config("DB_PORT", "5432"),
+            "database": get_config("DB_NAME"),
+            "user": get_config("DB_USER"),
+            "password": get_config("DB_PASSWORD"),
+            "db_type": "postgres"
+        }
+    else:  # MSSQL по умолчанию
+        return {
+            "server": get_config("DB_SERVER"),
+            "port": get_config("DB_PORT", "1433"),
+            "database": get_config("DB_NAME"),
+            "user": get_config("DB_USER"),
+            "password": get_config("DB_PASSWORD"),
+            "driver": get_config("DB_DRIVER", "ODBC Driver 17 for SQL Server"),
+            "db_type": "mssql"
+        }
+
+# Получаем конфигурацию БД
+DB_CONFIG = get_db_config()
 
 # Функция для получения конфигурации из базы данных
 def get_db_settings():
