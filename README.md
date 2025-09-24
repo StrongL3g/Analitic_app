@@ -117,11 +117,13 @@ cp .env.example .env
 
 Отредактируйте файл `.env`:
 ```env
-SERVER=your_server_address
-DATABASE=your_database_name
+DB_TYPE=postgres
+
 USERNAME=your_username
 PASSWORD=your_password
 ```
+тип базы выбирается именно в .env файле (postgres/mssql)
+также нужно коментить/раскоментить нужные строки в зависимости от выбранной базы
 
 ### 5. Запуск приложения
 ```bash
