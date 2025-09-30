@@ -528,7 +528,7 @@ class EquationsPage(QWidget):
             # Формируем условие WHERE для выборки только сконфигурированных элементов
             placeholders = ','.join(['?' for _ in configured_numbers])
             query = f"""
-            SELECT * FROM PR_SET 
+            SELECT * FROM pr_set 
             WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb IN ({placeholders})
             ORDER BY el_nmb
             """
@@ -898,7 +898,7 @@ class EquationsPage(QWidget):
                 params.append(el_nmb)
 
                 query = f"""
-                UPDATE PR_SET SET
+                UPDATE pr_set SET
                 {base_fields}
                 WHERE pr_nmb IN ({product_placeholders}) AND mdl_nmb IN ({model_placeholders}) AND el_nmb = ?
                 """
@@ -919,7 +919,7 @@ class EquationsPage(QWidget):
                 params = base_params + [pr_nmb, mdl_nmb, el_nmb]
 
                 query = f"""
-                UPDATE PR_SET SET
+                UPDATE pr_set SET
                 {base_fields}
                 WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
                 """
@@ -943,7 +943,7 @@ class EquationsPage(QWidget):
         """Обновляет текущие данные уравнения из базы после сохранения"""
         try:
             query = """
-            SELECT * FROM PR_SET 
+            SELECT * FROM pr_set 
             WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
             """
             params = [pr_nmb, mdl_nmb, el_nmb]

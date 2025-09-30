@@ -89,10 +89,10 @@ class ModelsPage(QWidget):
         """Загрузка данных для конкретной кюветы"""
         try:
             query = """
-                SELECT TOP 1 m.ac_nmb, m.pr_nmb, p.mdl_nmb, p.mdl_desc, m.cuv_nmb
-                FROM [dbo].[CFG01] m
-                JOIN [dbo].[PR_SET] p ON m.pr_nmb = p.pr_nmb
-                WHERE m.ac_nmb = 1 AND p.active_model = 1 AND m.cuv_nmb = ?
+                SELECT m.ac_nmb, m.pr_nmb, p.mdl_nmb, p.mdl_desc, m.cuv_nmb
+                FROM cfg01 m
+                JOIN pr_set p ON m.pr_nmb = p.pr_nmb
+                WHERE m.ac_nmb = 1 AND p.active_model = 1 AND m.cuv_nmb = ? LIMIT 1
             """
 
             params = (cuv_number,)
