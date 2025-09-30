@@ -8,12 +8,27 @@ class Database:
         self.db_type = db_config.get('db_type', 'mssql')
         self.database_name = db_config['database']
 
+    def _prepare_query_and_params(self, query, params):
+        """Подготавливает запрос и параметры для конкретной СУБД"""
+        if params is None:
+            return query, None
+
+        if self.db_type == 'postgres':
+            # Для PostgreSQL заменяем ? на %s
+            converted_query = query.replace('?', '%s')
+            # Параметры оставляем как есть (list или tuple)
+            print(query)
+            print(converted_query)
+            return converted_query, params
+        else:
+            # Для MSSQL оставляем всё как есть
+            return query, params
+
     @contextmanager
     def connect(self):
         conn = None
         try:
             if self.db_type == 'postgres':
-                # Подключение к PostgreSQL
                 conn = psycopg2.connect(
                     host=self.db_config['host'],
                     port=self.db_config['port'],
@@ -22,7 +37,6 @@ class Database:
                     password=self.db_config['password']
                 )
             else:
-                # Подключение к MSSQL
                 connection_string = (
                     f"DRIVER={{{self.db_config['driver']}}};"
                     f"SERVER={self.db_config['server']},{self.db_config.get('port', '1433')};"
@@ -45,15 +59,17 @@ class Database:
     def fetch_all(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, params or ())
+
+            # Подготавливаем запрос и параметры
+            prepared_query, prepared_params = self._prepare_query_and_params(query, params)
+
+            cursor.execute(prepared_query, prepared_params or ())
 
             if self.db_type == 'postgres':
-                # Для PostgreSQL
                 columns = [desc[0] for desc in cursor.description]
                 rows = cursor.fetchall()
                 return [dict(zip(columns, row)) for row in rows]
             else:
-                # Для MSSQL
                 rows = cursor.fetchall()
                 columns = [column[0] for column in cursor.description]
                 return [dict(zip(columns, row)) for row in rows]
@@ -61,7 +77,9 @@ class Database:
     def fetch_one(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, params or ())
+
+            prepared_query, prepared_params = self._prepare_query_and_params(query, params)
+            cursor.execute(prepared_query, prepared_params or ())
             row = cursor.fetchone()
 
             if row:
@@ -76,9 +94,13 @@ class Database:
     def execute(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
+
+            prepared_query, prepared_params = self._prepare_query_and_params(query, params)
+
             try:
-                cursor.execute(query, params or ())
+                cursor.execute(prepared_query, prepared_params or ())
                 conn.commit()
+                return cursor.rowcount
             except Exception as e:
                 conn.rollback()
                 raise Exception(f"Ошибка выполнения запроса: {e}")
