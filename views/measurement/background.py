@@ -93,21 +93,21 @@ class BackgroundPage(QWidget):
             self.modified_data.clear()
 
             # 1. Загружаем метаданные из SET01
-            query_meta = f"SELECT [ln_nmb], [ln_name], [ln_back] FROM [{self.db.database_name}].[dbo].[SET01]"
+            query_meta = f"SELECT ln_nmb, ln_name, ln_back FROM SET01"
             meta_rows = self.db.fetch_all(query_meta)
             self.ln_nmb_to_name = {row["ln_nmb"]: row["ln_name"] for row in meta_rows}
             self.ln_nmb_to_back = {row["ln_nmb"]: row["ln_back"] for row in meta_rows}
 
             # 2. Загружаем данные из SET03 для выбранного прибора
             query_data = f"""
-            SELECT [sq_nmb], [ln_nmb], [k_nmb],
-                [ln_01], [ln_02], [ln_03], [ln_04], [ln_05],
-                [ln_06], [ln_07], [ln_08], [ln_09], [ln_10],
-                [ln_11], [ln_12], [ln_13], [ln_14], [ln_15],
-                [ln_16], [ln_17], [ln_18], [ln_19], [ln_20]
-            FROM [{self.db.database_name}].[dbo].[SET03]
-            WHERE [ac_nmb] = ? AND [ln_nmb] != -1
-            ORDER BY [sq_nmb], [k_nmb]
+            SELECT sq_nmb, ln_nmb, k_nmb,
+                ln_01, ln_02, ln_03, ln_04, ln_05,
+                ln_06, ln_07, ln_08, ln_09, ln_10,
+                ln_11, ln_12, ln_13, ln_14, ln_15,
+                ln_16, ln_17, ln_18, ln_19, ln_20
+            FROM SET03
+            WHERE ac_nmb = ? AND ln_nmb != -1
+            ORDER BY sq_nmb, k_nmb
             """
             self.data_rows = self.db.fetch_all(query_data, [self.current_ac_nmb])
             self.used_sq_nmbs = sorted(set(row['sq_nmb'] for row in self.data_rows))
@@ -306,11 +306,7 @@ class BackgroundPage(QWidget):
                             db_column = f"ln_{target_sq:02d}"
 
                             query = f"""
-                            UPDATE [{self.db.database_name}].[dbo].[SET03]
-                            SET [{db_column}] = ?
-                            WHERE [ac_nmb] = ?
-                                AND [sq_nmb] = ?
-                                AND [k_nmb] = ?
+                            UPDATE SET03 SET {db_column} = ? WHERE ac_nmb = ? AND sq_nmb = ? AND k_nmb = ?
                             """
 
                             cursor.execute(query, (new_value, self.current_ac_nmb, source_sq, k_nmb))

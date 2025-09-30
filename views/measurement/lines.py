@@ -77,10 +77,9 @@ class LinesPage(QWidget):
         """Загружает спектральные линии из SET01"""
         # Используем имя базы из объекта db и сортируем по ln_nmb
         query = f"""
-        SELECT [id], [ln_nmb], [ln_name], [ln_en], [ln_desc],
-               [ln_nc], [ln_back]
-        FROM [{self.db.database_name}].[dbo].[SET01]
-        ORDER BY [ln_nmb]
+        SELECT id, ln_nmb, ln_name, ln_en, ln_desc, ln_nc, ln_back
+        FROM SET01
+        ORDER BY ln_nmb
         """
         try:
             data = self.db.fetch_all(query)
@@ -174,9 +173,9 @@ class LinesPage(QWidget):
 
                     if new_value != old_value:
                         if new_value == "":
-                            changes.append(f"[{db_field}] = NULL")
+                            changes.append(f"{db_field} = NULL")
                         else:
-                            changes.append(f"[{db_field}] = ?")
+                            changes.append(f"{db_field} = ?")
                             try:
                                 # Пытаемся преобразовать в число
                                 if '.' in new_value:
@@ -190,7 +189,7 @@ class LinesPage(QWidget):
 
                 if changes:
                     try:
-                        query = f"UPDATE [{self.db.database_name}].[dbo].[SET01] SET {', '.join(changes)} WHERE [id] = ?"
+                        query = f"UPDATE SET01 SET {', '.join(changes)} WHERE ID = ?"
                         params.append(row_id)
                         self.db.execute(query, params)
                         # Обновляем оригинал
@@ -235,8 +234,8 @@ class LinesPage(QWidget):
             # Добавляем новую строку в БД
             try:
                 query = f"""
-                INSERT INTO [{self.db.database_name}].[dbo].[SET01]
-                ([ln_nmb], [ln_name], [ln_en], [ln_desc], [ln_nc], [ln_back])
+                INSERT INTO SET01
+                (ln_nmb, ln_name, ln_en, ln_desc, ln_nc, ln_back)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """
                 self.db.execute(query, [nmb, "", 0.0, "", 0, 0])
@@ -305,8 +304,8 @@ class LinesPage(QWidget):
                 try:
                     # Удаляем из БД
                     query = f"""
-                    DELETE FROM [{self.db.database_name}].[dbo].[SET01]
-                    WHERE [id] = ?
+                    DELETE FROM SET01
+                    WHERE id = ?
                     """
                     self.db.execute(query, [row_id_to_delete])
 
