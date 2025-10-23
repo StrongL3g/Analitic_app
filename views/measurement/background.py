@@ -93,7 +93,8 @@ class BackgroundPage(QWidget):
             self.modified_data.clear()
 
             # 1. Загружаем метаданные из SET01
-            query_meta = f"SELECT ln_nmb, ln_name, ln_back FROM SET01"
+            query_meta = f'SELECT ln_nmb, ln_name, ln_back FROM SET01'
+
             meta_rows = self.db.fetch_all(query_meta)
             self.ln_nmb_to_name = {row["ln_nmb"]: row["ln_name"] for row in meta_rows}
             self.ln_nmb_to_back = {row["ln_nmb"]: row["ln_back"] for row in meta_rows}
@@ -308,9 +309,7 @@ class BackgroundPage(QWidget):
                             query = f"""
                             UPDATE SET03 SET {db_column} = ? WHERE ac_nmb = ? AND sq_nmb = ? AND k_nmb = ?
                             """
-
-                            cursor.execute(query, (new_value, self.current_ac_nmb, source_sq, k_nmb))
-                            updated_count += 1
+                            updated_count += self.db.execute_raw_query(query, (new_value, self.current_ac_nmb, source_sq, k_nmb))
 
                     cursor.execute("COMMIT")
                     conn.commit()

@@ -78,3 +78,4 @@ db_settings = get_db_settings()
 # Количество приборов и принтеров
 AC_COUNT = db_settings["AC_COUNT"]
 PR_COUNT = db_settings["PR_COUNT"]
+
