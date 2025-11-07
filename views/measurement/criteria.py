@@ -16,7 +16,7 @@ class CriteriaPage(QWidget):
         self.table = None
         self.set04_data = None
         self.ac_selector = None
-        self.current_ac_nmb = 1
+        self.current_ac_nmb = None
         self.init_ui()
 
     def init_ui(self):
@@ -74,23 +74,39 @@ class CriteriaPage(QWidget):
 
         layout.addWidget(self.table)
         self.setLayout(layout)
-        self.load_data()
+        #self.load_data()
+
+         # После создания комбобокса устанавливаем текущее значение
+        if self.ac_selector.count() > 0:
+            self.ac_selector.setCurrentIndex(0)
+            self.current_ac_nmb = self.ac_selector.currentData()
+
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        # Загружаем данные только если есть что загружать
+        if self.current_ac_nmb is not None:
+            self.load_data()
 
     def on_ac_changed(self, index):
         """Обработчик изменения выбора прибора"""
-        self.current_ac_nmb = self.ac_selector.currentData()
-        self.load_data()
+        if index >= 0:  # проверяем валидный индекс
+            self.current_ac_nmb = self.ac_selector.currentData()
+            self.load_data()
+        else:
+            self.current_ac_nmb = None
+            self.clear_table()  # очищаем таблицу если ничего не выбрано
 
     def load_data(self):
         """Загружает данные из SET04"""
         try:
             # === Загружаем данные из SET04 ===
             query_set04 = f"""
-            SELECT
-                [I_DEF], [I_B], [K_D_DEF], [SD]
-            FROM [{self.db.database_name}].[dbo].[SET04]
-            WHERE [ac_nmb] = ?
+            SELECT i_def, i_b, k_d_def, sd
+            FROM SET04
+            WHERE ac_nmb = ?
             """
+
             set04_data_list = self.db.fetch_all(query_set04, [self.current_ac_nmb])
 
             if not set04_data_list:
@@ -98,6 +114,10 @@ class CriteriaPage(QWidget):
                 return
 
             self.set04_data = set04_data_list[0]  # Сохраняем для обновления
+
+            # Детальный вывод каждого поля
+            for key in ['i_def', 'i_b', 'k_d_def', 'sd']:
+                value = self.set04_data.get(key, 'NOT FOUND')
 
             # === Заполняем таблицу ===
             # Заголовки
@@ -110,10 +130,10 @@ class CriteriaPage(QWidget):
 
             # Параметры
             params = [
-                ("σтек, %", "SD"),
-                ("Опорная Iреп, имп/с", "I_DEF"),
-                ("σоп, %", "K_D_DEF"),
-                ("СКО", "I_B")
+                ("σтек, %", "i_def"),
+                ("Опорная Iреп, имп/с", "i_b"),
+                ("σоп, %", "k_d_def"),
+                ("СКО", "sd")
             ]
 
             for i, (param_name, param_key) in enumerate(params):
@@ -145,10 +165,10 @@ class CriteriaPage(QWidget):
             # Собираем изменения из таблицы
             updates = {}
             params_mapping = {
-                1: "SD",
-                2: "I_DEF",
-                3: "K_D_DEF",
-                4: "I_B"
+                1: "i_def",
+                2: "i_b",
+                3: "k_d_def",
+                4: "sd"
             }
 
             for row, param_key in params_mapping.items():
@@ -158,14 +178,15 @@ class CriteriaPage(QWidget):
 
             # Формируем SQL запрос на обновление
             if updates:
-                set_clause = ", ".join([f"[{key}] = ?" for key in updates.keys()])
+                set_clause = ", ".join([f"{key} = ?" for key in updates.keys()])
                 values = list(updates.values())
 
                 query = f"""
-                UPDATE [{self.db.database_name}].[dbo].[SET04]
+                UPDATE SET04
                 SET {set_clause}
-                WHERE [ac_nmb] = ?
+                WHERE ac_nmb = ?
                 """
+                print(query)
                 values.append(self.current_ac_nmb)
 
                 self.db.execute(query, values)

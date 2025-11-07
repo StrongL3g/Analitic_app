@@ -81,15 +81,15 @@ class ParamsPage(QWidget):
 
     def load_data(self):
         query = """
-        SELECT [id],
-               [current_00], [current_01], [current_02], [current_03], [current_04],
-               [current_05], [current_06], [current_07], [current_08],
-               [voltage_00], [voltage_01], [voltage_02], [voltage_03], [voltage_04],
-               [voltage_05], [voltage_06], [voltage_07], [voltage_08],
-               [time_00], [time_01], [time_02], [time_03], [time_04],
-               [time_05], [time_06], [time_07], [time_08]
-        FROM [AMMKASAKDB01].[dbo].[SET04]
-        WHERE [ac_nmb] = ?
+        SELECT id,
+               current_00, current_01, current_02, current_03, current_04,
+               current_05, current_06, current_07, current_08,
+               voltage_00, voltage_01, voltage_02, voltage_03, voltage_04,
+               voltage_05, voltage_06, voltage_07, voltage_08,
+               time_00, time_01, time_02, time_03, time_04,
+               time_05, time_06, time_07, time_08
+        FROM SET04
+        WHERE ac_nmb = ?
         """
 
         try:
@@ -188,15 +188,15 @@ class ParamsPage(QWidget):
 
             for field, value in zip(fields, params):
                 if value is None:
-                    set_parts.append(f"[{field}] = NULL")
+                    set_parts.append(f"{field} = NULL")
                 else:
-                    set_parts.append(f"[{field}] = ?")
+                    set_parts.append(f"{field} = ?")
                     query_params.append(value)
 
             query = f"""
-            UPDATE [AMMKASAKDB01].[dbo].[SET04]
+            UPDATE SET04
             SET {', '.join(set_parts)}
-            WHERE [id] = ? AND [ac_nmb] = ?
+            WHERE id = ? AND ac_nmb = ?
             """
             query_params.extend([self.record_id, self.current_ac_nmb])
 

@@ -309,7 +309,7 @@ class BackgroundPage(QWidget):
                             query = f"""
                             UPDATE SET03 SET {db_column} = ? WHERE ac_nmb = ? AND sq_nmb = ? AND k_nmb = ?
                             """
-                            updated_count += self.db.execute_raw_query(query, (new_value, self.current_ac_nmb, source_sq, k_nmb))
+                            updated_count += self.db.execute(query, (new_value, self.current_ac_nmb, source_sq, k_nmb))
 
                     cursor.execute("COMMIT")
                     conn.commit()
