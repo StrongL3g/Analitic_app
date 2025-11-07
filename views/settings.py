@@ -127,22 +127,22 @@ class SettingsPage(QWidget):
             # Проверяем существование записи
             check_query = f"""
             SELECT COUNT(*) as cnt
-            FROM [{self.db.database_name}].[dbo].[SET00]
+            FROM SET00
             """
             result = self.db.fetch_one(check_query)
 
             if result and result.get('cnt', 0) > 0:
                 # Обновляем существующую запись
                 update_query = f"""
-                UPDATE [{self.db.database_name}].[dbo].[SET00]
-                SET [ac_nmb] = ?, [pr_nmb] = ?
+                UPDATE SET00
+                SET ac_nmb = ?, pr_nmb = ?
                 """
                 self.db.execute(update_query, [new_ac_count, new_pr_count])
             else:
                 # Создаем новую запись
                 insert_query = f"""
-                INSERT INTO [{self.db.database_name}].[dbo].[SET00]
-                ([ac_nmb], [pr_nmb])
+                INSERT INTO SET00
+                (ac_nmb, pr_nmb)
                 VALUES (?, ?)
                 """
                 self.db.execute(insert_query, [new_ac_count, new_pr_count])
@@ -239,8 +239,8 @@ class SettingsPage(QWidget):
         try:
             query = f"""
             SELECT COUNT(*) as cnt
-            FROM [{self.db.database_name}].[dbo].[{table_name}]
-            WHERE [{group_field}] = ?
+            FROM {table_name}
+            WHERE {group_field} = ?
             """
             result = self.db.fetch_one(query, [group_nmb])
             return result and result.get('cnt', 0) > 0
@@ -252,15 +252,15 @@ class SettingsPage(QWidget):
         """Получает список существующих групп в таблице"""
         try:
             query = f"""
-            SELECT DISTINCT [{group_field}]
-            FROM [{self.db.database_name}].[dbo].[{table_name}]
-            WHERE [{group_field}] IS NOT NULL
-            ORDER BY [{group_field}]
+            SELECT DISTINCT {group_field}
+            FROM {table_name}
+            WHERE {group_field} IS NOT NULL
+            ORDER BY {group_field}
             """
             results = self.db.fetch_all(query)
             return [row[group_field] for row in results]
         except Exception as e:
-            print(f"Ошибка при получении списка существующих групп в [{table_name}]: {e}")
+            print(f"Ошибка при получении списка существующих групп в {table_name}: {e}")
             return []
 
     # --- Методы для создания базовых групп ---
@@ -269,8 +269,8 @@ class SettingsPage(QWidget):
         """Создает базовую группу (ac_nmb = 1) с 21 строкой в SET02"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[SET02]
-            ([ac_nmb], [sq_nmb], [ln_nmb], [ln_ch_min], [ln_ch_max])
+            INSERT INTO SET02
+            (ac_nmb, sq_nmb, ln_nmb, ln_ch_min, ln_ch_max)
             VALUES (?, ?, ?, ?, ?)
             """
 
@@ -290,10 +290,10 @@ class SettingsPage(QWidget):
         """Создает базовую группу (ac_nmb = 1) с 40 строками в SET03"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[SET03]
-            ([ac_nmb], [sq_nmb], [ln_nmb], [k_nmb],
-             [ln_01], [ln_02], [ln_03], [ln_04], [ln_05], [ln_06], [ln_07], [ln_08], [ln_09], [ln_10],
-             [ln_11], [ln_12], [ln_13], [ln_14], [ln_15], [ln_16], [ln_17], [ln_18], [ln_19], [ln_20])
+            INSERT INTO SET03
+            (ac_nmb, sq_nmb, ln_nmb, k_nmb,
+             ln_01, ln_02, ln_03, ln_04, ln_05, ln_06, ln_07, ln_08, ln_09, ln_10,
+             ln_11, ln_12, ln_13, ln_14, ln_15, ln_16, ln_17, ln_18, ln_19, ln_20)
             VALUES (?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """
 
@@ -314,12 +314,12 @@ class SettingsPage(QWidget):
         """Создает базовую группу (ac_nmb = 1) с 1 строкой в SET04"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[SET04]
-            ([ac_nmb], [current_00], [current_01], [current_02], [current_03], [current_04],
-             [current_05], [current_06], [current_07], [current_08], [voltage_00], [voltage_01],
-             [voltage_02], [voltage_03], [voltage_04], [voltage_05], [voltage_06], [voltage_07],
-             [voltage_08], [time_00], [time_01], [time_02], [time_03], [time_04], [time_05],
-             [time_06], [time_07], [time_08], [I_DEF], [I_B], [K_D_DEF], [SD])
+            INSERT INTO SET04
+            (ac_nmb, current_00, current_01, current_02, current_03, current_04,
+             current_05, current_06, current_07, current_08, voltage_00, voltage_01,
+             voltage_02, voltage_03, voltage_04, voltage_05, voltage_06, voltage_07,
+             voltage_08, time_00, time_01, time_02, time_03, time_04, time_05,
+             time_06, time_07, time_08, i_def, i_b, k_d_def, sd)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
@@ -329,7 +329,7 @@ class SettingsPage(QWidget):
                 30, 30, 30, 30, 30, 30, 30, 30, 30,  # current_00 - current_08
                 35, 35, 35, 35, 35, 35, 35, 35, 35,  # voltage_00 - voltage_08
                 10, 10, 10, 10, 10, 10, 10, 10, 10,  # time_00 - time_08
-                5, 105430, 20, 2  # I_DEF, I_B, K_D_DEF, SD
+                5, 105430, 20, 2  # i_def, i_b, k_d_def, sd
             ]
 
             self.db.execute(insert_query, default_values)
@@ -344,8 +344,8 @@ class SettingsPage(QWidget):
         """Создает базовую группу (ac_nmb = 1) с 8 строками в SET06"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[SET06]
-            ([ac_nmb], [sq_nmb], [ln_nmb], [ln_en], [ch_nmb])
+            INSERT INTO SET06
+            (ac_nmb, sq_nmb, ln_nmb, ln_en, ch_nmb)
             VALUES (?, ?, ?, ?, ?)
             """
 
@@ -375,17 +375,17 @@ class SettingsPage(QWidget):
         """Создает базовую группу (pr_nmb = 1) с 20 строками в SET07"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[SET07]
-            ([pr_nmb], [sq_nmb], [ln_nmb], [i_min], [i_max])
+            INSERT INTO SET07
+            (pr_nmb, sq_nmb, ln_nmb, i_min, i_max)
             VALUES (?, ?, ?, ?, ?)
             """
 
             # Берем значения из первого существующего продукта или используем значения по умолчанию
             template_query = f"""
-            SELECT TOP 1 [ln_nmb]
-            FROM [{self.db.database_name}].[dbo].[SET07]
-            WHERE [pr_nmb] = 1
-            ORDER BY [sq_nmb]
+            SELECT TOP 1 ln_nmb
+            FROM SET07
+            WHERE pr_nmb = 1
+            ORDER BY sq_nmb
             """
             template_result = self.db.fetch_one(template_query)
 
@@ -407,21 +407,21 @@ class SettingsPage(QWidget):
         """Создает базовую группу (pr_nmb = 1) с 24 строками в PR_SET (3 модели × 8 элементов)"""
         try:
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[PR_SET]
-            ([pr_nmb], [mdl_nmb], [active_model], [el_nmb], [meas_type], [mdl_desc],
-            [k_i_alin00], [k_c_alin00], [k_i_alin01], [k_c_alin01],
-            [operand_c_01_01], [operand_c_02_01], [operator_c_01],
-            [operand_i_01_01], [operand_i_02_01], [operator_i_01],
-            [k_i_alin02], [k_c_alin02], [operand_c_01_02], [operand_c_02_02], [operator_c_02],
-            [operand_i_01_02], [operand_i_02_02], [operator_i_02],
-            [k_i_alin03], [k_c_alin03], [operand_c_01_03], [operand_c_02_03], [operator_c_03],
-            [operand_i_01_03], [operand_i_02_03], [operator_i_03],
-            [k_i_alin04], [k_c_alin04], [operand_c_01_04], [operand_c_02_04], [operator_c_04],
-            [operand_i_01_04], [operand_i_02_04], [operator_i_04],
-            [k_i_alin05], [k_c_alin05], [operand_c_01_05], [operand_c_02_05], [operator_c_05],
-            [operand_i_01_05], [operand_i_02_05], [operator_i_05],
-            [k_i_klin00], [k_c_klin00], [k_i_klin01], [k_c_klin01],
-            [c_min], [c_max], [water_crit], [empty_crit], [w_sq_nmb], [e_sq_nmb], [w_operator], [e_operator])
+            INSERT INTO PR_SET
+            (pr_nmb, mdl_nmb, active_model, el_nmb, meas_type, mdl_desc,
+            k_i_alin00, k_c_alin00, k_i_alin01, k_c_alin01,
+            operand_c_01_01, operand_c_02_01, operator_c_01,
+            operand_i_01_01, operand_i_02_01, operator_i_01,
+            k_i_alin02, k_c_alin02, operand_c_01_02, operand_c_02_02, operator_c_02,
+            operand_i_01_02, operand_i_02_02, operator_i_02,
+            k_i_alin03, k_c_alin03, operand_c_01_03, operand_c_02_03, operator_c_03,
+            operand_i_01_03, operand_i_02_03, operator_i_03,
+            k_i_alin04, k_c_alin04, operand_c_01_04, operand_c_02_04, operator_c_04,
+            operand_i_01_04, operand_i_02_04, operator_i_04,
+            k_i_alin05, k_c_alin05, operand_c_01_05, operand_c_02_05, operator_c_05,
+            operand_i_01_05, operand_i_02_05, operator_i_05,
+            k_i_klin00, k_c_klin00, k_i_klin01, k_c_klin01,
+            c_min, c_max, water_crit, empty_crit, w_sq_nmb, e_sq_nmb, w_operator, e_operator)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
@@ -455,58 +455,58 @@ class SettingsPage(QWidget):
         """Создает новую группу, копируя структуру и данные из шаблонной группы"""
         try:
             if table_name == "SET02":
-                select_fields = "[sq_nmb], [ln_nmb], [ln_ch_min], [ln_ch_max]"
-                insert_fields = "([ac_nmb], [sq_nmb], [ln_nmb], [ln_ch_min], [ln_ch_max])"
+                select_fields = "sq_nmb, ln_nmb, ln_ch_min, ln_ch_max"
+                insert_fields = "(ac_nmb, sq_nmb, ln_nmb, ln_ch_min, ln_ch_max)"
                 values_placeholder = "(?, ?, ?, ?, ?)"
             elif table_name == "SET03":
-                select_fields = "[sq_nmb], [ln_nmb], [k_nmb], [ln_01], [ln_02], [ln_03], [ln_04], [ln_05], [ln_06], [ln_07], [ln_08], [ln_09], [ln_10], [ln_11], [ln_12], [ln_13], [ln_14], [ln_15], [ln_16], [ln_17], [ln_18], [ln_19], [ln_20]"
-                insert_fields = "([ac_nmb], [sq_nmb], [ln_nmb], [k_nmb], [ln_01], [ln_02], [ln_03], [ln_04], [ln_05], [ln_06], [ln_07], [ln_08], [ln_09], [ln_10], [ln_11], [ln_12], [ln_13], [ln_14], [ln_15], [ln_16], [ln_17], [ln_18], [ln_19], [ln_20])"
+                select_fields = "sq_nmb, ln_nmb, k_nmb, ln_01, ln_02, ln_03, ln_04, ln_05, ln_06, ln_07, ln_08, ln_09, ln_10, ln_11, ln_12, ln_13, ln_14, ln_15, ln_16, ln_17, ln_18, ln_19, ln_20"
+                insert_fields = "(ac_nmb, sq_nmb, ln_nmb, k_nmb, ln_01, ln_02, ln_03, ln_04, ln_05, ln_06, ln_07, ln_08, ln_09, ln_10, ln_11, ln_12, ln_13, ln_14, ln_15, ln_16, ln_17, ln_18, ln_19, ln_20)"
                 values_placeholder = "(?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
             elif table_name == "SET04":
-                select_fields = "[current_00], [current_01], [current_02], [current_03], [current_04], [current_05], [current_06], [current_07], [current_08], [voltage_00], [voltage_01], [voltage_02], [voltage_03], [voltage_04], [voltage_05], [voltage_06], [voltage_07], [voltage_08], [time_00], [time_01], [time_02], [time_03], [time_04], [time_05], [time_06], [time_07], [time_08], [I_DEF], [I_B], [K_D_DEF], [SD]"
-                insert_fields = "([ac_nmb], [current_00], [current_01], [current_02], [current_03], [current_04], [current_05], [current_06], [current_07], [current_08], [voltage_00], [voltage_01], [voltage_02], [voltage_03], [voltage_04], [voltage_05], [voltage_06], [voltage_07], [voltage_08], [time_00], [time_01], [time_02], [time_03], [time_04], [time_05], [time_06], [time_07], [time_08], [I_DEF], [I_B], [K_D_DEF], [SD])"
+                select_fields = "current_00, current_01, current_02, current_03, current_04, current_05, current_06, current_07, current_08, voltage_00, voltage_01, voltage_02, voltage_03, voltage_04, voltage_05, voltage_06, voltage_07, voltage_08, time_00, time_01, time_02, time_03, time_04, time_05, time_06, time_07, time_08, i_def, i_b, k_d_def, sd"
+                insert_fields = "(ac_nmb, current_00, current_01, current_02, current_03, current_04, current_05, current_06, current_07, current_08, voltage_00, voltage_01, voltage_02, voltage_03, voltage_04, voltage_05, voltage_06, voltage_07, voltage_08, time_00, time_01, time_02, time_03, time_04, time_05, time_06, time_07, time_08, i_def, i_b, k_d_def, sd)"
                 values_placeholder = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             elif table_name == "SET06":
-                select_fields = "[sq_nmb], [ln_nmb], [ln_en], [ch_nmb]"
-                insert_fields = "([ac_nmb], [sq_nmb], [ln_nmb], [ln_en], [ch_nmb])"
+                select_fields = "sq_nmb, ln_nmb, ln_en, ch_nmb"
+                insert_fields = "(ac_nmb, sq_nmb, ln_nmb, ln_en, ch_nmb)"
                 values_placeholder = "(?, ?, ?, ?, ?)"
             elif table_name == "SET07":
-                select_fields = "[sq_nmb], [ln_nmb], [i_min], [i_max]"
-                insert_fields = "([pr_nmb], [sq_nmb], [ln_nmb], [i_min], [i_max])"
+                select_fields = "sq_nmb, ln_nmb, i_min, i_max"
+                insert_fields = "(pr_nmb, sq_nmb, ln_nmb, i_min, i_max)"
                 values_placeholder = "(?, ?, ?, ?, ?)"
             elif table_name == "PR_SET":
                 # Более полный список полей с обработкой NULL значений
                 select_fields = """
-                [mdl_nmb], [active_model], [el_nmb], [meas_type], [mdl_desc],
-                [k_i_alin00], [k_c_alin00], [k_i_alin01], [k_c_alin01],
-                [operand_c_01_01], [operand_c_02_01], [operator_c_01],
-                [operand_i_01_01], [operand_i_02_01], [operator_i_01],
-                [k_i_alin02], [k_c_alin02], [operand_c_01_02], [operand_c_02_02], [operator_c_02],
-                [operand_i_01_02], [operand_i_02_02], [operator_i_02],
-                [k_i_alin03], [k_c_alin03], [operand_c_01_03], [operand_c_02_03], [operator_c_03],
-                [operand_i_01_03], [operand_i_02_03], [operator_i_03],
-                [k_i_alin04], [k_c_alin04], [operand_c_01_04], [operand_c_02_04], [operator_c_04],
-                [operand_i_01_04], [operand_i_02_04], [operator_i_04],
-                [k_i_alin05], [k_c_alin05], [operand_c_01_05], [operand_c_02_05], [operator_c_05],
-                [operand_i_01_05], [operand_i_02_05], [operator_i_05],
-                [k_i_klin00], [k_c_klin00], [k_i_klin01], [k_c_klin01],
-                [c_min], [c_max], [water_crit], [empty_crit], [w_sq_nmb], [e_sq_nmb], [w_operator], [e_operator]
+                mdl_nmb, active_model, el_nmb, meas_type, mdl_desc,
+                k_i_alin00, k_c_alin00, k_i_alin01, k_c_alin01,
+                operand_c_01_01, operand_c_02_01, operator_c_01,
+                operand_i_01_01, operand_i_02_01, operator_i_01,
+                k_i_alin02, k_c_alin02, operand_c_01_02, operand_c_02_02, operator_c_02,
+                operand_i_01_02, operand_i_02_02, operator_i_02,
+                k_i_alin03, k_c_alin03, operand_c_01_03, operand_c_02_03, operator_c_03,
+                operand_i_01_03, operand_i_02_03, operator_i_03,
+                k_i_alin04, k_c_alin04, operand_c_01_04, operand_c_02_04, operator_c_04,
+                operand_i_01_04, operand_i_02_04, operator_i_04,
+                k_i_alin05, k_c_alin05, operand_c_01_05, operand_c_02_05, operator_c_05,
+                operand_i_01_05, operand_i_02_05, operator_i_05,
+                k_i_klin00, k_c_klin00, k_i_klin01, k_c_klin01,
+                c_min, c_max, water_crit, empty_crit, w_sq_nmb, e_sq_nmb, w_operator, e_operator
                 """
                 insert_fields = """
-                ([pr_nmb], [mdl_nmb], [active_model], [el_nmb], [meas_type], [mdl_desc],
-                [k_i_alin00], [k_c_alin00], [k_i_alin01], [k_c_alin01],
-                [operand_c_01_01], [operand_c_02_01], [operator_c_01],
-                [operand_i_01_01], [operand_i_02_01], [operator_i_01],
-                [k_i_alin02], [k_c_alin02], [operand_c_01_02], [operand_c_02_02], [operator_c_02],
-                [operand_i_01_02], [operand_i_02_02], [operator_i_02],
-                [k_i_alin03], [k_c_alin03], [operand_c_01_03], [operand_c_02_03], [operator_c_03],
-                [operand_i_01_03], [operand_i_02_03], [operator_i_03],
-                [k_i_alin04], [k_c_alin04], [operand_c_01_04], [operand_c_02_04], [operator_c_04],
-                [operand_i_01_04], [operand_i_02_04], [operator_i_04],
-                [k_i_alin05], [k_c_alin05], [operand_c_01_05], [operand_c_02_05], [operator_c_05],
-                [operand_i_01_05], [operand_i_02_05], [operator_i_05],
-                [k_i_klin00], [k_c_klin00], [k_i_klin01], [k_c_klin01],
-                [c_min], [c_max], [water_crit], [empty_crit], [w_sq_nmb], [e_sq_nmb], [w_operator], [e_operator])
+                (pr_nmb, mdl_nmb, active_model, el_nmb, meas_type, mdl_desc,
+                k_i_alin00, k_c_alin00, k_i_alin01, k_c_alin01,
+                operand_c_01_01, operand_c_02_01, operator_c_01,
+                operand_i_01_01, operand_i_02_01, operator_i_01,
+                k_i_alin02, k_c_alin02, operand_c_01_02, operand_c_02_02, operator_c_02,
+                operand_i_01_02, operand_i_02_02, operator_i_02,
+                k_i_alin03, k_c_alin03, operand_c_01_03, operand_c_02_03, operator_c_03,
+                operand_i_01_03, operand_i_02_03, operator_i_03,
+                k_i_alin04, k_c_alin04, operand_c_01_04, operand_c_02_04, operator_c_04,
+                operand_i_01_04, operand_i_02_04, operator_i_04,
+                k_i_alin05, k_c_alin05, operand_c_01_05, operand_c_02_05, operator_c_05,
+                operand_i_01_05, operand_i_02_05, operator_i_05,
+                k_i_klin00, k_c_klin00, k_i_klin01, k_c_klin01,
+                c_min, c_max, water_crit, empty_crit, w_sq_nmb, e_sq_nmb, w_operator, e_operator)
                 """
                 values_placeholder = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             else:
@@ -515,9 +515,9 @@ class SettingsPage(QWidget):
 
             select_query = f"""
             SELECT {select_fields}
-            FROM [{self.db.database_name}].[dbo].[{table_name}]
-            WHERE [{group_field}] = ?
-            ORDER BY [id]
+            FROM {table_name}
+            WHERE {group_field} = ?
+            ORDER BY id
             """
             template_rows = self.db.fetch_all(select_query, [template_group_nmb])
 
@@ -526,7 +526,7 @@ class SettingsPage(QWidget):
                 return False
 
             insert_query = f"""
-            INSERT INTO [{self.db.database_name}].[dbo].[{table_name}]
+            INSERT INTO {table_name}
             {insert_fields}
             VALUES {values_placeholder}
             """
@@ -557,7 +557,7 @@ class SettingsPage(QWidget):
                             row['voltage_03'], row['voltage_04'], row['voltage_05'], row['voltage_06'],
                             row['voltage_07'], row['voltage_08'], row['time_00'], row['time_01'],
                             row['time_02'], row['time_03'], row['time_04'], row['time_05'], row['time_06'],
-                            row['time_07'], row['time_08'], row['I_DEF'], row['I_B'], row['K_D_DEF'], row['SD']
+                            row['time_07'], row['time_08'], row['i_def'], row['i_b'], row['k_d_def'], row['sd']
                         ])
                     elif table_name == "SET06":
                         values_list.extend([
@@ -672,8 +672,8 @@ class SettingsPage(QWidget):
         """Удаляет группу с указанным номером из таблицы"""
         try:
             delete_query = f"""
-            DELETE FROM [{self.db.database_name}].[dbo].[{table_name}]
-            WHERE [{group_field}] = ?
+            DELETE FROM {table_name}
+            WHERE {group_field} = ?
             """
             self.db.execute(delete_query, [group_nmb])
             print(f"Группа ({group_field}={group_nmb}) успешно удалена из [{table_name}]")

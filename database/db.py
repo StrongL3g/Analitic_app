@@ -14,18 +14,13 @@ class Database:
         if params is None:
             return query, None
 
-        #print(f"DB_TYPE: {self.db_type}")
         #print(f"Исходный запрос: {query}")
 
         if self.db_type == 'postgres':
-            # Заменяем [column] на "column"
-            #converted_query = re.sub(r'\[([a-zA-Z_][a-zA-Z0-9_]*)\]', r'"\1"', query)
-            # Заменяем ? на %s
             converted_query = query.replace('?', '%s')
-            print(f"Конвертированный запрос: {converted_query}")
+            #print(f"Конвертированный запрос: {converted_query}")
             return converted_query, params
         else:
-            print(f"Конвертированный запрос: {query}")
             return query, params
 
     @contextmanager
@@ -63,7 +58,6 @@ class Database:
     def fetch_all(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
-            print(f"Коннект выполнен")
             prepared_query, prepared_params = self._prepare_query_and_params(query, params)
 
             cursor.execute(prepared_query, prepared_params or ())
@@ -80,7 +74,6 @@ class Database:
     def fetch_one(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
-            print(f"Коннект выполнен")
             prepared_query, prepared_params = self._prepare_query_and_params(query, params)
             cursor.execute(prepared_query, prepared_params or ())
             row = cursor.fetchone()
@@ -97,21 +90,8 @@ class Database:
     def execute(self, query, params=None):
         with self.connect() as conn:
             cursor = conn.cursor()
-            print(f"Коннект выполнен")
             prepared_query, prepared_params = self._prepare_query_and_params(query, params)
 
-            try:
-                cursor.execute(prepared_query, prepared_params or ())
-                conn.commit()
-                return cursor.rowcount
-            except Exception as e:
-                conn.rollback()
-                raise Exception(f"Ошибка выполнения запроса: {e}")
-
-    def execute_raw_query(self, query, params=None):
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            prepared_query, prepared_params = self._prepare_query_and_params(query, params)
             try:
                 cursor.execute(prepared_query, prepared_params or ())
                 conn.commit()

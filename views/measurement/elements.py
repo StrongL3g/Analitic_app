@@ -74,9 +74,9 @@ class ElementsPage(QWidget):
     def load_data(self):
         """Загружает элементы из SET05"""
         query = f"""
-        SELECT [id], [el_nmb], [el_name]
-        FROM [{self.db.database_name}].[dbo].[SET05]
-        ORDER BY [el_nmb]
+        SELECT id, el_nmb, el_name
+        FROM SET05
+        ORDER BY el_nmb
         """
         try:
             data = self.db.fetch_all(query)
@@ -157,9 +157,9 @@ class ElementsPage(QWidget):
 
                 if original_entry and new_name and new_name != original_entry["el_name"]:
                     query = f"""
-                    UPDATE [{self.db.database_name}].[dbo].[SET05]
-                    SET [el_name] = ?
-                    WHERE [id] = ?
+                    UPDATE SET05
+                    SET el_name = ?
+                    WHERE id = ?
                     """
                     self.db.execute(query, [new_name, row_id])
                     # Обновляем оригинальные данные

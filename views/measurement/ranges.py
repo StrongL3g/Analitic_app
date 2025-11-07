@@ -117,10 +117,10 @@ class RangesPage(QWidget):
             # Загружаем данные для ВСЕХ групп ac_nmb одним запросом
             # ORDER BY важен: сначала по ac_nmb, потом по sq_nmb
             query = f"""
-            SELECT [id], [ac_nmb], [sq_nmb], [ln_nmb], [ln_ch_min], [ln_ch_max]
-            FROM [{self.db.database_name}].[dbo].[SET02]
-            WHERE [ac_nmb] BETWEEN 1 AND ?
-            ORDER BY [ac_nmb], [sq_nmb]
+            SELECT id, ac_nmb, sq_nmb, ln_nmb, ln_ch_min, ln_ch_max
+            FROM SET02
+            WHERE ac_nmb BETWEEN 1 AND ?
+            ORDER BY ac_nmb, sq_nmb
             """
             # Передаем ac_count как параметр в запрос
             all_data = self.db.fetch_all(query, [ac_count])
@@ -371,9 +371,9 @@ class RangesPage(QWidget):
                         if new_min != old_min:
                             try:
                                 query = f"""
-                                UPDATE [{self.db.database_name}].[dbo].[SET02]
-                                SET [ln_ch_min] = ?
-                                WHERE [id] = ? AND [ac_nmb] = ?
+                                UPDATE SET02
+                                SET ln_ch_min = ?
+                                WHERE id = ? AND ac_nmb = ?
                                 """
                                 if new_min == "":
                                     self.db.execute(query, [None, target_id, ac_nmb])
@@ -392,9 +392,9 @@ class RangesPage(QWidget):
                         if new_max != old_max:
                             try:
                                 query = f"""
-                                UPDATE [{self.db.database_name}].[dbo].[SET02]
-                                SET [ln_ch_max] = ?
-                                WHERE [id] = ? AND [ac_nmb] = ?
+                                UPDATE SET02
+                                SET ln_ch_max = ?
+                                WHERE id = ? AND ac_nmb = ?
                                 """
                                 if new_max == "":
                                     self.db.execute(query, [None, target_id, ac_nmb])
@@ -474,51 +474,42 @@ class RangesPage(QWidget):
 
     def synchronize_line_changes(self, old_ln_nmb, new_ln_nmb, sq_nmb):
         """Синхронизирует изменения линий между SET02, SET03 и SET07 для всех записей с данным sq_nmb"""
-        try:
+        with self.db.connect() as conn:
+            cursor = conn.cursor()
             updated_count = 0
 
-            with self.db.connect() as conn:
-                cursor = conn.cursor()
-                cursor.execute("BEGIN TRANSACTION")
-
-                # 1. Обновляем SET02 для всех записей с данным sq_nmb и старым ln_nmb
-                query_set02 = f"""
-                UPDATE [{self.db.database_name}].[dbo].[SET02]
-                SET [ln_nmb] = ?
-                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
-                """
-                cursor.execute(query_set02, [new_ln_nmb, sq_nmb, old_ln_nmb])
-                updated_count += cursor.rowcount
-
-                # 2. Обновляем SET03 для всех записей с данным sq_nmb и старым ln_nmb
-                query_set03 = f"""
-                UPDATE [{self.db.database_name}].[dbo].[SET03]
-                SET [ln_nmb] = ?
-                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
-                """
-                cursor.execute(query_set03, [new_ln_nmb, sq_nmb, old_ln_nmb])
-                updated_count += cursor.rowcount
-
-                # 3. Обновляем SET07 для всех записей с данным sq_nmb и старым ln_nmb
-                query_set07 = f"""
-                UPDATE [{self.db.database_name}].[dbo].[SET07]
-                SET [ln_nmb] = ?
-                WHERE [sq_nmb] = ? AND [ln_nmb] = ?
-                """
-                cursor.execute(query_set07, [new_ln_nmb, sq_nmb, old_ln_nmb])
-                updated_count += cursor.rowcount
-
-                cursor.execute("COMMIT")
-                conn.commit()
-
-            return updated_count
-
-        except Exception as e:
             try:
-                cursor.execute("ROLLBACK")
-            except:
-                pass
-            raise e
+                # Подготавливаем запрос и параметры один раз (или для каждого — неважно, логика в _prepare)
+                # Обновляем SET02
+                query_set02 = "UPDATE SET02 SET ln_nmb = ? WHERE sq_nmb = ? AND ln_nmb = ?"
+                prepared_query, prepared_params = self.db._prepare_query_and_params(
+                    query_set02, (new_ln_nmb, sq_nmb, old_ln_nmb)
+                )
+                cursor.execute(prepared_query, prepared_params or ())
+                updated_count += cursor.rowcount
+
+                # Обновляем SET03
+                query_set03 = "UPDATE SET03 SET ln_nmb = ? WHERE sq_nmb = ? AND ln_nmb = ?"
+                prepared_query, prepared_params = self.db._prepare_query_and_params(
+                    query_set03, (new_ln_nmb, sq_nmb, old_ln_nmb)
+                )
+                cursor.execute(prepared_query, prepared_params or ())
+                updated_count += cursor.rowcount
+
+                # Обновляем SET07
+                query_set07 = "UPDATE SET07 SET ln_nmb = ? WHERE sq_nmb = ? AND ln_nmb = ?"
+                prepared_query, prepared_params = self.db._prepare_query_and_params(
+                    query_set07, (new_ln_nmb, sq_nmb, old_ln_nmb)
+                )
+                cursor.execute(prepared_query, prepared_params or ())
+                updated_count += cursor.rowcount
+
+                conn.commit()
+                return updated_count
+
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Ошибка синхронизации линий: {e}")
 
     def validate_cross_table_consistency(self):
         """Проверяет согласованность ln_nmb для каждого sq_nmb между SET02, SET03 и SET07"""
@@ -527,19 +518,19 @@ class RangesPage(QWidget):
 
             # Получаем уникальные sq_nmb из SET02 (основная таблица)
             query_sq_nmb = f"""
-            SELECT DISTINCT [sq_nmb]
-            FROM [{self.db.database_name}].[dbo].[SET02]
-            WHERE [sq_nmb] != 0
-            ORDER BY [sq_nmb]
+            SELECT DISTINCT sq_nmb
+            FROM SET02
+            WHERE sq_nmb != 0
+            ORDER BY sq_nmb
             """
             sq_nmb_list = [row["sq_nmb"] for row in self.db.fetch_all(query_sq_nmb)]
 
             for sq_nmb in sq_nmb_list:
                 # Получаем эталонное значение ln_nmb из SET02
                 query_set02 = f"""
-                SELECT DISTINCT [ln_nmb]
-                FROM [{self.db.database_name}].[dbo].[SET02]
-                WHERE [sq_nmb] = ?
+                SELECT DISTINCT ln_nmb
+                FROM SET02
+                WHERE sq_nmb = ?
                 """
                 set02_data = self.db.fetch_all(query_set02, [sq_nmb])
 
@@ -551,9 +542,9 @@ class RangesPage(QWidget):
 
                 # Проверяем SET03
                 query_set03 = f"""
-                SELECT DISTINCT [ln_nmb]
-                FROM [{self.db.database_name}].[dbo].[SET03]
-                WHERE [sq_nmb] = ?
+                SELECT DISTINCT ln_nmb
+                FROM SET03
+                WHERE sq_nmb = ?
                 """
                 set03_data = self.db.fetch_all(query_set03, [sq_nmb])
 
@@ -566,9 +557,9 @@ class RangesPage(QWidget):
 
                 # Проверяем SET07
                 query_set07 = f"""
-                SELECT DISTINCT [ln_nmb]
-                FROM [{self.db.database_name}].[dbo].[SET07]
-                WHERE [sq_nmb] = ?
+                SELECT DISTINCT ln_nmb
+                FROM SET07
+                WHERE sq_nmb = ?
                 """
                 set07_data = self.db.fetch_all(query_set07, [sq_nmb])
 
