@@ -346,22 +346,21 @@ class EquationsPage(QWidget):
         container = QWidget()
         container_layout = QVBoxLayout(container)
 
-        # Таблица границ интенсивности
+        # Таблица границ интенсивности (теперь 3 колонки вместо 4)
         self.intensity_table = QTableWidget()
-        self.intensity_table.setColumnCount(4)
+        self.intensity_table.setColumnCount(3)  # Уменьшили с 4 до 3
         self.intensity_table.setHorizontalHeaderLabels([
-            "№ линии", "Название линии", "I мин", "I макс"
+            "Название линии", "I мин", "I макс"  # Убрали "№ линии"
         ])
-        # КОМПАКТНАЯ НАСТРОЙКА РАЗМЕРОВ
-        self.intensity_table.setColumnWidth(0, 60)  # № линии - компактно
-        self.intensity_table.setColumnWidth(1, 120)  # Название линии - компактно
-        self.intensity_table.setColumnWidth(2, 80)  # I мин - компактно
-        self.intensity_table.setColumnWidth(3, 80)  # I макс - компактно
+
+        # НАСТРОЙКА РАЗМЕРОВ КОЛОНОК
+        self.intensity_table.setColumnWidth(0, 180)  # Название линии - увеличили место
+        self.intensity_table.setColumnWidth(1, 100)  # I мин
+        self.intensity_table.setColumnWidth(2, 100)  # I макс
 
         self.intensity_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
+        self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.intensity_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.intensity_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
 
         self.intensity_table.setAlternatingRowColors(True)
         self.intensity_table.setRowCount(20)  # 20 линий
@@ -760,6 +759,11 @@ class EquationsPage(QWidget):
 
         self.intensity_table.setRowCount(len(self.current_intensity_data))
 
+        # Устанавливаем размеры колонок при обновлении таблицы (теперь 3 колонки)
+        self.intensity_table.setColumnWidth(0, 180)  # Название линии
+        self.intensity_table.setColumnWidth(1, 100)  # I мин
+        self.intensity_table.setColumnWidth(2, 100)  # I макс
+
         for row_idx, data in enumerate(self.current_intensity_data):
             sq_nmb = data.get('sq_nmb', 0)
             ln_nmb = data.get('ln_nmb', -1)
@@ -767,26 +771,25 @@ class EquationsPage(QWidget):
             # Получаем название линии
             line_name = self._get_line_name(ln_nmb)
 
-            # № линии
-            sq_item = QTableWidgetItem(str(sq_nmb))
-            sq_item.setTextAlignment(Qt.AlignCenter)
-            sq_item.setFlags(sq_item.flags() & ~Qt.ItemIsEditable)
-            self.intensity_table.setItem(row_idx, 0, sq_item)
+            # 3 колонки:
+            # 0: Название линии
+            # 1: I мин
+            # 2: I макс
 
             # Название линии
             name_item = QTableWidgetItem(line_name)
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
-            self.intensity_table.setItem(row_idx, 1, name_item)
+            self.intensity_table.setItem(row_idx, 0, name_item)
 
             # I мин
             i_min_item = QTableWidgetItem(str(data.get('i_min', 1)))
             i_min_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.intensity_table.setItem(row_idx, 2, i_min_item)
+            self.intensity_table.setItem(row_idx, 1, i_min_item)
 
             # I макс
             i_max_item = QTableWidgetItem(str(data.get('i_max', 1000000)))
             i_max_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.intensity_table.setItem(row_idx, 3, i_max_item)
+            self.intensity_table.setItem(row_idx, 2, i_max_item)
 
     def _get_line_name(self, ln_nmb):
         """Получает название линии по номеру"""
@@ -1108,9 +1111,13 @@ class EquationsPage(QWidget):
             pr_nmb = self.current_equation_data.get('pr_nmb', 0)
 
             for row in range(self.intensity_table.rowCount()):
-                sq_nmb = int(self.intensity_table.item(row, 0).text())
-                i_min_text = self.intensity_table.item(row, 2).text()
-                i_max_text = self.intensity_table.item(row, 3).text()
+                # Теперь номер линии берем из текущих данных, так как столбца с номером нет
+                # Используем row индекс + 1 для получения номера линии
+                sq_nmb = row + 1
+
+                # Колонки теперь: 0 - название, 1 - I мин, 2 - I макс
+                i_min_text = self.intensity_table.item(row, 1).text()  # I мин теперь в колонке 1
+                i_max_text = self.intensity_table.item(row, 2).text()  # I макс теперь в колонке 2
 
                 if not i_min_text or not i_max_text:
                     QMessageBox.warning(self, "Ошибка",
