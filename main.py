@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
         self.db_pages = {
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "settings",
-            "equations", "standards"
+            "equations", "models", "standards"
         }
 
         # Кэш созданных страниц
