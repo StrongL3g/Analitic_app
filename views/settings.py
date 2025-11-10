@@ -110,6 +110,9 @@ class SettingsPage(QWidget):
             self._update_db_groups_for_table("SET07", "pr_nmb", new_pr_count, rows_per_group=20)
             self._update_db_groups_for_table("PR_SET", "pr_nmb", new_pr_count, rows_per_group=24)
 
+            # 10.11.2025 RD # Обновляем set08 для продуктов
+            self._update_set08_groups(new_pr_count)
+
             QMessageBox.information(
                 self,
                 "Успех",
@@ -120,6 +123,85 @@ class SettingsPage(QWidget):
             error_msg = f"Ошибка при применении настроек и обновлении БД: {e}"
             print(error_msg)
             QMessageBox.critical(self, "Ошибка", error_msg)
+
+    def _update_set08_groups(self, new_pr_count: int):
+        """Обновляет группы продуктов в таблице SET08 (по 8 элементов на продукт, все delta = 0)"""
+        try:
+            table_name = "set08"
+            group_field = "pr_nmb"
+
+            # Проверяем/создаём базовую группу (pr_nmb = 1), если её нет
+            if not self._check_group_exists_in_table(table_name, group_field, 1):
+                reply = QMessageBox.question(
+                    self,
+                    "Создать базовую группу",
+                    f"Базовая группа данных ({group_field}=1) в таблице {table_name} не существует. Создать её?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.Yes
+                )
+                if reply == QMessageBox.Yes:
+                    if self._create_empty_group_set08(1):
+                        QMessageBox.information(self, "Успех", f"Базовая группа ({group_field}=1) в таблице {table_name} создана")
+                    else:
+                        raise Exception(f"Не удалось создать базовую группу для {table_name}")
+                else:
+                    raise Exception(f"Отмена: базовая группа для {table_name} обязательна")
+
+            # --- Создаём недостающие группы (pr_nmb = 2..new_pr_count) ---
+            groups_created = []
+            for pr_nmb in range(2, new_pr_count + 1):
+                if not self._check_group_exists_in_table(table_name, group_field, pr_nmb):
+                    if self._create_empty_group_set08(pr_nmb):
+                        groups_created.append(pr_nmb)
+                    else:
+                        QMessageBox.warning(self, "Предупреждение", f"Не удалось создать продукт {pr_nmb} в {table_name}")
+
+            # --- Удаляем лишние группы (pr_nmb > new_pr_count) ---
+            existing_groups = self._get_existing_groups_in_table(table_name, group_field)
+            groups_to_delete = [g for g in existing_groups if g > new_pr_count]
+
+            if groups_to_delete:
+                delete_list = ", ".join(map(str, groups_to_delete))
+                reply = QMessageBox.question(
+                    self,
+                    "Подтверждение удаления",
+                    f"Будут удалены продукты: {delete_list} из таблицы {table_name}.\n"
+                    f"Это действие необратимо!\nПродолжить?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    for pr_nmb in groups_to_delete:
+                        if self._delete_group_from_table(table_name, group_field, pr_nmb):
+                            pass  # можно логгировать
+                        else:
+                            QMessageBox.warning(self, "Ошибка", f"Не удалось удалить продукт {pr_nmb} из {table_name}")
+                else:
+                    QMessageBox.information(self, "Отмена", f"Удаление из {table_name} отменено.")
+
+        except Exception as e:
+            error_msg = f"Ошибка при обновлении SET08: {e}"
+            print(error_msg)
+            raise e
+
+    def _create_empty_group_set08(self, pr_nmb: int) -> bool:
+        """Создаёт продукт в SET08 с 8 элементами, все delta_c_01 = delta_c_02 = 0.0"""
+        try:
+            insert_query = """
+            INSERT INTO set08 (pr_nmb, el_nmb, delta_c_01, delta_c_02)
+            VALUES (?, ?, ?, ?)
+            """
+
+            # Создаём 8 элементов: el_nmb = 1..8
+            for el_nmb in range(1, 9):  # 1 to 8 inclusive
+                self.db.execute(insert_query, [pr_nmb, el_nmb, 0.0, 0.0])
+
+            print(f"Группа продукта (pr_nmb={pr_nmb}) успешно создана в SET08 (8 элементов, все delta = 0)")
+            return True
+        except Exception as e:
+            error_msg = f"Ошибка при создании продукта {pr_nmb} в SET08: {e}"
+            print(error_msg)
+            return False
 
     def _update_set00(self, new_ac_count: int, new_pr_count: int):
         """Обновляет таблицу SET00 с новыми значениями"""
