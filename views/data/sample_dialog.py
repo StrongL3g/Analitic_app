@@ -228,8 +228,8 @@ class SampleDialog(QDialog):
     def load_sample_from_file(self):
         """Загружает выборку из файла"""
         try:
-            if os.path.exists("config/sample.json"):
-                with open("config/sample.json", "r", encoding="utf-8") as f:
+            if os.path.exists("config/sample/s_regress.json"):
+                with open("config/sample/s_regress.json", "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
                         self.sample_data = data
@@ -241,7 +241,7 @@ class SampleDialog(QDialog):
         """Сохраняет выборку в файл"""
         try:
             os.makedirs("config", exist_ok=True)
-            with open("config/sample.json", "w", encoding="utf-8") as f:
+            with open("config/sample/s_regress.json", "w", encoding="utf-8") as f:
                 json.dump(self.sample_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Ошибка сохранения выборки в файл: {e}")
