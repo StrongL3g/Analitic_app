@@ -94,7 +94,7 @@ class StandardsPage(QWidget):
 
         # Левая часть: выбор продукта и кнопки
         left_layout = QVBoxLayout()
-        left_layout.setSpacing(10)
+        left_layout.setSpacing(15)  # Увеличили расстояние между элементами
 
         # Выбор продукта
         product_layout = QVBoxLayout()
@@ -106,7 +106,7 @@ class StandardsPage(QWidget):
         self.product_combo = QComboBox()
         products = [f"Продукт {i}" for i in range(1, PR_COUNT + 1)]
         self.product_combo.addItems(products)
-        self.product_combo.setFixedSize(150, 30)
+        self.product_combo.setFixedSize(130, 25)  # Уменьшили размер комбобокса
 
         product_layout.addWidget(product_label)
         product_layout.addWidget(self.product_combo)
@@ -115,9 +115,9 @@ class StandardsPage(QWidget):
         # Кнопки управления (без подписи "Действия")
         buttons_row_layout = QHBoxLayout()
         self.save_btn = QPushButton("Сохранить")
-        self.save_btn.setFixedSize(100, 30)
+        self.save_btn.setFixedSize(80, 25)  # Уменьшили размер
         self.refresh_btn = QPushButton("Обновить")
-        self.refresh_btn.setFixedSize(100, 30)
+        self.refresh_btn.setFixedSize(80, 25)  # Уменьшили размер
 
         buttons_row_layout.addWidget(self.save_btn)
         buttons_row_layout.addWidget(self.refresh_btn)
@@ -127,7 +127,7 @@ class StandardsPage(QWidget):
         top_layout.addLayout(left_layout)
 
         top_layout.addStretch()
-        top_frame.setFixedHeight(100)  # Увеличили высоту для кнопок
+        top_frame.setFixedHeight(90)  # Немного уменьшили высоту
 
         # Область с описанием продукта (с рамкой как у верхней панели)
         self.product_info_frame = QFrame()
@@ -174,7 +174,7 @@ class StandardsPage(QWidget):
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(top_frame)
         splitter.addWidget(self.table_widget)
-        splitter.setSizes([100, 400])
+        splitter.setSizes([90, 410])  # Подкорректировали размеры
 
         main_layout.addWidget(splitter)
 
