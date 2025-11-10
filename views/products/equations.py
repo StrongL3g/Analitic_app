@@ -2,8 +2,9 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QComboBox, QFrame,
                                QHBoxLayout, QSplitter, QTableWidget, QTableWidgetItem,
                                QHeaderView, QMessageBox, QLineEdit, QRadioButton,
                                QButtonGroup, QPushButton, QGroupBox, QFormLayout,
-                               QScrollArea, QApplication,QDialog, QTextEdit, QDialogButtonBox)
-from PySide6.QtGui import QDoubleValidator
+                               QScrollArea, QApplication, QDialog, QTextEdit,
+                               QDialogButtonBox, QTabWidget)
+from PySide6.QtGui import QDoubleValidator, QIntValidator
 from PySide6.QtCore import Qt
 import json
 from database.db import Database
@@ -23,6 +24,7 @@ class EquationsPage(QWidget):
         self.range_config = self._load_range_config()
         self.current_editing_row = None
         self.current_equation_data = None
+        self.current_intensity_data = None  # Данные границ интенсивности
         self.init_ui()
         self.setup_connections()
 
@@ -153,23 +155,53 @@ class EquationsPage(QWidget):
 
         main_layout.addWidget(splitter)
 
-        # Область редактирования уравнений
-        self.edit_widget = self.create_edit_area()
+        # === Область редактирования с вкладками ===
+        self.edit_widget = QGroupBox("Редактирование")
+        edit_layout = QVBoxLayout()
+
+        # Создаем вкладки
+        self.tab_widget = QTabWidget()
+
+        # Вкладка уравнения
+        self.equation_tab = self.create_equation_tab()
+        self.intensity_tab = self.create_intensity_tab()
+
+        self.tab_widget.addTab(self.equation_tab, "Уравнение")
+        self.tab_widget.addTab(self.intensity_tab, "Границы интенсивности")
+
+        edit_layout.addWidget(self.tab_widget)
+
+        # Кнопки управления (общие для всех вкладок)
+        btn_layout = QHBoxLayout()
+        self.save_btn = QPushButton("Сохранить")
+        self.apply_to_btn = QPushButton("Применить для...")
+        self.cancel_btn = QPushButton("Отменить")
+        self.clear_btn = QPushButton("Очистить уравнение")
+
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.apply_to_btn)
+        btn_layout.addWidget(self.cancel_btn)
+        btn_layout.addWidget(self.clear_btn)
+        btn_layout.addStretch()
+
+        edit_layout.addLayout(btn_layout)
+        self.edit_widget.setLayout(edit_layout)
+
         main_layout.addWidget(self.edit_widget)
         self.edit_widget.setVisible(False)
 
-    def create_edit_area(self):
-        """Создает область редактирования уравнения"""
-        edit_widget = QGroupBox("Редактирование уравнения")
-        edit_layout = QVBoxLayout()
-        edit_layout.setSpacing(10)
+    def create_equation_tab(self):
+        """Создает вкладку для редактирования уравнения"""
+        tab = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
 
         # Первая строка: Продукт №  Модель № Элемент:
         header_layout1 = QHBoxLayout()
         self.product_model_label = QLabel("Продукт №:  Модель №:  Элемент: ")
         header_layout1.addWidget(self.product_model_label)
         header_layout1.addStretch()
-        edit_layout.addLayout(header_layout1)
+        layout.addLayout(header_layout1)
 
         # Вторая строка: Выбор типа уравнения
         header_layout2 = QHBoxLayout()
@@ -182,14 +214,14 @@ class EquationsPage(QWidget):
         header_layout2.addWidget(self.regression_radio)
         header_layout2.addWidget(self.correlation_radio)
         header_layout2.addStretch()
-        edit_layout.addLayout(header_layout2)
+        layout.addLayout(header_layout2)
 
         # Третья строка: Критерии и диапазоны концентраций
         criteria_layout = QHBoxLayout()
 
         # Критерий Вода и C мин
         water_label = QLabel("Критерий \"Вода\":")
-        water_label.setFixedWidth(150)  # Фиксированная ширина для критерия воды
+        water_label.setFixedWidth(150)
         self.water_crit_edit = QLineEdit()
         self.water_crit_edit.setFixedWidth(100)
         self.water_crit_edit.setValidator(QDoubleValidator())
@@ -197,17 +229,15 @@ class EquationsPage(QWidget):
         # Выбор линии для критерия
         self.w_element_combo = QComboBox()
         self.w_element_combo.setFixedWidth(100)
-        # Заполняем комбобоксы через функцию
         self.populate_operand_combos(self.w_element_combo)
 
         # Выбор знака <= 0 ; > 1 bool
         self.w_operator_combo = QComboBox()
         self.w_operator_combo.setFixedWidth(50)
-        # Заполняем комбобокс через функцию
         self.populate_operator_combos(self.w_operator_combo)
 
         cmin_label = QLabel("C мин:")
-        cmin_label.setFixedWidth(50)  # Фиксированная ширина для C мин
+        cmin_label.setFixedWidth(50)
         self.c_min_edit = QLineEdit()
         self.c_min_edit.setFixedWidth(100)
         self.c_min_edit.setValidator(QDoubleValidator())
@@ -221,14 +251,14 @@ class EquationsPage(QWidget):
         criteria_layout.addWidget(self.c_min_edit)
         criteria_layout.addStretch()
 
-        edit_layout.addLayout(criteria_layout)
+        layout.addLayout(criteria_layout)
 
         # Четвертая строка: Критерий Пусто и C макс
         empty_layout = QHBoxLayout()
 
         # Критерий Пусто и C макс
         empty_label = QLabel("Критерий \"Пусто\"")
-        empty_label.setFixedWidth(150)  # Та же ширина, что и у water_label
+        empty_label.setFixedWidth(150)
         self.empty_crit_edit = QLineEdit()
         self.empty_crit_edit.setFixedWidth(100)
         self.empty_crit_edit.setValidator(QDoubleValidator())
@@ -236,17 +266,15 @@ class EquationsPage(QWidget):
         # Выбор линии для критерия
         self.e_element_combo = QComboBox()
         self.e_element_combo.setFixedWidth(100)
-        # Заполняем комбобоксы через функцию
         self.populate_operand_combos(self.e_element_combo)
 
         # Выбор знака <= 0 ; > 1 bool
         self.e_operator_combo = QComboBox()
         self.e_operator_combo.setFixedWidth(50)
-        # Заполняем комбобокс через функцию
         self.populate_operator_combos(self.e_operator_combo)
 
         cmax_label = QLabel("C макс:")
-        cmax_label.setFixedWidth(50)  # Та же ширина, что и у cmin_label
+        cmax_label.setFixedWidth(50)
         self.c_max_edit = QLineEdit()
         self.c_max_edit.setFixedWidth(100)
         self.c_max_edit.setValidator(QDoubleValidator())
@@ -260,7 +288,7 @@ class EquationsPage(QWidget):
         empty_layout.addWidget(self.c_max_edit)
         empty_layout.addStretch()
 
-        edit_layout.addLayout(empty_layout)
+        layout.addLayout(empty_layout)
 
         # Коэффициенты корректировки
         corr_group = QGroupBox("Коэффициенты корректировки")
@@ -277,7 +305,7 @@ class EquationsPage(QWidget):
         corr_layout.addWidget(self.k1_edit)
         corr_layout.addStretch()
         corr_group.setLayout(corr_layout)
-        edit_layout.addWidget(corr_group)
+        layout.addWidget(corr_group)
 
         # Члены уравнения (A0-A5)
         members_group = QGroupBox("Члены уравнения")
@@ -290,25 +318,54 @@ class EquationsPage(QWidget):
             members_layout.addWidget(member_widget)
 
         members_group.setLayout(members_layout)
-        edit_layout.addWidget(members_group)
+        layout.addWidget(members_group)
 
-        # Кнопки управления
-        btn_layout = QHBoxLayout()
-        self.save_btn = QPushButton("Сохранить")
-        self.apply_to_btn = QPushButton("Применить для...")
-        self.cancel_btn = QPushButton("Отменить")
-        self.clear_btn = QPushButton("Очистить уравнение")
+        tab.setLayout(layout)
+        return tab
 
-        btn_layout.addWidget(self.save_btn)
-        btn_layout.addWidget(self.apply_to_btn)
-        btn_layout.addWidget(self.cancel_btn)
-        btn_layout.addWidget(self.clear_btn)
-        btn_layout.addStretch()
+    def create_intensity_tab(self):
+        """Создает вкладку для редактирования границ интенсивности"""
+        tab = QWidget()
+        layout = QVBoxLayout()
 
-        edit_layout.addLayout(btn_layout)
-        edit_widget.setLayout(edit_layout)
+        # Заголовок
+        title = QLabel("Границы интенсивности для линий")
+        title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        layout.addWidget(title)
 
-        return edit_widget
+        # Информация о продукте
+        info_label = QLabel("Настройка минимальных и максимальных значений интенсивности для каждой линии")
+        info_label.setStyleSheet("color: #666;")
+        layout.addWidget(info_label)
+
+        # Прокручиваемая область для таблицы
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        # Контейнер для таблицы
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+
+        # Таблица границ интенсивности
+        self.intensity_table = QTableWidget()
+        self.intensity_table.setColumnCount(4)
+        self.intensity_table.setHorizontalHeaderLabels([
+            "№ линии", "Название линии", "I мин", "I макс"
+        ])
+        self.intensity_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.intensity_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.intensity_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+
+        self.intensity_table.setAlternatingRowColors(True)
+        self.intensity_table.setRowCount(20)  # 20 линий
+
+        container_layout.addWidget(self.intensity_table)
+        scroll_area.setWidget(container)
+        layout.addWidget(scroll_area)
+
+        tab.setLayout(layout)
+        return tab
 
     def create_member_widget(self, index):
         """Создает виджет для редактирования члена уравнения"""
@@ -380,8 +437,8 @@ class EquationsPage(QWidget):
     def populate_operator_combos(self, combo):
         """Заполняет комбобокс неравенством"""
         combo.clear()
-        combo.addItem("≤", 0)  # Меньше или равно
-        combo.addItem(">", 1)  # Строго больше
+        combo.addItem("≤", 1)  # True - меньше или равно
+        combo.addItem(">", 0)  # False - строго больше
 
     def populate_operation_combo(self, combo):
         """Заполняет комбобокс операций"""
@@ -419,6 +476,7 @@ class EquationsPage(QWidget):
         self.edit_widget.setVisible(False)
         self.current_editing_row = None
         self.current_equation_data = None
+        self.current_intensity_data = None
 
         # Перезагружаем конфигурационные файлы
         self.elements_config = self._load_elements_config()
@@ -503,7 +561,6 @@ class EquationsPage(QWidget):
                     operation_value = self.current_equation_data.get(f'operator_c_{i:02d}', 0)
 
                     # Устанавливаем значения в комбобоксы (для элементов используем номер как есть)
-                    # Исправляем проблему с -1: если значение отрицательное, устанавливаем 0
                     element1_value = element1_value if element1_value >= 0 else 0
                     element2_value = element2_value if element2_value >= 0 else 0
 
@@ -610,10 +667,17 @@ class EquationsPage(QWidget):
             # Заполняем критерии и диапазоны
             self.water_crit_edit.setText(str(equation_data.get('water_crit', 0)))
             self.set_combo_value(self.w_element_combo, equation_data.get('w_sq_nmb', 0))
-            self.set_combo_value(self.w_operator_combo, equation_data.get('w_operator', 0))
+
+            # ИСПРАВЛЕНИЕ: преобразуем boolean в int для комбобокса
+            w_operator = 1 if equation_data.get('w_operator', False) else 0
+            self.set_combo_value(self.w_operator_combo, w_operator)
+
             self.empty_crit_edit.setText(str(equation_data.get('empty_crit', 0)))
             self.set_combo_value(self.e_element_combo, equation_data.get('e_sq_nmb', 0))
-            self.set_combo_value(self.e_operator_combo, equation_data.get('e_operator', 0))
+
+            # ИСПРАВЛЕНИЕ: преобразуем boolean в int для комбобокса
+            e_operator = 1 if equation_data.get('e_operator', False) else 0
+            self.set_combo_value(self.e_operator_combo, e_operator)
 
             self.c_min_edit.setText(str(equation_data.get('c_min', 0)))
             self.c_max_edit.setText(str(equation_data.get('c_max', 0)))
@@ -633,11 +697,13 @@ class EquationsPage(QWidget):
                         self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
                         self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
 
-
             # Заполняем коэффициенты в соответствии с текущим типом измерения
             self.update_coefficients_display(meas_type)
 
-            # Подключаем обработчики (убедитесь, что они не подключены ранее)
+            # Загружаем данные границ интенсивности
+            self.load_intensity_data(pr_nmb)
+
+            # Подключаем обработчики
             try:
                 self.regression_radio.toggled.disconnect(self.on_measurement_type_changed)
                 self.correlation_radio.toggled.disconnect(self.on_measurement_type_changed)
@@ -651,6 +717,87 @@ class EquationsPage(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки уравнения для редактирования: {str(e)}")
+
+    def load_intensity_data(self, pr_nmb):
+        """Загружает данные границ интенсивности для выбранного продукта"""
+        try:
+            # Загружаем данные из таблицы set07
+            query = """
+            SELECT sq_nmb, ln_nmb, i_min, i_max 
+            FROM set07 
+            WHERE pr_nmb = ? 
+            ORDER BY sq_nmb
+            """
+            results = self.db.fetch_all(query, [pr_nmb])
+
+            if not results:
+                # Если данных нет, создаем пустые строки с значениями по умолчанию
+                results = []
+                for sq_nmb in range(1, 21):
+                    results.append({
+                        'sq_nmb': sq_nmb,
+                        'ln_nmb': -1,
+                        'i_min': 1,
+                        'i_max': 1000000
+                    })
+
+            self.current_intensity_data = results
+            self.update_intensity_table()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки границ интенсивности: {str(e)}")
+
+    def update_intensity_table(self):
+        """Обновляет таблицу границ интенсивности"""
+        if not self.current_intensity_data:
+            return
+
+        self.intensity_table.setRowCount(len(self.current_intensity_data))
+
+        for row_idx, data in enumerate(self.current_intensity_data):
+            sq_nmb = data.get('sq_nmb', 0)
+            ln_nmb = data.get('ln_nmb', -1)
+
+            # Получаем название линии
+            line_name = self._get_line_name(ln_nmb)
+
+            # № линии
+            sq_item = QTableWidgetItem(str(sq_nmb))
+            sq_item.setTextAlignment(Qt.AlignCenter)
+            sq_item.setFlags(sq_item.flags() & ~Qt.ItemIsEditable)
+            self.intensity_table.setItem(row_idx, 0, sq_item)
+
+            # Название линии
+            name_item = QTableWidgetItem(line_name)
+            name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
+            self.intensity_table.setItem(row_idx, 1, name_item)
+
+            # I мин
+            i_min_item = QTableWidgetItem(str(data.get('i_min', 1)))
+            i_min_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.intensity_table.setItem(row_idx, 2, i_min_item)
+
+            # I макс
+            i_max_item = QTableWidgetItem(str(data.get('i_max', 1000000)))
+            i_max_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.intensity_table.setItem(row_idx, 3, i_max_item)
+
+    def _get_line_name(self, ln_nmb):
+        """Получает название линии по номеру"""
+        if ln_nmb == -1:
+            return "Не используется"
+
+        # Сопоставление номеров линий с названиями из range.json
+        for range_item in self.range_config:
+            if isinstance(range_item, dict) and range_item.get('number') == ln_nmb:
+                return range_item.get('name', f"Линия {ln_nmb}")
+
+        # Если не найдено в конфиге, используем стандартные названия
+        line_names = {
+            1: "INT", 2: "NC", 21: "Fe_Ka", 23: "Co_Ka",
+            25: "Ni_Ka", 27: "Cu_Ka"
+        }
+        return line_names.get(ln_nmb, f"Линия {ln_nmb}")
 
     def update_all_combos(self):
         """Обновляет все комбобоксы с новыми данными из конфигурационных файлов"""
@@ -717,13 +864,17 @@ class EquationsPage(QWidget):
 
             if update_criteria:
                 # Обычное сохранение - обновляем ВСЕ поля
+                # ИСПРАВЛЕНИЕ: преобразуем операторы в boolean
+                w_operator_value = bool(self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()))
+                e_operator_value = bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()))
+
                 update_data.update({
                     'water_crit': float(self.water_crit_edit.text()) if self.water_crit_edit.text() else 0,
                     'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
-                    'w_operator': self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()),
+                    'w_operator': w_operator_value,  # ← ИСПРАВЛЕНО: boolean
                     'empty_crit': float(self.empty_crit_edit.text()) if self.empty_crit_edit.text() else 0,
                     'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                    'e_operator': self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()),
+                    'e_operator': e_operator_value,  # ← ИСПРАВЛЕНО: boolean
                     'c_min': float(self.c_min_edit.text()) if self.c_min_edit.text() else 0,
                     'c_max': float(self.c_max_edit.text()) if self.c_max_edit.text() else 0
                 })
@@ -927,6 +1078,9 @@ class EquationsPage(QWidget):
                 # Выполняем загрузку в базу
                 self.db.execute(query, params)
 
+                # Сохраняем границы интенсивности
+                self.save_intensity_data()
+
                 # ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ СОХРАНЕНИЯ
                 # Загружаем обновленные данные из базы
                 self.refresh_current_equation_data(pr_nmb, mdl_nmb, el_nmb)
@@ -934,10 +1088,73 @@ class EquationsPage(QWidget):
                 # Обновляем таблицу
                 self.load_equations()
 
-                QMessageBox.information(self, "Успех", "Уравнение успешно сохранено!")
+                QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения/применения уравнения: {str(e)}")
+
+    def save_intensity_data(self):
+        """Сохраняет данные границ интенсивности"""
+        try:
+            if not self.current_intensity_data:
+                return
+
+            pr_nmb = self.current_equation_data.get('pr_nmb', 0)
+
+            for row in range(self.intensity_table.rowCount()):
+                sq_nmb = int(self.intensity_table.item(row, 0).text())
+                i_min_text = self.intensity_table.item(row, 2).text()
+                i_max_text = self.intensity_table.item(row, 3).text()
+
+                if not i_min_text or not i_max_text:
+                    QMessageBox.warning(self, "Ошибка",
+                                        f"Пожалуйста, заполните значения I мин и I макс для линии {sq_nmb}")
+                    return
+
+                i_min = float(i_min_text)
+                i_max = float(i_max_text)
+
+                if i_min < 0 or i_max < 0:
+                    QMessageBox.warning(self, "Ошибка",
+                                        f"Значения интенсивности должны быть положительными для линии {sq_nmb}")
+                    return
+
+                if i_min >= i_max:
+                    QMessageBox.warning(self, "Ошибка", f"I мин должно быть меньше I макс для линии {sq_nmb}")
+                    return
+
+                # Получаем ln_nmb из исходных данных
+                ln_nmb = -1
+                for data in self.current_intensity_data:
+                    if data.get('sq_nmb') == sq_nmb:
+                        ln_nmb = data.get('ln_nmb', -1)
+                        break
+
+                # Проверяем существует ли запись
+                check_query = "SELECT id FROM set07 WHERE pr_nmb = ? AND sq_nmb = ?"
+                exists = self.db.fetch_one(check_query, [pr_nmb, sq_nmb])
+
+                if exists:
+                    # Обновляем существующую запись
+                    update_query = """
+                    UPDATE set07 SET i_min = ?, i_max = ? 
+                    WHERE pr_nmb = ? AND sq_nmb = ?
+                    """
+                    self.db.execute(update_query, [i_min, i_max, pr_nmb, sq_nmb])
+                else:
+                    # Создаем новую запись
+                    insert_query = """
+                    INSERT INTO set07 (pr_nmb, sq_nmb, ln_nmb, i_min, i_max)
+                    VALUES (?, ?, ?, ?, ?)
+                    """
+                    self.db.execute(insert_query, [pr_nmb, sq_nmb, ln_nmb, i_min, i_max])
+
+        except ValueError as e:
+            QMessageBox.critical(self, "Ошибка", f"Некорректные значения интенсивности: {str(e)}")
+            raise
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения границ интенсивности: {str(e)}")
+            raise
 
     def refresh_current_equation_data(self, pr_nmb, mdl_nmb, el_nmb):
         """Обновляет текущие данные уравнения из базы после сохранения"""
@@ -954,26 +1171,19 @@ class EquationsPage(QWidget):
         except Exception as e:
             print(f"Ошибка обновления данных уравнения: {str(e)}")
 
-
     def show_apply_to_dialog(self):
         """Показывает диалоговое окно 'Применить для...' и выполняет массовое обновление"""
-        # Проверка наличия редактируемого уравнения
         if self.current_editing_row is None or not self.current_equation_data:
-             # Можно разрешить массовое применение даже без явного редактирования, если поля заполнены
-             # Но для простоты требуем активное редактирование
-             QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для применения.")
-             return
+            QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для применения.")
+            return
 
         dialog = ApplyToDialog(self)
         if dialog.exec() == QDialog.Accepted:
             try:
                 product_numbers, model_numbers = dialog.get_data()
-                # Вызываем модифицированный метод save_equation_changes с параметрами для массового применения
                 self.save_equation_changes(product_numbers, model_numbers)
             except ValueError as e:
                 QMessageBox.warning(self, "Ошибка ввода", f"Некорректный формат ввода:\n{str(e)}")
-
-
 
     def cancel_editing(self):
         """Отменяет редактирование"""
@@ -986,6 +1196,7 @@ class EquationsPage(QWidget):
         self.edit_widget.setVisible(False)
         self.current_editing_row = None
         self.current_equation_data = None
+        self.current_intensity_data = None
 
     def clear_equation(self):
         """Очищает введенное уравнение и сбрасывает коэффициенты корректировки"""
@@ -1172,6 +1383,7 @@ class EquationsPage(QWidget):
         self.edit_widget.setVisible(False)
         self.current_editing_row = None
         self.current_equation_data = None
+        self.current_intensity_data = None
 
         # Перезагружаем конфигурационные файлы
         self.elements_config = self._load_elements_config()
@@ -1179,6 +1391,7 @@ class EquationsPage(QWidget):
 
         # Загружаем данные
         self.load_equations()
+
 
 class ApplyToDialog(QDialog):
     """Диалоговое окно для ввода продуктов и моделей для массового применения"""
@@ -1193,11 +1406,11 @@ class ApplyToDialog(QDialog):
 
         self.products_label = QLabel("Номера продуктов (через запятую, например: 1,2,3):")
         self.products_edit = QTextEdit()
-        self.products_edit.setMaximumHeight(60)  # Ограничиваем высоту
+        self.products_edit.setMaximumHeight(60)
 
         self.models_label = QLabel("Номера моделей (через запятую, например: 1,2):")
         self.models_edit = QTextEdit()
-        self.models_edit.setMaximumHeight(60)  # Ограничиваем высоту
+        self.models_edit.setMaximumHeight(60)
 
         # Кнопки OK/Cancel
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -1241,6 +1454,4 @@ class ApplyToDialog(QDialog):
             return product_numbers, model_numbers
 
         except ValueError as e:
-            # QMessageBox.warning(self, "Ошибка ввода", str(e)) # Можно показать здесь или в родителе
-            # В данном случае лучше выбросить исключение, чтобы вызывающая функция могла обработать
-            raise e  # Перебрасываем исключение
+            raise e
