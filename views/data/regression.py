@@ -209,6 +209,105 @@ class RegressionPage(QWidget):
             print(f"Получена выборка: {len(self.current_sample)} строк")
             self.load_data()
 
+    def load_equation_terms(self):
+        """
+        Заполняет 5 комбобоксов self.combo_equation_terms
+        на основе: product_id (из s_regress.json), el_nmb (из combo_element), meas_type (из БД)
+        """
+        # 1. Проверяем, есть ли хотя бы одно условие в s_regress.json
+        filter_path = "config/sample/s_regress.json"
+        try:
+            if not os.path.exists(filter_path):
+                print("Файл config/sample/s_regress.json не найден")
+                terms_list = []
+            else:
+                with open(filter_path, "r", encoding="utf-8") as f:
+                    filter_config = json.load(f)
+
+                if not filter_config:
+                    print("Файл s_regress.json пуст")
+                    terms_list = []
+                else:
+                    # Берём product_id первого условия
+                    pr_nmb = filter_config[0].get("product_id")
+                    if pr_nmb is None:
+                        raise ValueError("product_id отсутствует в первом условии")
+
+                    # 2. Получаем el_nmb из UI
+                    el_nmb = self.combo_element.currentData()  # original_number, например, 1 для Cu
+                    if el_nmb is None:
+                        print("Элемент не выбран")
+                        terms_list = []
+                    else:
+                        # 3. Запрашиваем meas_type из БД
+                        query = """
+                            SELECT meas_type
+                            FROM PR_SET
+                            WHERE pr_nmb = ? AND el_nmb = ? AND active_model = 1
+                        """
+                        row = self.db.fetch_one(query, [pr_nmb, el_nmb])
+                        if not row or row.get("meas_type") is None:
+                            print(f"Не найдена настройка meas_type для pr_nmb={pr_nmb}, el_nmb={el_nmb}")
+                            terms_list = []
+                        else:
+                            meas_type = row["meas_type"]
+                            print(f"meas_type = {meas_type} (pr_nmb={pr_nmb}, el_nmb={el_nmb})")
+
+                            # 4. Выбираем JSON-файл
+                            json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
+                            json_path = f"config/{json_file}"
+
+                            if not os.path.exists(json_path):
+                                print(f"Файл {json_path} не найден")
+                                terms_list = []
+                            else:
+                                with open(json_path, "r", encoding="utf-8") as f:
+                                    data = json.load(f)
+
+                                # 5. Извлекаем список description
+                                terms_list = []
+                                try:
+                                    if meas_type == 0:
+                                        # lines_math_interactions.json → глобальный список interactions
+                                        interactions = data.get("interactions", [])
+                                        terms_list = [
+                                            term["description"]
+                                            for term in interactions
+                                            if term.get("description") and term["description"].strip()
+                                        ]
+                                    else:
+                                        # math_interactions.json → ищем по element_original_number
+                                        interactions_groups = data.get("interactions", [])
+                                        target_group = None
+                                        for group in interactions_groups:
+                                            if group.get("element_original_number") == el_nmb:
+                                                target_group = group
+                                                break
+                                        if target_group:
+                                            interactions = target_group.get("interactions", [])
+                                            terms_list = [
+                                                term["description"]
+                                                for term in interactions
+                                                if term.get("description") and term["description"].strip()
+                                            ]
+                                        else:
+                                            print(f"В {json_file} не найдена группа для element_original_number={el_nmb}")
+                                            terms_list = []
+                                except Exception as e:
+                                    print(f"Ошибка обработки {json_file}: {e}")
+                                    terms_list = []
+
+        except Exception as e:
+            print(f"Ошибка в load_equation_terms: {e}")
+            terms_list = []
+
+        # 6. Заполняем 5 комбобоксов
+        for combo in self.combo_equation_terms:
+            combo.clear()
+            combo.addItem("")  # пустой выбор
+            combo.addItems(terms_list)
+            combo.setPlaceholderText("Выберите член уравнения")
+
     def load_data(self):
         """Выгрузка данных - заглушка для первой итерации"""
         print("Выгрузка данных...")
@@ -218,13 +317,11 @@ class RegressionPage(QWidget):
         # TODO: Реализовать actual data loading
         QMessageBox.information(self, "Info", "Выгрузка данных будет реализована в следующей итерации")
 
+        #
+        self.load_equation_terms()
+
         # Расчет регрессии
         self.start_regress()
-
-    def save_equation(self):
-        """Сохранение уравнения - заглушка"""
-        print("Сохранение уравнения...")
-        QMessageBox.information(self, "Info", "Сохранение уравнения будет реализовано позже")
 
     def start_regress(self):
         print("Процедура регрессии...")
@@ -232,3 +329,7 @@ class RegressionPage(QWidget):
         # TODO: Реализовать работу с данными
         QMessageBox.information(self, "Info", "Расчет регрессии будет реализована в следующей итерации")
 
+    def save_equation(self):
+        """Сохранение уравнения - заглушка"""
+        print("Сохранение уравнения...")
+        QMessageBox.information(self, "Info", "Сохранение уравнения будет реализовано позже")
