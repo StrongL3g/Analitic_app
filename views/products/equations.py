@@ -352,8 +352,14 @@ class EquationsPage(QWidget):
         self.intensity_table.setHorizontalHeaderLabels([
             "№ линии", "Название линии", "I мин", "I макс"
         ])
-        self.intensity_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        # КОМПАКТНАЯ НАСТРОЙКА РАЗМЕРОВ
+        self.intensity_table.setColumnWidth(0, 60)  # № линии - компактно
+        self.intensity_table.setColumnWidth(1, 120)  # Название линии - компактно
+        self.intensity_table.setColumnWidth(2, 80)  # I мин - компактно
+        self.intensity_table.setColumnWidth(3, 80)  # I макс - компактно
+
+        self.intensity_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
         self.intensity_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.intensity_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
 
