@@ -42,6 +42,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Система анализа спектров")
+        self.setMinimumSize(1200, 800)
+        #self.resize(1920, 1080)
         self.resize(1200, 800)
 
         # Текущая роль пользователя
@@ -124,7 +126,7 @@ class MainWindow(QMainWindow):
         self.db_pages = {
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "settings",
-            "equations"
+            "equations", "standards"
         }
 
         # Кэш созданных страниц

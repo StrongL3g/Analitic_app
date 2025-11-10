@@ -58,21 +58,48 @@ class RegressionPage(QWidget):
         btn_layout.addStretch()
         left_top_layout.addLayout(btn_layout)
 
-        # Таблица коэффициентов
+        # === Таблица коэффициентов ===
         left_top_layout.addWidget(QLabel("Сводная таблица коэффициентов:"))
         self.coeff_table = QTableWidget()
-        self.coeff_table.setRowCount(7)
+        self.coeff_table.setRowCount(6)  # A0–A5 → 6 строк
         self.coeff_table.setColumnCount(4)
-        self.coeff_table.setHorizontalHeaderLabels(["Множитель", "Коэффициент", "Значимость"])
-        self.coeff_table.setVerticalHeaderLabels(["A0", "A1", "A2", "A3", "A4", "A5"])
+        self.coeff_table.setHorizontalHeaderLabels(["Коэффициент", "Множитель", "Значение", "Значимость"])
+        self.coeff_table.verticalHeader().setVisible(False)  # ← скрываем вертикальные заголовки
+
+        # Заполняем первый столбец именами коэффициентов + стилизуем
+        gray_bg = "#f0f0f0"
+        for row, name in enumerate(["A0", "A1", "A2", "A3", "A4", "A5"]):
+            item = QTableWidgetItem(name)
+            item.setBackground(Qt.GlobalColor.lightGray)  # или QColor(gray_bg)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # только для чтения
+            self.coeff_table.setItem(row, 0, item)
+
         left_top_layout.addWidget(self.coeff_table)
 
-        # Таблица характеристик уравнения
+        # === Таблица характеристик уравнения ===
         left_top_layout.addWidget(QLabel("Характеристики уравнения:"))
         self.stats_table = QTableWidget()
         self.stats_table.setRowCount(6)
         self.stats_table.setColumnCount(2)
         self.stats_table.setHorizontalHeaderLabels(["Параметр", "Значение"])
+        self.stats_table.verticalHeader().setVisible(False)
+
+        # Параметры в первом столбце
+        stats_labels = [
+            "СКО σ",
+            "Отн. СКО",
+            "Смин",
+            "Смакс",
+            "Ссред",
+            "Корреляция R²"
+        ]
+
+        for row, label in enumerate(stats_labels):
+            item = QTableWidgetItem(label)
+            item.setBackground(Qt.GlobalColor.lightGray)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.stats_table.setItem(row, 0, item)
+
         left_top_layout.addWidget(self.stats_table)
 
         left_top_group.setLayout(left_top_layout)
@@ -143,11 +170,14 @@ class RegressionPage(QWidget):
         self.setLayout(layout)
 
         # Загружаем начальные данные
-        self.load_elements()
-        self.combo_element.currentIndexChanged.connect(self.on_element_changed)
-        self.combo_meas_type.currentIndexChanged.connect(self.on_meas_type_changed)
+        self.ini_load_elements()
+        self.combo_element.currentIndexChanged.connect(self.load_data)
+        self.combo_meas_type.currentIndexChanged.connect(self.load_data)
 
-    def load_elements(self):
+        # запускаем выгрузку данных по текущим параметра json файла выбоки
+        self.load_data()
+
+    def ini_load_elements(self):
         """Загрузка элементов из JSON файла"""
         try:
             elements_path = "config/elements.json"
@@ -172,130 +202,33 @@ class RegressionPage(QWidget):
             print(f"Ошибка загрузки элементов: {e}")
             self.combo_element.addItems(["Cu", "Ni", "Fe", "ТФ"])
 
-    def load_equation_terms(self):
-        """Загрузка членов уравнения в комбобоксы"""
-        if not self.current_element:
-            return
-
-        try:
-            # Определяем какой файл использовать
-            json_file = "line_math_interactions.json" if self.current_meas_type == 0 else "math_interactions.json"
-            json_path = f"config/{json_file}"
-
-            if not os.path.exists(json_path):
-                print(f"Файл {json_file} не найден")
-                return
-
-            with open(json_path, "r", encoding="utf-8") as f:
-                interactions_data = json.load(f)
-
-            # Находим взаимодействия для выбранного элемента
-            terms_to_load = []
-
-            if self.current_meas_type == 0:  # По линиям
-                # Ищем по original_number
-                for interaction_group in interactions_data.get("interactions", []):
-                    if interaction_group.get("element_original_number") == self.current_element:
-                        terms_to_load = [term["description"] for term in interaction_group.get("interactions", [])
-                                      if term.get("description")]
-                        break
-            else:  # По элементам
-                # Ищем по имени элемента
-                element_name = self.combo_element.currentText()
-                for interaction_group in interactions_data.get("interactions", []):
-                    if interaction_group.get("element_name") == element_name:
-                        terms_to_load = [term["description"] for term in interaction_group.get("interactions", [])
-                                      if term.get("description")]
-                        break
-
-            # Заполняем комбобоксы
-            for combo in self.combo_equation_terms:
-                combo.clear()
-                combo.addItems([""] + terms_to_load)
-
-            print(f"Загружено членов уравнения: {len(terms_to_load)}")
-
-        except Exception as e:
-            print(f"Ошибка загрузки членов уравнения: {e}")
-
-    def on_element_changed(self, index):
-        """Обработчик изменения элемента"""
-        if index >= 0:
-            self.current_element = self.combo_element.currentData()
-            self.load_equation_terms()
-
-    def on_meas_type_changed(self, index):
-        """Обработчик изменения типа измерения"""
-        # 0: Все пробы, 1: Ручные, 2: Цикл
-        # Пока просто используем 0 для интенсивностей, нужно уточнить логику
-        self.current_meas_type = 0 if index == 0 else 1
-        self.load_equation_terms()
-
     def open_sample_dialog(self):
         """Открывает диалог формирования выборки"""
         dialog = SampleDialog(self.db, self)
         if dialog.exec():
-            self.load_sample_from_file()
             print(f"Получена выборка: {len(self.current_sample)} строк")
-            self.update_sample_table()
-
-    def load_sample_from_file(self):
-        """Загружает выборку из файла"""
-        try:
-            sample_path = "config/sample.json"
-            if os.path.exists(sample_path):
-                with open(sample_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self.current_sample = data if isinstance(data, list) else []
-            else:
-                self.current_sample = []
-        except Exception as e:
-            print(f"Ошибка загрузки выборки: {e}")
-            self.current_sample = []
-
-    def update_sample_table(self):
-        """Обновляет таблицу выборки"""
-        self.data_table.setRowCount(0)
-
-        if not self.current_sample:
-            return
-
-        self.data_table.setRowCount(len(self.current_sample))
-
-        for row, item in enumerate(self.current_sample):
-            # Заполняем базовые данные
-            self.data_table.setItem(row, 0, QTableWidgetItem(str(item.get('product_id', ''))))
-            self.data_table.setItem(row, 1, QTableWidgetItem(
-                f"{item.get('date_from', '')} {item.get('time_from', '')} - "
-                f"{item.get('date_to', '')} {item.get('time_to', '')}"
-            ))
-
-            # Остальные колонки пока пустые, заполнятся после выгрузки данных
-            for col in range(2, 11):
-                self.data_table.setItem(row, col, QTableWidgetItem(""))
+            self.load_data()
 
     def load_data(self):
         """Выгрузка данных - заглушка для первой итерации"""
         print("Выгрузка данных...")
         print(f"Элемент: {self.combo_element.currentText()}")
         print(f"Тип измерения: {self.current_meas_type}")
-        print(f"Выборка: {len(self.current_sample)} записей")
 
         # TODO: Реализовать actual data loading
         QMessageBox.information(self, "Info", "Выгрузка данных будет реализована в следующей итерации")
+
+        # Расчет регрессии
+        self.start_regress()
 
     def save_equation(self):
         """Сохранение уравнения - заглушка"""
         print("Сохранение уравнения...")
         QMessageBox.information(self, "Info", "Сохранение уравнения будет реализовано позже")
 
-    def clear_tables(self):
-        """Очистка таблиц"""
-        self.coeff_table.clearContents()
-        self.stats_table.clearContents()
-        self.data_table.setRowCount(0)
+    def start_regress(self):
+        print("Процедура регрессии...")
 
-        # Очищаем график
-        self.ax.clear()
-        self.ax.grid(True, alpha=0.3)
-        self.canvas.draw()
+        # TODO: Реализовать работу с данными
+        QMessageBox.information(self, "Info", "Расчет регрессии будет реализована в следующей итерации")
+
