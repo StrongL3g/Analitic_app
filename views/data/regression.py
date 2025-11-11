@@ -209,119 +209,231 @@ class RegressionPage(QWidget):
             print(f"Получена выборка: {len(self.current_sample)} строк")
             self.load_data()
 
-    def load_equation_terms(self):
-        """
-        Заполняет 5 комбобоксов self.combo_equation_terms
-        на основе: product_id (из s_regress.json), el_nmb (из combo_element), meas_type (из БД)
-        """
-        # 1. Проверяем, есть ли хотя бы одно условие в s_regress.json
-        filter_path = "config/sample/s_regress.json"
+    def load_data(self):
+        """Выгрузка параметров, данных и начального уравнения → буфер"""
         try:
-            if not os.path.exists(filter_path):
-                print("Файл config/sample/s_regress.json не найден")
-                terms_list = []
-            else:
-                with open(filter_path, "r", encoding="utf-8") as f:
-                    filter_config = json.load(f)
+            # 1. Загружаем параметры выборки (config/sample/s_regress.json)
+            sample_path = "config/sample/s_regress.json"
+            if not os.path.exists(sample_path):
+                QMessageBox.warning(self, "Ошибка", "Файл выборки не найден: config/sample/s_regress.json")
+                return
 
-                if not filter_config:
-                    print("Файл s_regress.json пуст")
-                    terms_list = []
-                else:
-                    # Берём product_id первого условия
-                    pr_nmb = filter_config[0].get("product_id")
-                    if pr_nmb is None:
-                        raise ValueError("product_id отсутствует в первом условии")
+            with open(sample_path, "r", encoding="utf-8") as f:
+                sample_config = json.load(f)
 
-                    # 2. Получаем el_nmb из UI
-                    el_nmb = self.combo_element.currentData()  # original_number, например, 1 для Cu
-                    if el_nmb is None:
-                        print("Элемент не выбран")
-                        terms_list = []
-                    else:
-                        # 3. Запрашиваем meas_type из БД
-                        query = """
-                            SELECT meas_type
-                            FROM PR_SET
-                            WHERE pr_nmb = ? AND el_nmb = ? AND active_model = 1
-                        """
-                        row = self.db.fetch_one(query, [pr_nmb, el_nmb])
-                        if not row or row.get("meas_type") is None:
-                            print(f"Не найдена настройка meas_type для pr_nmb={pr_nmb}, el_nmb={el_nmb}")
-                            terms_list = []
-                        else:
-                            meas_type = row["meas_type"]
-                            print(f"meas_type = {meas_type} (pr_nmb={pr_nmb}, el_nmb={el_nmb})")
+            if not sample_config:
+                QMessageBox.warning(self, "Ошибка", "Выборка пуста. Откройте «Изменить выборку».")
+                return
 
-                            # 4. Выбираем JSON-файл
-                            json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
-                            json_path = f"config/{json_file}"
+            pr_nmb = sample_config[0].get("product_id")
+            if pr_nmb is None:
+                QMessageBox.critical(self, "Ошибка", "В выборке отсутствует product_id")
+                return
 
-                            if not os.path.exists(json_path):
-                                print(f"Файл {json_path} не найден")
-                                terms_list = []
-                            else:
-                                with open(json_path, "r", encoding="utf-8") as f:
-                                    data = json.load(f)
+            # 2. Получаем el_nmb из UI
+            el_nmb = self.combo_element.currentData()  # original_number, например 1 → Cu
+            if el_nmb is None:
+                QMessageBox.warning(self, "Ошибка", "Сначала выберите элемент")
+                return
 
-                                # 5. Извлекаем список description
-                                terms_list = []
-                                try:
-                                    if meas_type == 0:
-                                        # lines_math_interactions.json → глобальный список interactions
-                                        interactions = data.get("interactions", [])
-                                        terms_list = [
-                                            term["description"]
-                                            for term in interactions
-                                            if term.get("description") and term["description"].strip()
-                                        ]
-                                    else:
-                                        # math_interactions.json → ищем по element_original_number
-                                        interactions_groups = data.get("interactions", [])
-                                        target_group = None
-                                        for group in interactions_groups:
-                                            if group.get("element_original_number") == el_nmb:
-                                                target_group = group
-                                                break
-                                        if target_group:
-                                            interactions = target_group.get("interactions", [])
-                                            terms_list = [
-                                                term["description"]
-                                                for term in interactions
-                                                if term.get("description") and term["description"].strip()
-                                            ]
-                                        else:
-                                            print(f"В {json_file} не найдена группа для element_original_number={el_nmb}")
-                                            terms_list = []
-                                except Exception as e:
-                                    print(f"Ошибка обработки {json_file}: {e}")
-                                    terms_list = []
+            # 3. Запрашиваем PR_SET: meas_type + начальное уравнение
+            query_pr_set = """
+                SELECT *
+                FROM PR_SET
+                WHERE pr_nmb = ? AND el_nmb = ? AND active_model = 1
+            """
+            pr_set_row = self.db.fetch_one(query_pr_set, [pr_nmb, el_nmb])
+            if not pr_set_row:
+                QMessageBox.critical(self, "Ошибка",
+                                    f"Не найдена активная градуировка:\npr_nmb={pr_nmb}, el_nmb={el_nmb}")
+                return
+
+            meas_type = pr_set_row["meas_type"]
+            self.current_meas_type = meas_type
+            print(f"✅ PR_SET: pr_nmb={pr_nmb}, el_nmb={el_nmb}, meas_type={meas_type}")
+
+            # 4. Заполняем 5 комбобоксов членами уравнения
+            self._load_equation_terms(meas_type, el_nmb)
+
+            # 5. Выгружаем данные из PR_MEAS → raw_buffer
+            self.raw_buffer = self._fetch_pr_meas_data(sample_config, el_nmb, meas_type)
+            print(f"📥 Получено строк: {len(self.raw_buffer)}")
+            if not self.raw_buffer:
+                QMessageBox.warning(self, "Информация", "По условиям выборки данных не найдено.")
+                self.clear_tables()
+                return
+
+            # 6. Подгружаем НАЧАЛЬНОЕ уравнение из PR_SET в UI
+            #self._apply_initial_equation(pr_set_row)
+
+            # 7. Обновляем таблицу данных (только базовые колонки)
+            self._update_data_table_from_buffer()
+
+            QMessageBox.information(self, "Готово", f"Буфер загружен: {len(self.raw_buffer)} записей")
 
         except Exception as e:
-            print(f"Ошибка в load_equation_terms: {e}")
-            terms_list = []
+            import traceback
+            print("❌ Ошибка в load_data():")
+            traceback.print_exc()
+            QMessageBox.critical(self, "Ошибка", f"load_data() провалился:\n{str(e)}")
 
-        # 6. Заполняем 5 комбобоксов
-        for combo in self.combo_equation_terms:
-            combo.clear()
-            combo.addItem("")  # пустой выбор
-            combo.addItems(terms_list)
-            combo.setPlaceholderText("Выберите член уравнения")
+    def _load_equation_terms(self, meas_type, el_nmb):
+        """Заполняет 5 комбобоксов на основе meas_type и el_nmb"""
+        try:
+            json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
+            json_path = f"config/{json_file}"
 
-    def load_data(self):
-        """Выгрузка данных - заглушка для первой итерации"""
-        print("Выгрузка данных...")
-        print(f"Элемент: {self.combo_element.currentText()}")
-        print(f"Тип измерения: {self.current_meas_type}")
+            if not os.path.exists(json_path):
+                print(f"❌ {json_path} не найден")
+                terms_list = []
+            else:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
-        # TODO: Реализовать actual data loading
-        QMessageBox.information(self, "Info", "Выгрузка данных будет реализована в следующей итерации")
+                terms_list = []
+                if meas_type == 0:
+                    # lines: единый список interactions
+                    interactions = data.get("interactions", [])
+                    terms_list = [term["description"] for term in interactions
+                                if term.get("description") and term["description"].strip()]
+                else:
+                    # elements: ищем по element_original_number
+                    for group in data.get("interactions", []):
+                        if group.get("element_original_number") == el_nmb:
+                            interactions = group.get("interactions", [])
+                            terms_list = [term["description"] for term in interactions
+                                        if term.get("description") and term["description"].strip()]
+                            break
 
-        #
-        self.load_equation_terms()
+            for combo in self.combo_equation_terms:
+                combo.clear()
+                combo.addItem("")
+                combo.addItems(terms_list)
+                combo.setPlaceholderText("Член уравнения")
 
-        # Расчет регрессии
-        self.start_regress()
+        except Exception as e:
+            print(f"❌ Ошибка в _load_equation_terms: {e}")
+            for combo in self.combo_equation_terms:
+                combo.clear()
+                combo.addItem("")
+
+    def _fetch_pr_meas_data(self, sample_config, el_nmb, meas_type):
+        """Возвращает list[dict] — буфер данных из PR_MEAS"""
+        all_rows = []
+
+        for cond in sample_config:
+            pr_nmb = cond["product_id"]
+            start_dt = f"{cond['date_from']} {cond['time_from']}"
+            end_dt = f"{cond['date_to']} {cond['time_to']}"
+
+            # Базовые колонки
+            cols = ["pr_nmb", "meas_dt"]
+            # Добавляем i_00_00..i_00_19 или c_cor_01..c_cor_08
+            if meas_type == 0:
+                cols.extend([f"i_00_{i:02d}" for i in range(20)])  # i_00_00 … i_00_19
+            else:
+                cols.extend([f"c_cor_{i:02d}" for i in range(1, 9)])  # c_cor_01 … c_cor_08
+
+            # Целевая переменная: c_chem_0{el_nmb}
+            chem_col = f"c_chem_0{el_nmb}"
+            cor_col = f"c_cor_0{el_nmb}"
+            cols.extend([chem_col, cor_col])
+
+            # Формируем SELECT
+            select_list = ", ".join(f"{c}" for c in cols)
+            query = f"""
+                SELECT {select_list},
+                    {cor_col} - {chem_col} AS dc,
+                    CASE
+                        WHEN {chem_col} <> 0 AND {chem_col} IS NOT NULL
+                        THEN ABS({cor_col} - {chem_col}) / {chem_col}
+                        ELSE 0
+                    END AS ddc
+                FROM PR_MEAS
+                WHERE timestamp BETWEEN ? AND ?
+                AND pr_nmb = ?
+                AND {chem_col} <> 0
+                AND active_model = 1
+            """
+            # Добавляем фильтр по meas_type, если выбрано не «Все пробы»
+            meas_index = self.combo_meas_type.currentIndex()
+            if meas_index == 1:  # Ручные → meas_type=0
+                query += " AND meas_type = 0"
+            elif meas_index == 2:  # Цикл → meas_type=1
+                query += " AND meas_type = 1"
+
+            query += " ORDER BY meas_dt, timestamp"
+
+            try:
+                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
+                all_rows.extend(rows)
+            except Exception as e:
+                print(f"⚠️ Ошибка запроса для pr_nmb={pr_nmb}: {e}")
+
+        return all_rows
+
+    def _apply_initial_equation(self, row):
+        """Подгружает начальное уравнение из PR_SET в таблицы и комбобоксы"""
+        # Сопоставление: coeff_table[row] ↔ A0..A5
+        coeff_map = [
+            ("k_i_klin00", "k_c_klin00"),  # A0
+            ("k_i_klin01", "k_c_klin01"),  # A1
+            ("k_i_alin01", "k_c_alin01"),  # A2
+            ("k_i_alin02", "k_c_alin02"),  # A3
+            ("k_i_alin03", "k_c_alin03"),  # A4
+            ("k_i_alin04", "k_c_alin04"),  # A5
+        ]
+        operand_map = [
+            ("operand_i_01_01", "operand_i_02_01", "operator_i_01"),  # член 1
+            ("operand_i_01_02", "operand_i_02_02", "operator_i_02"),  # член 2
+            ("operand_i_01_03", "operand_i_02_03", "operator_i_03"),  # член 3
+            ("operand_i_01_04", "operand_i_02_04", "operator_i_04"),  # член 4
+            ("operand_i_01_05", "operand_i_02_05", "operator_i_05"),  # член 5
+        ]
+
+        # 1. Коэффициенты (A0..A5)
+        for i, (k_i, k_c) in enumerate(coeff_map):
+            k_val = row.get(k_i) or row.get(k_c) or 0.0
+            item = QTableWidgetItem(str(k_val))
+            self.coeff_table.setItem(i, 2, item)  # колонка "Значение"
+
+        # 2. Множители (члены уравнения) — пока пусто (нужно lookup в JSON)
+        # Пока оставим как "-", как в Excel
+        for i in range(1, 6):  # A1..A5
+            item = QTableWidgetItem("-")
+            self.coeff_table.setItem(i, 1, item)
+
+        # 3. Заполняем 5 комбобоксов — из PR_SET (если есть описание)
+        # (пока упрощённо: оставим пустыми — позже сделаем lookup по (x1,x2,op))
+        for i, combo in enumerate(self.combo_equation_terms):
+            combo.setCurrentIndex(0)  # сброс в пустой
+
+    def _update_data_table_from_buffer(self):
+        """Заполняет data_table из self.raw_buffer (базовые колонки)"""
+        self.data_table.setRowCount(0)
+        if not self.raw_buffer:
+            return
+
+        self.data_table.setRowCount(len(self.raw_buffer))
+        for row_idx, rec in enumerate(self.raw_buffer):
+            # G: Продукт
+            self.data_table.setItem(row_idx, 0, QTableWidgetItem(str(rec.get("pr_nmb", ""))))
+            # H: Дата/Время
+            dt = rec.get("meas_dt", "")
+            self.data_table.setItem(row_idx, 1, QTableWidgetItem(str(dt)))
+            # N: C_хим = c_chem_0X
+            el_nmb = self.combo_element.currentData()
+            c_chem = rec.get(f"c_chem_0{el_nmb}", "")
+            self.data_table.setItem(row_idx, 7, QTableWidgetItem(str(c_chem)))
+            # O: C_расч = c_cor_0X (начальное приближение)
+            c_cor = rec.get(f"c_cor_0{el_nmb}", "")
+            self.data_table.setItem(row_idx, 8, QTableWidgetItem(str(c_cor)))
+            # P: ΔC = dc
+            dc = rec.get("dc", "")
+            self.data_table.setItem(row_idx, 9, QTableWidgetItem(str(dc)))
+            # Q: δC = ddc
+            ddc = rec.get("ddc", "")
+            self.data_table.setItem(row_idx, 10, QTableWidgetItem(str(ddc)))
 
     def start_regress(self):
         print("Процедура регрессии...")
