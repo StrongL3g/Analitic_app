@@ -260,11 +260,11 @@ class RegressionPage(QWidget):
             print(f"📥 Получено строк: {len(self.raw_buffer)}")
             if not self.raw_buffer:
                 QMessageBox.warning(self, "Информация", "По условиям выборки данных не найдено.")
-                self.clear_tables()
-                return
+                #self.clear_tables()
+                #return
 
             # 6. Подгружаем НАЧАЛЬНОЕ уравнение из PR_SET в UI
-            #self._apply_initial_equation(pr_set_row)
+            self._apply_initial_equation(pr_set_row, meas_type)
 
             # 7. Обновляем таблицу данных (только базовые колонки)
             self._update_data_table_from_buffer()
@@ -372,41 +372,109 @@ class RegressionPage(QWidget):
 
         return all_rows
 
-    def _apply_initial_equation(self, row):
-        """Подгружает начальное уравнение из PR_SET в таблицы и комбобоксы"""
-        # Сопоставление: coeff_table[row] ↔ A0..A5
-        coeff_map = [
-            ("k_i_klin00", "k_c_klin00"),  # A0
-            ("k_i_klin01", "k_c_klin01"),  # A1
-            ("k_i_alin01", "k_c_alin01"),  # A2
-            ("k_i_alin02", "k_c_alin02"),  # A3
-            ("k_i_alin03", "k_c_alin03"),  # A4
-            ("k_i_alin04", "k_c_alin04"),  # A5
-        ]
-        operand_map = [
-            ("operand_i_01_01", "operand_i_02_01", "operator_i_01"),  # член 1
-            ("operand_i_01_02", "operand_i_02_02", "operator_i_02"),  # член 2
-            ("operand_i_01_03", "operand_i_02_03", "operator_i_03"),  # член 3
-            ("operand_i_01_04", "operand_i_02_04", "operator_i_04"),  # член 4
-            ("operand_i_01_05", "operand_i_02_05", "operator_i_05"),  # член 5
-        ]
+    def _apply_initial_equation(self, pr_set_row, meas_type):
+        """
+        Подгружает начальное уравнение из PR_SET → заполняет coeff_table и combo_equation_terms
+        :param pr_set_row: dict — строка из PR_SET
+        :param meas_type: int — 0 → интенсивности (_i_), 1 → концентрации (_c_)
+        """
+        try:
+            # 1. Определяем префиксы по meas_type
+            k_prefix = "k_i_" if meas_type == 0 else "k_c_"
+            op_prefix = "operand_i_" if meas_type == 0 else "operand_c_"
+            op_type = "operator_i_" if meas_type == 0 else "operator_c_"
 
-        # 1. Коэффициенты (A0..A5)
-        for i, (k_i, k_c) in enumerate(coeff_map):
-            k_val = row.get(k_i) or row.get(k_c) or 0.0
-            item = QTableWidgetItem(str(k_val))
-            self.coeff_table.setItem(i, 2, item)  # колонка "Значение"
+            # 2. Сопоставление: A0..A5 ↔ alin00..alin05
+            coeff_keys = [
+                f"{k_prefix}alin00",  # A0
+                f"{k_prefix}alin01",  # A1
+                f"{k_prefix}alin02",  # A2
+                f"{k_prefix}alin03",  # A3
+                f"{k_prefix}alin04",  # A4
+                f"{k_prefix}alin05",  # A5
+            ]
 
-        # 2. Множители (члены уравнения) — пока пусто (нужно lookup в JSON)
-        # Пока оставим как "-", как в Excel
-        for i in range(1, 6):  # A1..A5
-            item = QTableWidgetItem("-")
-            self.coeff_table.setItem(i, 1, item)
+            # 3. Заполняем коэффициенты (A0..A5) → колонка "Значение"
+            for i, key in enumerate(coeff_keys):
+                val = pr_set_row.get(key, 0.0)
+                item = QTableWidgetItem(f"{val:.6g}")  # compact float format
+                self.coeff_table.setItem(i, 2, item)
 
-        # 3. Заполняем 5 комбобоксов — из PR_SET (если есть описание)
-        # (пока упрощённо: оставим пустыми — позже сделаем lookup по (x1,x2,op))
-        for i, combo in enumerate(self.combo_equation_terms):
-            combo.setCurrentIndex(0)  # сброс в пустой
+            # 4. Готовим lookup для членов уравнения
+            #    Загружаем нужный JSON-файл (уже должен быть загружен в _load_equation_terms)
+            json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
+            json_path = f"config/{json_file}"
+
+            if not os.path.exists(json_path):
+                print(f"⚠️ {json_path} не найден — пропускаем заполнение членов")
+                return
+
+            with open(json_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+            # 5. Построим словарь: (x1, x2, op) → description
+            term_lookup = {}
+            if meas_type == 0:
+                # lines_math_interactions.json → глобальный список interactions
+                for term in json_data.get("interactions", []):
+                    desc = term.get("description", "").strip()
+                    if desc:
+                        key = (term["x1"], term["x2"], term["op"])
+                        term_lookup[key] = desc
+            else:
+                # math_interactions.json → ищем по element_original_number
+                el_nmb = self.combo_element.currentData()  # например, 1 → Cu
+                for group in json_data.get("interactions", []):
+                    if group.get("element_original_number") == el_nmb:
+                        for term in group.get("interactions", []):
+                            desc = term.get("description", "").strip()
+                            if desc:
+                                key = (term["x1"], term["x2"], term["op"])
+                                term_lookup[key] = desc
+                        break
+
+            # 6. Сопоставление: члены A1..A5 ↔ operand_XX_XX + operator_XX
+            term_specs = [
+                (f"{op_prefix}01_01", f"{op_prefix}02_01", f"{op_type}01"),  # A1
+                (f"{op_prefix}01_02", f"{op_prefix}02_02", f"{op_type}02"),  # A2
+                (f"{op_prefix}01_03", f"{op_prefix}02_03", f"{op_type}03"),  # A3
+                (f"{op_prefix}01_04", f"{op_prefix}02_04", f"{op_type}04"),  # A4
+                (f"{op_prefix}01_05", f"{op_prefix}02_05", f"{op_type}05"),  # A5
+            ]
+
+            found_terms = []
+            for i, (x1_key, x2_key, op_key) in enumerate(term_specs, start=1):
+                x1 = pr_set_row.get(x1_key, 0)
+                x2 = pr_set_row.get(x2_key, 0)
+                op = pr_set_row.get(op_key, 0)
+
+                # Ищем описание
+                desc = term_lookup.get((x1, x2, op), "-")
+
+                # Заполняем "Множитель" (колонка 1) для A{i}
+                item = QTableWidgetItem(desc)
+                self.coeff_table.setItem(i, 1, item)
+
+                # Сохраняем для комбобоксов
+                found_terms.append(desc)
+
+            # 7. Выбираем нужные значения в 5 комбобоксах
+            for i, combo in enumerate(self.combo_equation_terms):
+                if i < len(found_terms) and found_terms[i] != "-":
+                    # Ищем индекс описания в текущих items комбобокса
+                    for idx in range(combo.count()):
+                        if combo.itemText(idx) == found_terms[i]:
+                            combo.setCurrentIndex(idx)
+                            break
+                else:
+                    combo.setCurrentIndex(0)  # пустой выбор
+
+            print(f"✅ Уравнение загружено: A0={pr_set_row.get(coeff_keys[0], 0)}", *found_terms)
+
+        except Exception as e:
+            import traceback
+            print("❌ Ошибка в _apply_initial_equation:")
+            traceback.print_exc()
 
     def _update_data_table_from_buffer(self):
         """Заполняет data_table из self.raw_buffer (базовые колонки)"""
