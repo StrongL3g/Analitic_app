@@ -4,12 +4,36 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QComboBox, QFrame,
                                QButtonGroup, QPushButton, QGroupBox, QFormLayout,
                                QScrollArea, QApplication, QDialog, QTextEdit,
                                QDialogButtonBox, QTabWidget)
-from PySide6.QtGui import QDoubleValidator, QIntValidator
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QDoubleValidator, QIntValidator, QValidator
+from PySide6.QtCore import Qt, QRegularExpression
 import json
+import re
 from database.db import Database
 from pathlib import Path
 from config import AC_COUNT, PR_COUNT, DB_CONFIG
+
+
+class ScientificDoubleValidator(QValidator):
+    """Валидатор для чисел с плавающей точкой в научной нотации"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Регулярное выражение для чисел в научной нотации
+        self.pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$')
+
+    def validate(self, text, pos):
+        if not text:
+            return QValidator.Intermediate, text, pos
+
+        # Проверяем соответствие шаблону
+        if self.pattern.match(text):
+            return QValidator.Acceptable, text, pos
+        else:
+            return QValidator.Invalid, text, pos
+
+    def fixup(self, text):
+        # Заменяем запятые на точки для корректного преобразования
+        return text.replace(',', '.')
 
 
 class EquationsPage(QWidget):
@@ -22,6 +46,8 @@ class EquationsPage(QWidget):
         self._config_dir = self._get_config_directory()
         self.elements_config = self._load_elements_config()
         self.range_config = self._load_range_config()
+        self.lines_math_config = self._load_lines_math_config()
+        self.math_config = self._load_math_config()
         self.current_editing_row = None
         self.current_equation_data = None
         self.current_intensity_data = None  # Данные границ интенсивности
@@ -35,20 +61,20 @@ class EquationsPage(QWidget):
         config_dir.mkdir(exist_ok=True)
         return config_dir
 
-    def _load_config_file(self, filename: str) -> list:
+    def _load_config_file(self, filename: str) -> dict:
         """Загружает конфигурационный файл JSON"""
         config_path = self._config_dir / filename
 
         if not config_path.exists():
             print(f"Файл конфигурации не найден: {config_path}")
-            return []
+            return {}
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Ошибка загрузки файла {filename}: {e}")
-            return []
+            return {}
 
     def _load_elements_config(self) -> list:
         """Загружает конфигурацию элементов"""
@@ -57,6 +83,14 @@ class EquationsPage(QWidget):
     def _load_range_config(self) -> list:
         """Загружает конфигурацию диапазонов"""
         return self._load_config_file("range.json")
+
+    def _load_lines_math_config(self) -> dict:
+        """Загружает конфигурацию математических операций для линий"""
+        return self._load_config_file("lines_math_interactions.json")
+
+    def _load_math_config(self) -> dict:
+        """Загружает конфигурацию математических операций для элементов"""
+        return self._load_config_file("math_interactions.json")
 
     def _get_configured_elements_count(self) -> int:
         """Получает количество сконфигурированных элементов (исключая '-')"""
@@ -77,6 +111,25 @@ class EquationsPage(QWidget):
                 if name and name != '-':
                     numbers.append(element.get('number', 0))
         return numbers
+
+    def _safe_float_convert(self, text):
+        """Безопасно преобразует строку в float, поддерживая научную нотацию и запятые"""
+        if not text or text.strip() == '':
+            return 0.0
+
+        try:
+            # Заменяем запятые на точки и преобразуем в нижний регистр для научной нотации
+            cleaned_text = text.strip().replace(',', '.').lower()
+            return float(cleaned_text)
+        except ValueError:
+            # Если преобразование не удалось, пробуем убрать возможные проблемы
+            try:
+                # Убираем лишние символы, оставляем только цифры, точки, E, +, -
+                cleaned = re.sub(r'[^\d.eE+-]', '', text)
+                cleaned = cleaned.replace(',', '.')
+                return float(cleaned)
+            except ValueError:
+                return 0.0
 
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
@@ -224,7 +277,7 @@ class EquationsPage(QWidget):
         water_label.setFixedWidth(150)
         self.water_crit_edit = QLineEdit()
         self.water_crit_edit.setFixedWidth(100)
-        self.water_crit_edit.setValidator(QDoubleValidator())
+        self.water_crit_edit.setValidator(ScientificDoubleValidator())
 
         # Выбор линии для критерия
         self.w_element_combo = QComboBox()
@@ -240,7 +293,7 @@ class EquationsPage(QWidget):
         cmin_label.setFixedWidth(50)
         self.c_min_edit = QLineEdit()
         self.c_min_edit.setFixedWidth(100)
-        self.c_min_edit.setValidator(QDoubleValidator())
+        self.c_min_edit.setValidator(ScientificDoubleValidator())
 
         criteria_layout.addWidget(water_label)
         criteria_layout.addWidget(self.w_element_combo)
@@ -261,7 +314,7 @@ class EquationsPage(QWidget):
         empty_label.setFixedWidth(150)
         self.empty_crit_edit = QLineEdit()
         self.empty_crit_edit.setFixedWidth(100)
-        self.empty_crit_edit.setValidator(QDoubleValidator())
+        self.empty_crit_edit.setValidator(ScientificDoubleValidator())
 
         # Выбор линии для критерия
         self.e_element_combo = QComboBox()
@@ -277,7 +330,7 @@ class EquationsPage(QWidget):
         cmax_label.setFixedWidth(50)
         self.c_max_edit = QLineEdit()
         self.c_max_edit.setFixedWidth(100)
-        self.c_max_edit.setValidator(QDoubleValidator())
+        self.c_max_edit.setValidator(ScientificDoubleValidator())
 
         empty_layout.addWidget(empty_label)
         empty_layout.addWidget(self.e_element_combo)
@@ -295,10 +348,10 @@ class EquationsPage(QWidget):
         corr_layout = QHBoxLayout()
         self.k0_edit = QLineEdit()
         self.k0_edit.setFixedWidth(120)
-        self.k0_edit.setValidator(QDoubleValidator())
+        self.k0_edit.setValidator(ScientificDoubleValidator())
         self.k1_edit = QLineEdit()
         self.k1_edit.setFixedWidth(120)
-        self.k1_edit.setValidator(QDoubleValidator())
+        self.k1_edit.setValidator(ScientificDoubleValidator())
         corr_layout.addWidget(QLabel("k0:"))
         corr_layout.addWidget(self.k0_edit)
         corr_layout.addWidget(QLabel("k1:"))
@@ -382,39 +435,22 @@ class EquationsPage(QWidget):
         layout.addWidget(QLabel(f"A{index}:"))
         coeff_edit = QLineEdit("0.000000")
         coeff_edit.setFixedWidth(100)
-        coeff_edit.setValidator(QDoubleValidator())
+        coeff_edit.setValidator(ScientificDoubleValidator())
         layout.addWidget(coeff_edit)
 
-        # Операнды и операция (только для A1-A5)
+        # Один комбобокс вместо трех (только для A1-A5)
         if index > 0:  # Для A0 операнды не нужны
-            element1_combo = QComboBox()
-            element1_combo.setFixedWidth(120)
-            element2_combo = QComboBox()
-            element2_combo.setFixedWidth(120)
-            operation_combo = QComboBox()
-            operation_combo.setFixedWidth(200)
+            interaction_combo = QComboBox()
+            interaction_combo.setFixedWidth(400)  # Увеличили ширину для длинных описаний
 
-            # Заполняем комбобоксы
-            self.populate_operand_combos(element1_combo)
-            self.populate_operand_combos(element2_combo)
-            self.populate_operation_combo(operation_combo)
-
-            layout.addWidget(QLabel("Элемент №1:"))
-            layout.addWidget(element1_combo)
-            layout.addWidget(QLabel("Элемент №2:"))
-            layout.addWidget(element2_combo)
-            layout.addWidget(QLabel("Операция:"))
-            layout.addWidget(operation_combo)
+            layout.addWidget(QLabel("Взаимодействие:"))
+            layout.addWidget(interaction_combo)
 
             # Сохраняем ссылки на виджеты
-            widget.element1_combo = element1_combo
-            widget.element2_combo = element2_combo
-            widget.operation_combo = operation_combo
+            widget.interaction_combo = interaction_combo
         else:
             # Для A0 создаем заглушки
-            widget.element1_combo = None
-            widget.element2_combo = None
-            widget.operation_combo = None
+            widget.interaction_combo = None
             # Добавляем пустое пространство
             layout.addStretch()
 
@@ -445,22 +481,43 @@ class EquationsPage(QWidget):
         combo.addItem("≤", 1)  # True - меньше или равно
         combo.addItem(">", 0)  # False - строго больше
 
-    def populate_operation_combo(self, combo):
-        """Заполняет комбобокс операций"""
+    def populate_interaction_combo(self, combo, meas_type, current_el_nmb=None):
+        """Заполняет комбобокс взаимодействий в зависимости от типа измерения"""
         combo.clear()
-        operations = [
-            ("---", 0),
-            ("X1", 1),
-            ("X1 * X2", 2),
-            ("X1 / X2", 3),
-            ("X1 * X1", 4),
-            ("1 / X1", 5),
-            ("X1 / X2 * X2", 6),
-            ("1 / X1 * X1", 7)
-        ]
+        combo.addItem("---", {"x1": 0, "x2": 0, "op": 0})
 
-        for text, value in operations:
-            combo.addItem(text, value)
+        if meas_type == 0:  # Регрессия (интенсивности)
+            interactions = self.lines_math_config.get('interactions', [])
+            for interaction in interactions:
+                description = interaction.get('description', '')
+                if description:  # Пропускаем пустые описания
+                    combo.addItem(description, {
+                        'x1': interaction.get('x1', 0),
+                        'x2': interaction.get('x2', 0),
+                        'op': interaction.get('op', 0)
+                    })
+        else:  # Корреляция (концентрации)
+            if current_el_nmb is not None:
+                # Находим interactions для текущего элемента
+                element_interactions = self._get_element_interactions(current_el_nmb)
+                for interaction in element_interactions:
+                    description = interaction.get('description', '')
+                    if description:  # Пропускаем пустые описания
+                        combo.addItem(description, {
+                            'x1': interaction.get('x1', 0),
+                            'x2': interaction.get('x2', 0),
+                            'op': interaction.get('op', 0)
+                        })
+
+    def _get_element_interactions(self, el_nmb):
+        """Получает interactions для конкретного элемента"""
+        element_name = self._get_element_name(el_nmb)
+        interactions_data = self.math_config.get('interactions', [])
+
+        for element_data in interactions_data:
+            if element_data.get('element_name') == element_name:
+                return element_data.get('interactions', [])
+        return []
 
     def setup_connections(self):
         """Настройка соединений сигналов и слотов"""
@@ -486,6 +543,8 @@ class EquationsPage(QWidget):
         # Перезагружаем конфигурационные файлы
         self.elements_config = self._load_elements_config()
         self.range_config = self._load_range_config()
+        self.lines_math_config = self._load_lines_math_config()
+        self.math_config = self._load_math_config()
 
         # Перезагружаем данные
         self.load_equations()
@@ -497,22 +556,12 @@ class EquationsPage(QWidget):
 
         # Получаем выбранный тип измерения
         meas_type = 0 if self.regression_radio.isChecked() else 1
-
-        # Обновляем комбобоксы в соответствии с выбранным типом
         current_el_nmb = self.current_equation_data.get('el_nmb', 0)
 
-        if meas_type == 0:
-            # Для регрессии - диапазоны
-            for member_widget in self.equation_members:
-                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                    self.populate_operand_combos(member_widget.element1_combo)
-                    self.populate_operand_combos(member_widget.element2_combo)
-        else:
-            # Для корреляции - элементы (исключая текущий)
-            for member_widget in self.equation_members:
-                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                    self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
-                    self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
+        # Обновляем комбобоксы взаимодействий
+        for member_widget in self.equation_members:
+            if hasattr(member_widget, 'interaction_combo') and member_widget.interaction_combo:
+                self.populate_interaction_combo(member_widget.interaction_combo, meas_type, current_el_nmb)
 
         # Обновляем коэффициенты в соответствии с выбранным типом
         self.update_coefficients_display(meas_type)
@@ -525,53 +574,71 @@ class EquationsPage(QWidget):
             self.k0_edit.setText(str(self.current_equation_data.get('k_i_klin00', 0)))
             self.k1_edit.setText(str(self.current_equation_data.get('k_i_klin01', 0)))
 
-            # Для регрессии используем диапазоны
-            for member_widget in self.equation_members:
-                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                    self.populate_operand_combos(member_widget.element1_combo)
-                    self.populate_operand_combos(member_widget.element2_combo)
-
             for i in range(6):
                 coeff_value = self.current_equation_data.get(f'k_i_alin{i:02d}', 0)
                 self.equation_members[i].coeff_edit.setText(str(coeff_value))
 
-                if i > 0:  # Для A1-A5 также обновляем операнды и операции
+                if i > 0:  # Для A1-A5 также обновляем взаимодействия
                     element1_value = self.current_equation_data.get(f'operand_i_01_{i:02d}', 0)
                     element2_value = self.current_equation_data.get(f'operand_i_02_{i:02d}', 0)
                     operation_value = self.current_equation_data.get(f'operator_i_{i:02d}', 0)
 
-                    # Устанавливаем значения в комбобоксы (прибавляем 1 для диапазонов)
-                    self.set_combo_value(self.equation_members[i].element1_combo,
-                                         element1_value + 1 if element1_value > 0 else 0)
-                    self.set_combo_value(self.equation_members[i].element2_combo,
-                                         element2_value + 1 if element2_value > 0 else 0)
-                    self.set_combo_value(self.equation_members[i].operation_combo, operation_value)
+                    # Находим соответствующее взаимодействие
+                    interaction_data = self._find_interaction_by_values(
+                        element1_value, element2_value, operation_value, meas_type, current_el_nmb
+                    )
+                    self.set_combo_interaction_value(self.equation_members[i].interaction_combo, interaction_data)
         else:  # Корреляция
             self.k0_edit.setText(str(self.current_equation_data.get('k_c_klin00', 0)))
             self.k1_edit.setText(str(self.current_equation_data.get('k_c_klin01', 0)))
-
-            # Для корреляции используем элементы (исключая текущий элемент)
-            for member_widget in self.equation_members:
-                if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                    self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
-                    self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
 
             for i in range(6):
                 coeff_value = self.current_equation_data.get(f'k_c_alin{i:02d}', 0)
                 self.equation_members[i].coeff_edit.setText(str(coeff_value))
 
-                if i > 0:  # Для A1-A5 также обновляем операнды и операции
+                if i > 0:  # Для A1-A5 также обновляем взаимодействия
                     element1_value = self.current_equation_data.get(f'operand_c_01_{i:02d}', 0)
                     element2_value = self.current_equation_data.get(f'operand_c_02_{i:02d}', 0)
                     operation_value = self.current_equation_data.get(f'operator_c_{i:02d}', 0)
 
-                    # Устанавливаем значения в комбобоксы (для элементов используем номер как есть)
-                    element1_value = element1_value if element1_value >= 0 else 0
-                    element2_value = element2_value if element2_value >= 0 else 0
+                    # Находим соответствующее взаимодействие
+                    interaction_data = self._find_interaction_by_values(
+                        element1_value, element2_value, operation_value, meas_type, current_el_nmb
+                    )
+                    self.set_combo_interaction_value(self.equation_members[i].interaction_combo, interaction_data)
 
-                    self.set_combo_value(self.equation_members[i].element1_combo, element1_value)
-                    self.set_combo_value(self.equation_members[i].element2_combo, element2_value)
-                    self.set_combo_value(self.equation_members[i].operation_combo, operation_value)
+    def _find_interaction_by_values(self, x1, x2, op, meas_type, current_el_nmb):
+        """Находит взаимодействие по значениям x1, x2, op"""
+        if meas_type == 0:  # Регрессия
+            interactions = self.lines_math_config.get('interactions', [])
+            for interaction in interactions:
+                if (interaction.get('x1') == x1 and
+                        interaction.get('x2') == x2 and
+                        interaction.get('op') == op):
+                    return interaction
+        else:  # Корреляция
+            element_interactions = self._get_element_interactions(current_el_nmb)
+            for interaction in element_interactions:
+                if (interaction.get('x1') == x1 and
+                        interaction.get('x2') == x2 and
+                        interaction.get('op') == op):
+                    return interaction
+        return {"x1": 0, "x2": 0, "op": 0}
+
+    def set_combo_interaction_value(self, combo, interaction_data):
+        """Устанавливает значение в комбобокс взаимодействий"""
+        x1 = interaction_data.get('x1', 0)
+        x2 = interaction_data.get('x2', 0)
+        op = interaction_data.get('op', 0)
+
+        for i in range(combo.count()):
+            item_data = combo.itemData(i)
+            if (item_data.get('x1') == x1 and
+                    item_data.get('x2') == x2 and
+                    item_data.get('op') == op):
+                combo.setCurrentIndex(i)
+                return
+        combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
     def load_equations(self):
         """Загружает уравнения из базы данных только для сконфигурированных элементов"""
@@ -647,9 +714,8 @@ class EquationsPage(QWidget):
             # Перезагружаем конфигурационные файлы для актуальных данных
             self.elements_config = self._load_elements_config()
             self.range_config = self._load_range_config()
-
-            # Обновляем комбобоксы с новыми данными
-            self.update_all_combos()
+            self.lines_math_config = self._load_lines_math_config()
+            self.math_config = self._load_math_config()
 
             self.current_editing_row = row
             self.current_equation_data = equation_data.copy()
@@ -687,20 +753,11 @@ class EquationsPage(QWidget):
             self.c_min_edit.setText(str(equation_data.get('c_min', 0)))
             self.c_max_edit.setText(str(equation_data.get('c_max', 0)))
 
-            # Инициализируем комбобоксы в соответствии с типом измерения
+            # Инициализируем комбобоксы взаимодействий в соответствии с типом измерения
             current_el_nmb = equation_data.get('el_nmb', 0)
-            if meas_type == 0:
-                # Для регрессии - диапазоны
-                for member_widget in self.equation_members:
-                    if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                        self.populate_operand_combos(member_widget.element1_combo)
-                        self.populate_operand_combos(member_widget.element2_combo)
-            else:
-                # Для корреляции - элементы (исключая текущий)
-                for member_widget in self.equation_members:
-                    if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                        self.populate_element_combos(member_widget.element1_combo, current_el_nmb)
-                        self.populate_element_combos(member_widget.element2_combo, current_el_nmb)
+            for member_widget in self.equation_members:
+                if hasattr(member_widget, 'interaction_combo') and member_widget.interaction_combo:
+                    self.populate_interaction_combo(member_widget.interaction_combo, meas_type, current_el_nmb)
 
             # Заполняем коэффициенты в соответствии с текущим типом измерения
             self.update_coefficients_display(meas_type)
@@ -812,11 +869,9 @@ class EquationsPage(QWidget):
         """Обновляет все комбобоксы с новыми данными из конфигурационных файлов"""
         # Обновляем комбобоксы операндов для каждого члена уравнения
         for member_widget in self.equation_members:
-            if hasattr(member_widget, 'element1_combo') and member_widget.element1_combo:
-                self.populate_operand_combos(member_widget.element1_combo)
-                self.populate_operand_combos(member_widget.element2_combo)
-            if hasattr(member_widget, 'operation_combo') and member_widget.operation_combo:
-                self.populate_operation_combo(member_widget.operation_combo)
+            if hasattr(member_widget, 'interaction_combo') and member_widget.interaction_combo:
+                # Комбобоксы взаимодействий будут обновляться при смене типа измерения
+                pass
         self.populate_operand_combos(self.e_element_combo)
         self.populate_operand_combos(self.w_element_combo)
 
@@ -828,30 +883,11 @@ class EquationsPage(QWidget):
                 return
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
-    def populate_element_combos(self, combo, exclude_element_nmb=None):
-        """Заполняет комбобоксы элементами (исключая указанный элемент)"""
-        combo.clear()
-        combo.addItem("---", 0)
-
-        for element in self.elements_config:
-            if isinstance(element, dict):
-                number = element.get('number', 0)
-                name = element.get('name', '').strip()
-                if name and name != '-' and number != exclude_element_nmb:
-                    # Для элементов используем номер как есть (без +1)
-                    combo.addItem(name, number)
-
     def save_equation_changes(self, product_numbers: list[int] | None = None, model_numbers: list[int] | None = None):
         """
         Сохраняет изменения уравнения в базу.
         Если product_numbers и model_numbers переданы, применяет изменения массово.
         """
-        import traceback
-        print("Вызов save_equation_changes с:")
-        print("product_numbers:", product_numbers)
-        print("model_numbers:", model_numbers)
-        traceback.print_stack()
-
         try:
             if self.current_editing_row is None or not self.current_equation_data:
                 if product_numbers is False or model_numbers is None:
@@ -878,55 +914,47 @@ class EquationsPage(QWidget):
                 e_operator_value = bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()))
 
                 update_data.update({
-                    'water_crit': float(self.water_crit_edit.text()) if self.water_crit_edit.text() else 0,
+                    'water_crit': self._safe_float_convert(self.water_crit_edit.text()),
                     'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
                     'w_operator': w_operator_value,  # ← ИСПРАВЛЕНО: boolean
-                    'empty_crit': float(self.empty_crit_edit.text()) if self.empty_crit_edit.text() else 0,
+                    'empty_crit': self._safe_float_convert(self.empty_crit_edit.text()),
                     'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
                     'e_operator': e_operator_value,  # ← ИСПРАВЛЕНО: boolean
-                    'c_min': float(self.c_min_edit.text()) if self.c_min_edit.text() else 0,
-                    'c_max': float(self.c_max_edit.text()) if self.c_max_edit.text() else 0
+                    'c_min': self._safe_float_convert(self.c_min_edit.text()),
+                    'c_max': self._safe_float_convert(self.c_max_edit.text())
                 })
 
             # Коэффициенты корректировки
             if meas_type == 0:
-                update_data['k_i_klin00'] = float(self.k0_edit.text()) if self.k0_edit.text() else 0
-                update_data['k_i_klin01'] = float(self.k1_edit.text()) if self.k1_edit.text() else 0
+                update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text())
+                update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text())
             else:
-                update_data['k_c_klin00'] = float(self.k0_edit.text()) if self.k0_edit.text() else 0
-                update_data['k_c_klin01'] = float(self.k1_edit.text()) if self.k1_edit.text() else 0
+                update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text())
+                update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text())
 
             # Члены уравнения
             for i in range(6):
                 member_widget = self.equation_members[i]
-                coeff_value = float(member_widget.coeff_edit.text()) if member_widget.coeff_edit.text() else 0
+                coeff_value = self._safe_float_convert(member_widget.coeff_edit.text())
 
                 if meas_type == 0:
                     update_data[f'k_i_alin{i:02d}'] = coeff_value
-                    if i > 0 and member_widget.element1_combo:
-                        element1_value = member_widget.element1_combo.itemData(
-                            member_widget.element1_combo.currentIndex())
-                        element2_value = member_widget.element2_combo.itemData(
-                            member_widget.element2_combo.currentIndex())
-                        operation_value = member_widget.operation_combo.itemData(
-                            member_widget.operation_combo.currentIndex())
-                        # Для регрессии вычитаем 1 (диапазоны)
-                        update_data[f'operand_i_01_{i:02d}'] = element1_value - 1 if element1_value > 0 else 0
-                        update_data[f'operand_i_02_{i:02d}'] = element2_value - 1 if element2_value > 0 else 0
-                        update_data[f'operator_i_{i:02d}'] = operation_value if operation_value else 0
+                    if i > 0 and member_widget.interaction_combo:
+                        interaction_data = member_widget.interaction_combo.itemData(
+                            member_widget.interaction_combo.currentIndex())
+                        if interaction_data:
+                            update_data[f'operand_i_01_{i:02d}'] = interaction_data.get('x1', 0)
+                            update_data[f'operand_i_02_{i:02d}'] = interaction_data.get('x2', 0)
+                            update_data[f'operator_i_{i:02d}'] = interaction_data.get('op', 0)
                 else:
                     update_data[f'k_c_alin{i:02d}'] = coeff_value
-                    if i > 0 and member_widget.element1_combo:
-                        element1_value = member_widget.element1_combo.itemData(
-                            member_widget.element1_combo.currentIndex())
-                        element2_value = member_widget.element2_combo.itemData(
-                            member_widget.element2_combo.currentIndex())
-                        operation_value = member_widget.operation_combo.itemData(
-                            member_widget.operation_combo.currentIndex())
-                        # Для корреляции используем как есть (элементы)
-                        update_data[f'operand_c_01_{i:02d}'] = element1_value
-                        update_data[f'operand_c_02_{i:02d}'] = element2_value
-                        update_data[f'operator_c_{i:02d}'] = operation_value if operation_value else 0
+                    if i > 0 and member_widget.interaction_combo:
+                        interaction_data = member_widget.interaction_combo.itemData(
+                            member_widget.interaction_combo.currentIndex())
+                        if interaction_data:
+                            update_data[f'operand_c_01_{i:02d}'] = interaction_data.get('x1', 0)
+                            update_data[f'operand_c_02_{i:02d}'] = interaction_data.get('x2', 0)
+                            update_data[f'operator_c_{i:02d}'] = interaction_data.get('op', 0)
 
             # Формируем SQL запрос
             if meas_type == 0:
@@ -1124,8 +1152,8 @@ class EquationsPage(QWidget):
                                         f"Пожалуйста, заполните значения I мин и I макс для линии {sq_nmb}")
                     return
 
-                i_min = float(i_min_text)
-                i_max = float(i_max_text)
+                i_min = self._safe_float_convert(i_min_text)
+                i_max = self._safe_float_convert(i_max_text)
 
                 if i_min < 0 or i_max < 0:
                     QMessageBox.warning(self, "Ошибка",
@@ -1202,7 +1230,7 @@ class EquationsPage(QWidget):
         """Отменяет редактирование"""
         try:
             self.regression_radio.toggled.disconnect(self.on_measurement_type_changed)
-            self.correlation_radio.toggled.disconnect(self.on_measurement_type_changed)
+            self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
         except:
             pass  # Игнорируем ошибки если обработчики не подключены
 
@@ -1223,11 +1251,9 @@ class EquationsPage(QWidget):
                 member_widget = self.equation_members[i]
                 member_widget.coeff_edit.setText("0")
 
-                # Очищаем операнды и операции (только для A1-A5)
-                if i > 0 and member_widget.element1_combo:
-                    member_widget.element1_combo.setCurrentIndex(0)
-                    member_widget.element2_combo.setCurrentIndex(0)
-                    member_widget.operation_combo.setCurrentIndex(0)
+                # Очищаем взаимодействия (только для A1-A5)
+                if i > 0 and member_widget.interaction_combo:
+                    member_widget.interaction_combo.setCurrentIndex(0)
 
             QMessageBox.information(self, "Успех", "Уравнение очищено!")
 
@@ -1325,54 +1351,82 @@ class EquationsPage(QWidget):
             return "0"
 
         elif operator == 1:  # 1 - берем только operand_i_01_01
-            if operand1 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 (для NC)
+            if operand1 >= 0:  # было operand1 > 0
                 name1 = get_name_func(operand1)
-                return f"{prefix}{name1}"
+                # Проверяем, что имя не пустое
+                if name1:
+                    return f"{prefix}{name1}"
             return "0"
 
         elif operator == 2:  # 2 - operand_i_01_01 * operand_i_02_01
-            if operand1 > 0 and operand2 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
+            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
-                return f"{prefix}{name1}*{prefix}{name2}"
+                # Проверяем, что оба имени не пустые
+                if name1 and name2:
+                    return f"{prefix}{name1}*{prefix}{name2}"
             return "0"
 
         elif operator == 3:  # 3 - operand_i_01_01 / operand_i_02_01
-            if operand1 > 0 and operand2 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
+            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
-                return f"{prefix}{name1}/{prefix}{name2}"
+                # Проверяем, что оба имени не пустые
+                if name1 and name2:
+                    return f"{prefix}{name1}/{prefix}{name2}"
             return "0"
 
         elif operator == 4:  # 4 - operand_i_01_01 * operand_i_01_01
-            if operand1 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
+            if operand1 >= 0:  # было operand1 > 0
                 name1 = get_name_func(operand1)
-                return f"{prefix}{name1}*{prefix}{name1}"
+                if name1:
+                    return f"{prefix}{name1}*{prefix}{name1}"
             return "0"
 
         elif operator == 5:  # 5 - 1 / operand_i_01_01
-            if operand1 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
+            if operand1 >= 0:  # было operand1 > 0
                 name1 = get_name_func(operand1)
-                return f"1/{prefix}{name1}"
+                if name1:
+                    return f"1/{prefix}{name1}"
             return "0"
 
         elif operator == 6:  # 6 - operand_i_01_01 / operand_i_02_01 * operand_i_02_01
-            if operand1 > 0 and operand2 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
+            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
-                return f"{prefix}{name1}/{prefix}{name2}*{prefix}{name2}"
+                if name1 and name2:
+                    return f"{prefix}{name1}/{prefix}{name2}*{prefix}{name2}"
             return "0"
 
         elif operator == 7:  # 7 - 1 / operand_i_01_01 * operand_i_01_01
-            if operand1 > 0:
+            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
+            if operand1 >= 0:  # было operand1 > 0
                 name1 = get_name_func(operand1)
-                return f"1/{prefix}{name1}*{prefix}{name1}"
+                if name1:
+                    return f"1/{prefix}{name1}*{prefix}{name1}"
             return "0"
 
         return "0"
 
     def _get_element_name(self, el_nmb: int) -> str:
         """Получает имя элемента по его номеру"""
+        # Используем adjusted_number из math_config
+        if el_nmb < 0:
+            return ""
+
+        # Сначала ищем в math_config
+        elements_config = self.math_config.get('elements', [])
+        for element in elements_config:
+            if isinstance(element, dict) and element.get('adjusted_number') == el_nmb:
+                return element.get('name', f"Element_{el_nmb}")
+
+        # Если не нашли в math_config, ищем в elements_config
         for element in self.elements_config:
             if isinstance(element, dict) and element.get('number') == el_nmb:
                 return element.get('name', f"Element_{el_nmb}")
@@ -1380,9 +1434,17 @@ class EquationsPage(QWidget):
 
     def _get_range_name(self, range_nmb: int) -> str:
         """Получает имя диапазона по его номеру"""
-        if range_nmb <= 0:
+        # ИСПРАВЛЕНИЕ: разрешаем range_nmb = 0
+        if range_nmb < 0:  # было range_nmb <= 0
             return ""
 
+        # Сначала ищем в lines_math_config
+        lines_config = self.lines_math_config.get('lines', [])
+        for line in lines_config:
+            if isinstance(line, dict) and line.get('adjusted_number') == range_nmb:
+                return line.get('name', f"Range_{range_nmb}")
+
+        # Если не нашли, ищем в range_config
         for range_item in self.range_config:
             if isinstance(range_item, dict) and range_item.get('number') == range_nmb + 1:
                 return range_item.get('name', f"Range_{range_nmb}")
@@ -1401,6 +1463,8 @@ class EquationsPage(QWidget):
         # Перезагружаем конфигурационные файлы
         self.elements_config = self._load_elements_config()
         self.range_config = self._load_range_config()
+        self.lines_math_config = self._load_lines_math_config()
+        self.math_config = self._load_math_config()
 
         # Загружаем данные
         self.load_equations()
