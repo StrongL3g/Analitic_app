@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QPushButton, QLabel,
     QHBoxLayout, QComboBox, QDateTimeEdit, QMessageBox,
     QHeaderView, QScrollArea, QTableWidgetItem, QProgressDialog,
-    QTimeEdit, QGroupBox
+    QTimeEdit, QGroupBox, QFileDialog
 )
 from PySide6.QtCore import Qt, QDateTime, QTime
 from PySide6.QtGui import QFontMetrics, QColor, QFont
@@ -173,6 +173,8 @@ class ReportPage(QWidget):
         table.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
         table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         table.verticalHeader().setVisible(False)  # Выключаем вертикальные заголовки
+        # Разрешаем выбор строк
+        table.setSelectionBehavior(QTableWidget.SelectRows)
         return table
 
     def configure_table(self):
@@ -447,35 +449,47 @@ class ReportPage(QWidget):
                 'calculated': [],
                 'chemical': [],
                 'deltas': [],
-                'relative_deltas': []
+                'relative_deltas': [],
+                'valid_count': 0  # Добавляем счетчик валидных значений
             }
 
-            col_base = 1 + col_idx * 4  # 1 - потому что первый столбец "Время цикла"
+            col_base = 1 + col_idx * 4
 
-            # Собираем данные из всех строк с данными (начиная с data_start_row)
             for row in range(data_start_row, self.table.rowCount()):
                 try:
-                    # Получаем данные из таблицы
-                    calc_item = self.table.item(row, col_base)  # С расч
-                    chem_item = self.table.item(row, col_base + 1)  # С хим
-                    delta_item = self.table.item(row, col_base + 2)  # ΔC
-                    relative_item = self.table.item(row, col_base + 3)  # ΔC/С хим %
+                    calc_item = self.table.item(row, col_base)
+                    chem_item = self.table.item(row, col_base + 1)
+                    delta_item = self.table.item(row, col_base + 2)
+                    relative_item = self.table.item(row, col_base + 3)
 
-                    if calc_item and chem_item:
+                    if calc_item and chem_item and chem_item.text() != "-":
+                        # Только если С хим не прочерк
                         c_calc = float(calc_item.text())
                         c_chem = float(chem_item.text())
-                        delta = float(delta_item.text()) if delta_item and delta_item.text() else 0
 
-                        # Извлекаем процент из строки (убираем символ %)
-                        relative_text = relative_item.text() if relative_item else "0%"
-                        relative_percent = float(relative_text.replace('%', '').strip())
+                        # Проверяем что delta_item не прочерк
+                        if delta_item and delta_item.text() != "-":
+                            delta = float(delta_item.text())
+                        else:
+                            delta = 0
+
+                        # Проверяем что relative_item не прочерк
+                        if relative_item and relative_item.text() != "-":
+                            relative_text = relative_item.text().replace('%', '').strip()
+                            if relative_text != "-":
+                                relative_percent = float(relative_text)
+                            else:
+                                relative_percent = 0
+                        else:
+                            relative_percent = 0
 
                         element_stats['calculated'].append(c_calc)
                         element_stats['chemical'].append(c_chem)
                         element_stats['deltas'].append(delta)
                         element_stats['relative_deltas'].append(relative_percent)
+                        element_stats['valid_count'] += 1
+
                 except (ValueError, AttributeError) as e:
-                    print(f"Ошибка обработки данных для статистики: {e}")
                     continue
 
             stats[element] = element_stats
@@ -504,6 +518,22 @@ class ReportPage(QWidget):
             element_num = col_idx + 1  # Номер элемента (начинается с 1)
 
             if element not in stats:
+                # Если элемента нет в статистике, ставим прочерки
+                col_base = 1 + col_idx * 4
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))  # Ср.расч
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))  # С хим
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))  # ΔC
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))  # Отн.ΔC%
+
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))  # СКО ΔC
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))  # СКО Отн.ΔC%
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))  # Вывод ΔC
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))  # Вывод Отн.ΔC%
                 continue
 
             element_stats = stats[element]
@@ -516,21 +546,66 @@ class ReportPage(QWidget):
             if element_num in normatives:
                 normative_delta_c_01, normative_delta_c_02 = normatives[element_num]
 
-            # Средние значения
-            if element_stats['calculated']:
+            # ПРОВЕРКА: достаточно ли данных для статистики (минимум 5 ненулевых С хим)
+            if element_stats['valid_count'] < 5:
+                # Недостаточно данных - ставим прочерки ВО ВСЕХ полях статистики
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))  # Ср.расч
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))  # С хим
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))  # ΔC
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))  # Отн.ΔC%
+
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))  # СКО ΔC
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))  # СКО Отн.ΔC%
+
+                # Обновляем строку "Норматив" (строка 2)
+                self.table.setItem(2, col_base, QTableWidgetItem(""))
+                self.table.setItem(2, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(2, col_base + 2,
+                                   QTableWidgetItem(f"{normative_delta_c_01:.4f}" if normative_delta_c_01 > 0 else "-"))
+                self.table.setItem(2, col_base + 3,
+                                   QTableWidgetItem(
+                                       f"{normative_delta_c_02:.0f}%" if normative_delta_c_02 > 0 else "-"))
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))  # Вывод ΔC
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))  # Вывод Отн.ΔC%
+                continue  # Переходим к следующему элементу
+
+            # Средние значения - считаем ТОЛЬКО по валидным данным (где С хим ≠ 0)
+            if element_stats['calculated'] and element_stats['chemical']:
                 avg_calc = statistics.mean(element_stats['calculated'])
                 avg_chem = statistics.mean(element_stats['chemical'])
                 avg_delta = statistics.mean(element_stats['deltas'])
                 avg_relative = statistics.mean(element_stats['relative_deltas'])
             else:
-                avg_calc = avg_chem = avg_delta = avg_relative = 0
+                # Если нет валидных данных, ставим прочерки
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))
 
-            # СКО
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))
+                continue
+
+            # СКО - считаем ТОЛЬКО если есть хотя бы 2 валидных значения
             if len(element_stats['deltas']) > 1:
                 std_delta = statistics.stdev(element_stats['deltas'])
                 std_relative = statistics.stdev(element_stats['relative_deltas'])
             else:
-                std_delta = std_relative = 0
+                # Если недостаточно данных для СКО, ставим прочерки
+                std_delta = 0
+                std_relative = 0
 
             # Заполняем строку "Среднее" (строка 0)
             self.table.setItem(0, col_base, QTableWidgetItem(f"{avg_calc:.6f}"))
@@ -541,8 +616,12 @@ class ReportPage(QWidget):
             # Заполняем строку "СКО" (строка 1)
             self.table.setItem(1, col_base, QTableWidgetItem(""))
             self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
-            self.table.setItem(1, col_base + 2, QTableWidgetItem(f"{std_delta:.6f}"))
-            self.table.setItem(1, col_base + 3, QTableWidgetItem(f"{std_relative:.1f}%"))
+            if len(element_stats['deltas']) > 1:
+                self.table.setItem(1, col_base + 2, QTableWidgetItem(f"{std_delta:.6f}"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem(f"{std_relative:.1f}%"))
+            else:
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))
 
             # Заполняем строку "Норматив" (строка 2) - теперь берем из БД
             self.table.setItem(2, col_base, QTableWidgetItem(""))
@@ -554,7 +633,7 @@ class ReportPage(QWidget):
 
             # Заполняем строку "Вывод" (строка 3) - проверяем по нормативам из БД с F-критерием
             # Для процентного отношения - простое сравнение
-            if normative_delta_c_02 == 0:
+            if normative_delta_c_02 == 0 or len(element_stats['relative_deltas']) <= 1:
                 relative_status = "-"
                 is_relative_ok = True
             else:
@@ -562,8 +641,8 @@ class ReportPage(QWidget):
                 relative_status = "Норма" if is_relative_ok else "Не норма"
 
             # Для delta C - используем F-критерий
-            if normative_delta_c_01 == 0:
-                # Если нет норматива для delta C
+            if normative_delta_c_01 == 0 or len(element_stats['deltas']) <= 1:
+                # Если нет норматива для delta C или недостаточно данных
                 delta_status = "-"
                 is_delta_ok = True
             else:
@@ -613,8 +692,6 @@ class ReportPage(QWidget):
             item = self.table.item(i, 0)
             if item:
                 item.setFont(bold_font)
-
-
 
     def load_report_data(self):
         """Загружает данные для отчета с расчетом c_cor на основе активной модели"""
@@ -691,7 +768,7 @@ class ReportPage(QWidget):
                 item.setFont(bold_font)
                 self.table.setItem(i, 0, item)
 
-            # Теперь добавляем основные данные, начиная с 6-й строки
+            # Теперь добавляем основные данные, начиная с 5-й строки
             data_start_row = 4
             self.table.setRowCount(data_start_row + len(rows))
 
@@ -732,40 +809,41 @@ class ReportPage(QWidget):
 
                     # С химическое
                     c_chem = row.get(f'c_chem_{i:02d}', 0)
-                    c_chem_item = QTableWidgetItem(f"{float(c_chem):.4f}" if c_chem is not None else "0.0000")
-                    c_chem_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    self.table.setItem(row_position, col_base + 1, c_chem_item)
+                    if c_chem is None or float(c_chem) == 0:
+                        # Если С хим равно нулю, ставим прочерки
+                        c_chem_item = QTableWidgetItem("-")
+                        delta_c_item = QTableWidgetItem("-")
+                        delta_percent_item = QTableWidgetItem("-")
+                    else:
+                        c_chem_item = QTableWidgetItem(f"{float(c_chem):.4f}")
 
-                    # ΔC (разница)
-                    delta_c = c_calc - float(c_chem) if c_chem is not None else c_calc
-                    delta_c_item = QTableWidgetItem(f"{delta_c:.4f}")
-                    delta_c_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                        # ΔC (разница)
+                        delta_c = c_calc - float(c_chem)
+                        delta_c_item = QTableWidgetItem(f"{delta_c:.4f}")
 
-                    # Подсветка больших отклонений
-                    if abs(delta_c) > 0.1:  # Порог для подсветки
-                        delta_c_item.setBackground(QColor(255, 255, 200))  # Светло-желтый
-
-                    self.table.setItem(row_position, col_base + 2, delta_c_item)
-
-                    # ΔC/С хим (%)
-                    delta_percent = 0.0
-                    if c_chem is not None and float(c_chem) != 0:
+                        # ΔC/С хим (%)
                         delta_percent = (delta_c / float(c_chem)) * 100
-                        # Математическое округление до целых чисел
                         delta_percent = round(delta_percent)
+                        delta_percent_item = QTableWidgetItem(f"{delta_percent:.0f}%")
 
-                    delta_percent_item = QTableWidgetItem(f"{delta_percent:.0f}%")
+                        # Подсветка больших отклонений
+                        if abs(delta_c) > 0.1:
+                            delta_c_item.setBackground(QColor(255, 255, 200))
+                        if abs(delta_percent) > 10:
+                            delta_percent_item.setBackground(QColor(255, 255, 200))
+
+                    c_chem_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    delta_c_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     delta_percent_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-                    # Подсветка больших отклонений в процентах
-                    if abs(delta_percent) > 10:  # Порог 10%
-                        delta_percent_item.setBackground(QColor(255, 255, 200))  # Светло-желтый
-
+                    self.table.setItem(row_position, col_base + 1, c_chem_item)
+                    self.table.setItem(row_position, col_base + 2, delta_c_item)
                     self.table.setItem(row_position, col_base + 3, delta_percent_item)
 
             # Теперь рассчитываем статистику из данных таблицы
-            stats = self.calculate_statistics_from_table_data(elements, data_start_row)
-            self.add_statistics_rows(stats, elements, normatives, pr_nmb, data_start_row, self.table.rowCount())
+            stats = self.calculate_statistics_from_table_data(elements,
+                                                              data_start_row + 1)  # +1 из-за добавленной пустой строки
+            self.add_statistics_rows(stats, elements, normatives, pr_nmb, data_start_row + 1, self.table.rowCount())
 
             self.table.resizeColumnsToContents()
 
@@ -780,13 +858,119 @@ class ReportPage(QWidget):
                 QMessageBox.warning(self, "Предупреждение", "Нет данных для экспорта")
                 return
 
-            # Здесь можно реализовать экспорт в CSV, Excel и т.д.
-            # Пока просто сообщение
-            QMessageBox.information(self, "Экспорт",
-                                    "Функция экспорта в файл будет реализована в следующей версии")
+            # Получаем настройки для формирования имени файла
+            selected_product = self.product_combo.currentText()
+            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd_HH-mm")
+            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd_HH-mm")
+
+            # Предлагаем пользователю выбрать файл для сохранения
+            from PySide6.QtWidgets import QFileDialog
+            default_filename = f"отчет_{selected_product}_{dt_from}_по_{dt_to}.csv"
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Сохранить отчет как CSV",
+                default_filename,
+                "CSV Files (*.csv);;All Files (*)"
+            )
+
+            if not file_path:
+                return  # Пользователь отменил сохранение
+
+            # Добавляем расширение .csv если его нет
+            if not file_path.lower().endswith('.csv'):
+                file_path += '.csv'
+
+            # Экспортируем данные в CSV
+            self.export_to_csv(file_path)
+
+            QMessageBox.information(self, "Успех", f"Отчет успешно сохранен в файл:\n{file_path}")
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при экспорте: {str(e)}")
+
+    def export_to_csv(self, file_path):
+        """Экспорт данных таблицы в CSV файл"""
+        try:
+            import csv
+            from pathlib import Path
+
+            # Создаем директорию если не существует
+            Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+
+            with open(file_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+                writer = csv.writer(csvfile, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+
+                # Записываем заголовок с информацией о периоде и продукте
+                self.write_csv_header(writer)
+
+                # Записываем заголовки таблицы
+                headers = []
+                for col in range(self.table.columnCount()):
+                    header = self.table.horizontalHeaderItem(col)
+                    headers.append(header.text() if header else f"Column_{col}")
+                writer.writerow(headers)
+
+                # Записываем данные таблицы
+                for row in range(self.table.rowCount()):
+                    row_data = []
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(row, col)
+                        if item is not None:
+                            # Обрабатываем специальные случаи (серые строки и т.д.)
+                            text = self.process_cell_text(item.text(), row, col)
+                            row_data.append(text)
+                        else:
+                            row_data.append("")
+
+                    writer.writerow(row_data)
+
+        except Exception as e:
+            raise Exception(f"Ошибка записи CSV файла: {str(e)}")
+
+    def write_csv_header(self, writer):
+        """Записывает заголовочную информацию в CSV"""
+        try:
+            # Информация о периоде
+            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("dd.MM.yyyy HH:mm")
+            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("dd.MM.yyyy HH:mm")
+            selected_product = self.product_combo.currentText()
+
+            writer.writerow(["Отчет по химическим содержаниям"])
+            writer.writerow([f"Продукт: {selected_product}"])
+            writer.writerow([f"Период: с {dt_from} по {dt_to}"])
+            writer.writerow([f"Дата формирования: {QDateTime.currentDateTime().toString('dd.MM.yyyy HH:mm:ss')}"])
+            writer.writerow([])  # Пустая строка
+
+        except Exception as e:
+            print(f"Ошибка записи заголовка CSV: {str(e)}")
+
+    def process_cell_text(self, text, row, col):
+        """Обрабатывает текст ячейки для корректного отображения в CSV"""
+        try:
+            if row == 4:  # Серая строка-разделитель
+                    return "---"
+
+            # Обработка статистических строк
+            stat_rows = {
+                0: "Среднее",
+                1: "СКО",
+                2: "Норматив",
+                3: "Вывод"
+            }
+
+            if row in stat_rows and col == 0:
+                return stat_rows[row]
+
+            # Заменяем прочерки и специальные символы если нужно
+            if text.strip() in ['-', '--', '---']:
+                return text
+
+            # Для числовых значений убираем лишние пробелы
+            return text.strip()
+
+        except Exception as e:
+            print(f"Ошибка обработки текста ячейки: {str(e)}")
+            return text
 
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
@@ -893,11 +1077,224 @@ class ReportPage(QWidget):
         self.load_btn.clicked.connect(self.load_report_data)
         self.export_btn.clicked.connect(self.export_to_file)
 
+        # Обработка двойного клика для удаления строк
+        self.table.doubleClicked.connect(self.delete_selected_row)
+
         # Валидация дат при изменении
         self.date_from.dateTimeChanged.connect(self.validate_dates)
         self.time_from.timeChanged.connect(self.validate_dates)
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
+
+    def delete_selected_row(self, index):
+        """Удаляет выбранную строку при двойном клике"""
+        row = index.row()
+
+        # Не позволяем удалять строки статистики (первые 5 строк)
+        if row < 5:  # Среднее, СКО, Норматив, Вывод, пустая строка
+            return
+
+        # Создаем кастомное окно подтверждения с русскими кнопками
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Подтверждение удаления")
+        msg_box.setText("Вы уверены, что хотите удалить эту строку?")
+        msg_box.setIcon(QMessageBox.Question)
+
+        # Создаем кнопки с русским текстом
+        btn_yes = msg_box.addButton("Да", QMessageBox.YesRole)
+        btn_no = msg_box.addButton("Нет", QMessageBox.NoRole)
+        msg_box.setDefaultButton(btn_no)
+
+        msg_box.exec()
+
+        if msg_box.clickedButton() == btn_yes:
+            self.table.removeRow(row)
+            # После удаления пересчитываем статистику
+            self.recalculate_statistics_after_deletion()
+
+    def recalculate_statistics_after_deletion(self):
+        """Пересчитывает статистику после удаления строки"""
+        elements = self.get_configured_elements()
+        data_start_row = 5  # Строка, с которой начинаются данные (после статистики)
+
+        if self.table.rowCount() > data_start_row:
+            # Пересчитываем статистику из оставшихся данных
+            stats = self.calculate_statistics_from_table_data(elements, data_start_row)
+
+            # Получаем номер продукта для нормативов
+            selected_product = self.product_combo.currentText()
+            try:
+                pr_nmb = int(selected_product.split()[-1])
+                normatives = self.get_normatives_from_db(pr_nmb)
+            except:
+                normatives = {}
+
+            # Обновляем строки статистики
+            self.update_statistics_rows(stats, elements, normatives, pr_nmb, data_start_row, self.table.rowCount())
+
+    def update_statistics_rows(self, stats, elements, normatives, pr_nmb, data_start_row, total_rows):
+        """Обновляет строки статистики без изменения структуры таблицы"""
+        # Создаем жирный шрифт
+        bold_font = QFont()
+        bold_font.setBold(True)
+
+        # Цвета для подсветки
+        light_green = QColor(200, 255, 200)  # Светло-зеленый
+        light_red = QColor(255, 200, 200)  # Светло-красный
+
+        # Количество наблюдений для расчета F-критерия
+        n = total_rows - data_start_row  # количество наблюдений
+        if n < 2:
+            n = 2  # минимальное значение для расчета СКО
+
+        # Получаем табличное значение F
+        f_critical = self.get_f_critical_value(n)
+
+        for col_idx, element in enumerate(elements):
+            element_num = col_idx + 1  # Номер элемента (начинается с 1)
+
+            if element not in stats:
+                # Если элемента нет в статистике, ставим прочерки
+                col_base = 1 + col_idx * 4
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))  # Ср.расч
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))  # С хим
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))  # ΔC
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))  # Отн.ΔC%
+
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))  # СКО ΔC
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))  # СКО Отн.ΔC%
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))  # Вывод ΔC
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))  # Вывод Отн.ΔC%
+                continue
+
+            element_stats = stats[element]
+            col_base = 1 + col_idx * 4  # 1 - потому что первый столбец "Время цикла"
+
+            # Получаем нормативы для текущего элемента и продукта
+            normative_delta_c_01 = 0.0  # значение по умолчанию
+            normative_delta_c_02 = 0.0  # значение по умолчанию
+
+            if element_num in normatives:
+                normative_delta_c_01, normative_delta_c_02 = normatives[element_num]
+
+            # Проверяем достаточно ли данных для статистики (минимум 5 ненулевых С хим)
+            if element_stats['valid_count'] < 5:
+                # Недостаточно данных - ставим прочерки ВО ВСЕХ полях статистики
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))  # Ср.расч
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))  # С хим
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))  # ΔC
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))  # Отн.ΔC%
+
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))  # СКО ΔC
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))  # СКО Отн.ΔC%
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))  # Вывод ΔC
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))  # Вывод Отн.ΔC%
+                continue  # Переходим к следующему элементу
+
+            # Остальной код без изменений...
+            # Средние значения - считаем ТОЛЬКО по валидным данным (где С хим ≠ 0)
+            if element_stats['calculated'] and element_stats['chemical']:
+                avg_calc = statistics.mean(element_stats['calculated'])
+                avg_chem = statistics.mean(element_stats['chemical'])
+                avg_delta = statistics.mean(element_stats['deltas'])
+                avg_relative = statistics.mean(element_stats['relative_deltas'])
+            else:
+                # Если нет валидных данных, ставим прочерки
+                self.table.setItem(0, col_base, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 1, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(0, col_base + 3, QTableWidgetItem("-"))
+
+                self.table.setItem(1, col_base, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))
+
+                self.table.setItem(3, col_base, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+                self.table.setItem(3, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(3, col_base + 3, QTableWidgetItem("-"))
+                continue
+
+            # СКО - считаем ТОЛЬКО если есть хотя бы 2 валидных значения
+            if len(element_stats['deltas']) > 1:
+                std_delta = statistics.stdev(element_stats['deltas'])
+                std_relative = statistics.stdev(element_stats['relative_deltas'])
+            else:
+                # Если недостаточно данных для СКО, ставим прочерки
+                std_delta = 0
+                std_relative = 0
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))
+
+            # Обновляем строку "Среднее" (строка 0) - только если есть данные
+            self.table.setItem(0, col_base, QTableWidgetItem(f"{avg_calc:.6f}"))
+            self.table.setItem(0, col_base + 1, QTableWidgetItem(f"{avg_chem:.6f}"))
+            self.table.setItem(0, col_base + 2, QTableWidgetItem(f"{avg_delta:.6f}"))
+            self.table.setItem(0, col_base + 3, QTableWidgetItem(f"{avg_relative:.1f}%"))
+
+            # Обновляем строку "СКО" (строка 1) - только если рассчитано СКО
+            self.table.setItem(1, col_base, QTableWidgetItem(""))
+            self.table.setItem(1, col_base + 1, QTableWidgetItem(""))
+            if len(element_stats['deltas']) > 1:
+                self.table.setItem(1, col_base + 2, QTableWidgetItem(f"{std_delta:.6f}"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem(f"{std_relative:.1f}%"))
+            else:
+                self.table.setItem(1, col_base + 2, QTableWidgetItem("-"))
+                self.table.setItem(1, col_base + 3, QTableWidgetItem("-"))
+
+            # Обновляем строку "Вывод" (строка 3) - только если можно рассчитать
+            if len(element_stats['deltas']) <= 1 or normative_delta_c_01 == 0:
+                # Недостаточно данных для вывода или нет норматива
+                delta_status = "-"
+                is_delta_ok = True
+            else:
+                # Вычисляем F-расчетное как (СКО / Норматив delta C)
+                f_calculated = std_delta / normative_delta_c_01
+
+                # F-расчетное < F-табличное => Норма
+                if f_calculated < f_critical:
+                    delta_status = "Норма"
+                    is_delta_ok = True
+                else:
+                    delta_status = "Не норма"
+                    is_delta_ok = False
+
+            if len(element_stats['relative_deltas']) <= 1 or normative_delta_c_02 == 0:
+                relative_status = "-"
+                is_relative_ok = True
+            else:
+                is_relative_ok = std_relative <= normative_delta_c_02
+                relative_status = "Норма" if is_relative_ok else "Не норма"
+
+            delta_item = QTableWidgetItem(delta_status)
+            relative_item = QTableWidgetItem(relative_status)
+
+            # Подсветка вывода
+            if is_delta_ok:
+                delta_item.setBackground(light_green)
+            else:
+                delta_item.setBackground(light_red)
+
+            if is_relative_ok:
+                relative_item.setBackground(light_green)
+            else:
+                relative_item.setBackground(light_red)
+
+            self.table.setItem(3, col_base, QTableWidgetItem(""))
+            self.table.setItem(3, col_base + 1, QTableWidgetItem(""))
+            self.table.setItem(3, col_base + 2, delta_item)
+            self.table.setItem(3, col_base + 3, relative_item)
 
     def showEvent(self, event):
         """Обработчик события показа виджета"""
