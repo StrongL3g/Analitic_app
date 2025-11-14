@@ -13,162 +13,26 @@ from pathlib import Path
 from config import AC_COUNT, PR_COUNT, DB_CONFIG
 
 
-
-
-
 class EquationsPage(QWidget):
     """Виджет для отображения уравнений расчета концентраций"""
-
     def __init__(self, db: Database):
-        super().__init__()
-        self.db = db
-        self.original_data = {}
-        self._config_dir = self._get_config_directory()
-        self.elements_config = self._load_elements_config()
-        self.range_config = self._load_range_config()
-        self.lines_math_config = self._load_lines_math_config()
-        self.math_config = self._load_math_config()
-        self.current_editing_row = None
-        self.current_equation_data = None
+        super().__init__()  # Инициализация родительского класса QWidget
+        self.db = db  # Подключение к базе данных
+        #  Работа с конфигурационными файлами
+        self._config_dir = self._get_config_directory()  # Путь к папке config
+        # Загрузка конфигурационных файлов:
+        self.elements_config = self._load_elements_config()  # elements.json
+        self.range_config = self._load_range_config()  # range.json
+        self.lines_math_config = self._load_lines_math_config()  # lines_math_interactions.json
+        self.math_config = self._load_math_config()  # math_interactions.json
+        #  Атрибуты
+        self.original_data = {}  # словарь для хранения имя: значение
+        self.current_editing_row = None  # Текущая строка для редактирования
+        self.current_equation_data = None  # Данные текущего редактируемого уравнения
         self.current_intensity_data = None  # Данные границ интенсивности
-        self.init_ui()
-        self.setup_connections()
-
-    def _get_config_directory(self) -> Path:
-        """Получает путь к директории конфигурации"""
-        base_dir = Path(__file__).parent
-        config_dir = base_dir.parent.parent / "config"
-        config_dir.mkdir(exist_ok=True)
-        return config_dir
-
-    def _highlight_error_fields(self, error_fields):
-        """Подсвечивает поля с ошибками"""
-        # Сначала сбрасываем подсветку всех полей
-        all_fields = [
-            self.water_crit_edit, self.empty_crit_edit, self.c_min_edit, self.c_max_edit,
-            self.k0_edit, self.k1_edit
-        ]
-        for i in range(6):
-            all_fields.append(self.equation_members[i].coeff_edit)
-
-        for field in all_fields:
-            field.setStyleSheet("")
-
-        # Подсвечиваем поля с ошибками
-        for field_name, field in error_fields:
-            field.setStyleSheet("background-color: #ffcccc; border: 1px solid red;")
-
-    def _validate_all_numeric_fields(self):
-        """Проверяет все числовые поля на корректность и возвращает список ошибок и полей с ошибками"""
-        errors = []
-        error_fields = []  # Список для подсветки полей
-
-        # Список полей для проверки
-        fields_to_check = [
-            (self.water_crit_edit, "Критерий Вода"),
-            (self.empty_crit_edit, "Критерий Пусто"),
-            (self.c_min_edit, "C мин"),
-            (self.c_max_edit, "C макс"),
-            (self.k0_edit, "k0"),
-            (self.k1_edit, "k1")
-        ]
-
-        # Добавляем коэффициенты A0-A5
-        for i in range(6):
-            fields_to_check.append((self.equation_members[i].coeff_edit, f"A{i}"))
-
-        # Проверяем каждое поле
-        for field, field_name in fields_to_check:
-            text = field.text().strip()
-            if text:  # Проверяем только непустые поля
-                try:
-                    self._safe_float_convert(text, field_name)
-                except ValueError as e:
-                    errors.append(str(e))
-                    error_fields.append((field_name, field))
-
-        return errors, error_fields
-
-    def _load_config_file(self, filename: str) -> dict:
-        """Загружает конфигурационный файл JSON"""
-        config_path = self._config_dir / filename
-
-        if not config_path.exists():
-            print(f"Файл конфигурации не найден: {config_path}")
-            return {}
-
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Ошибка загрузки файла {filename}: {e}")
-            return {}
-
-    def _load_elements_config(self) -> list:
-        """Загружает конфигурацию элементов"""
-        return self._load_config_file("elements.json")
-
-    def _load_range_config(self) -> list:
-        """Загружает конфигурацию диапазонов"""
-        return self._load_config_file("range.json")
-
-    def _load_lines_math_config(self) -> dict:
-        """Загружает конфигурацию математических операций для линий"""
-        return self._load_config_file("lines_math_interactions.json")
-
-    def _load_math_config(self) -> dict:
-        """Загружает конфигурацию математических операций для элементов"""
-        return self._load_config_file("math_interactions.json")
-
-    def _get_configured_elements_count(self) -> int:
-        """Получает количество сконфигурированных элементов (исключая '-')"""
-        count = 0
-        for element in self.elements_config:
-            if isinstance(element, dict):
-                name = element.get('name', '').strip()
-                if name and name != '-':
-                    count += 1
-        return count
-
-    def _get_configured_element_numbers(self) -> list:
-        """Получает список номеров сконфигурированных элементов"""
-        numbers = []
-        for element in self.elements_config:
-            if isinstance(element, dict):
-                name = element.get('name', '').strip()
-                if name and name != '-':
-                    numbers.append(element.get('number', 0))
-        return numbers
-
-    def _safe_float_convert(self, text, field_name=""):
-        """Безопасно преобразует строку в float, поддерживая научную нотацию и запятые"""
-        if not text or text.strip() == '':
-            return 0.0
-
-        cleaned = text.strip()
-
-        # Проверяем, соответствует ли текст шаблону числа с научной нотацией
-        pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
-        if not pattern.match(cleaned):
-            error_msg = f"Поле '{field_name}': '{text}'\n"
-            error_msg += "Допустимые форматы:\n"
-            error_msg += "• 1.5, -2.3, 0.001\n"
-            error_msg += "• 1,5, 0,001\n"
-            error_msg += "• 3.79e-01, 1.5E+02\n"
-            error_msg += "• 3.79Е-01, 2,3е-5\n"
-            raise ValueError(error_msg)
-
-        # Нормализуем для преобразования
-        cleaned = cleaned.replace(',', '.').lower()
-        cleaned = cleaned.replace('е', 'e')  # русская е в английскую
-
-        try:
-            return float(cleaned)
-        except ValueError as e:
-            error_msg = f"Поле '{field_name}': '{text}'\n"
-            error_msg += f"Ошибка преобразования: {str(e)}"
-            raise ValueError(error_msg)
-
+        #  Методы экземпляра
+        self.init_ui()            # Создание интерфейса
+        self.setup_connections()  # Настройка обработчиков событий
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
@@ -280,6 +144,145 @@ class EquationsPage(QWidget):
 
         main_layout.addWidget(self.edit_widget)
         self.edit_widget.setVisible(False)
+    def setup_connections(self):
+        """Настройка соединений сигналов и слотов"""
+        self.product_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
+        self.model_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
+        self.apply_to_btn.clicked.connect(self.show_apply_to_dialog)
+        self.table_widget.cellClicked.connect(self.on_table_cell_clicked)
+        self.save_btn.clicked.connect(self.save_equation_changes)
+        self.cancel_btn.clicked.connect(self.cancel_editing)
+        self.clear_btn.clicked.connect(self.clear_equation)
+        self.regression_radio.toggled.connect(self.on_measurement_type_changed)
+        self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
+    def _get_config_directory(self) -> Path:
+        """Получает путь к директории конфигурации"""
+        base_dir = Path(__file__).parent
+        config_dir = base_dir.parent.parent / "config"
+        config_dir.mkdir(exist_ok=True)
+        return config_dir
+    def _load_config_file(self, filename: str) -> dict:
+        """Загружает конфигурационный файл JSON"""
+        config_path = self._config_dir / filename
+        if not config_path.exists():
+            print(f"Файл конфигурации не найден: {config_path}")
+            return {}
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Ошибка загрузки файла {filename}: {e}")
+            return {}
+    def _load_elements_config(self) -> list:
+        """Загружает конфигурацию элементов"""
+        return self._load_config_file("elements.json")
+    def _load_range_config(self) -> list:
+        """Загружает конфигурацию диапазонов"""
+        return self._load_config_file("range.json")
+    def _load_lines_math_config(self) -> dict:
+        """Загружает конфигурацию математических операций для линий"""
+        return self._load_config_file("lines_math_interactions.json")
+    def _load_math_config(self) -> dict:
+        """Загружает конфигурацию математических операций для элементов"""
+        return self._load_config_file("math_interactions.json")
+    def _highlight_error_fields(self, error_fields):
+        """Подсвечивает поля с ошибками"""
+        # Сначала сбрасываем подсветку всех полей
+        all_fields = [
+            self.water_crit_edit, self.empty_crit_edit, self.c_min_edit, self.c_max_edit,
+            self.k0_edit, self.k1_edit
+        ]
+        for i in range(6):
+            all_fields.append(self.equation_members[i].coeff_edit)
+
+        for field in all_fields:
+            field.setStyleSheet("")
+
+        # Подсвечиваем поля с ошибками
+        for field_name, field in error_fields:
+            field.setStyleSheet("background-color: #ffcccc; border: 1px solid red;")
+
+    def _validate_all_numeric_fields(self):
+        """Проверяет все числовые поля на корректность и возвращает список ошибок и полей с ошибками"""
+        errors = []
+        error_fields = []  # Список для подсветки полей
+
+        # Список полей для проверки
+        fields_to_check = [
+            (self.water_crit_edit, "Критерий Вода"),
+            (self.empty_crit_edit, "Критерий Пусто"),
+            (self.c_min_edit, "C мин"),
+            (self.c_max_edit, "C макс"),
+            (self.k0_edit, "k0"),
+            (self.k1_edit, "k1")
+        ]
+
+        # Добавляем коэффициенты A0-A5
+        for i in range(6):
+            fields_to_check.append((self.equation_members[i].coeff_edit, f"A{i}"))
+
+        # Проверяем каждое поле
+        for field, field_name in fields_to_check:
+            text = field.text().strip()
+            if text:  # Проверяем только непустые поля
+                try:
+                    self._safe_float_convert(text, field_name)
+                except ValueError as e:
+                    errors.append(str(e))
+                    error_fields.append((field_name, field))
+
+        return errors, error_fields
+
+    def _get_configured_elements_count(self) -> int:
+        """Получает количество сконфигурированных элементов (исключая '-')"""
+        count = 0
+        for element in self.elements_config:
+            if isinstance(element, dict):
+                name = element.get('name', '').strip()
+                if name and name != '-':
+                    count += 1
+        return count
+
+    def _get_configured_element_numbers(self) -> list:
+        """Получает список номеров сконфигурированных элементов"""
+        numbers = []
+        for element in self.elements_config:
+            if isinstance(element, dict):
+                name = element.get('name', '').strip()
+                if name and name != '-':
+                    numbers.append(element.get('number', 0))
+        return numbers
+
+    def _safe_float_convert(self, text, field_name=""):
+        """Безопасно преобразует строку в float, поддерживая научную нотацию и запятые"""
+        if not text or text.strip() == '':
+            return 0.0
+
+        cleaned = text.strip()
+
+        # Проверяем, соответствует ли текст шаблону числа с научной нотацией
+        pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
+        if not pattern.match(cleaned):
+            error_msg = f"Поле '{field_name}': '{text}'\n"
+            error_msg += "Допустимые форматы:\n"
+            error_msg += "• 1.5, -2.3, 0.001\n"
+            error_msg += "• 1,5, 0,001\n"
+            error_msg += "• 3.79e-01, 1.5E+02\n"
+            error_msg += "• 3.79Е-01, 2,3е-5\n"
+            raise ValueError(error_msg)
+
+        # Нормализуем для преобразования
+        cleaned = cleaned.replace(',', '.').lower()
+        cleaned = cleaned.replace('е', 'e')  # русская е в английскую
+
+        try:
+            return float(cleaned)
+        except ValueError as e:
+            error_msg = f"Поле '{field_name}': '{text}'\n"
+            error_msg += f"Ошибка преобразования: {str(e)}"
+            raise ValueError(error_msg)
+
+
 
     def create_equation_tab(self):
         """Создает вкладку для редактирования уравнения"""
@@ -557,18 +560,7 @@ class EquationsPage(QWidget):
                 return element_data.get('interactions', [])
         return []
 
-    def setup_connections(self):
-        """Настройка соединений сигналов и слотов"""
-        self.product_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
-        self.model_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
-        self.apply_to_btn.clicked.connect(self.show_apply_to_dialog)
-        self.table_widget.cellClicked.connect(self.on_table_cell_clicked)
-        self.save_btn.clicked.connect(self.save_equation_changes)
-        self.cancel_btn.clicked.connect(self.cancel_editing)
-        self.clear_btn.clicked.connect(self.clear_equation)
-        # Добавляем обработчики переключения радиокнопок
-        self.regression_radio.toggled.connect(self.on_measurement_type_changed)
-        self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
+
 
     def on_product_or_model_changed(self, index):
         """Обработчик изменения продукта или модели - скрывает окно редактирования и перезагружает конфигурации"""
@@ -716,10 +708,6 @@ class EquationsPage(QWidget):
             for row_idx, row in enumerate(results):
                 el_nmb = row.get('el_nmb', 0)
                 element_name = self._get_element_name(el_nmb)
-                print(f"DEBUG load_equations: row_idx={row_idx}, el_nmb={el_nmb}, element_name='{element_name}'")
-                # ДОБАВЬТЕ ЭТУ ПРОВЕРКУ:
-                print(f"DEBUG row data: {row}")  # Посмотрим все данные строки
-
 
                 equation = self._build_equation(row)
                 correction_coeffs = self._build_correction_coeffs(row)
@@ -931,25 +919,36 @@ class EquationsPage(QWidget):
                 return
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
-    def save_equation_changes(self, product_numbers: list[int] | None = None, model_numbers: list[int] | None = None):
+    def save_equation_changes(self, product_numbers: list[int] | None = None,
+                              model_numbers: list[int] | None = None,
+                              apply_mode: str = "all"):
         """
         Сохраняет изменения уравнения в базу.
-        Если product_numbers и model_numbers переданы, применяет изменения массово.
+
+        Args:
+            product_numbers: Список номеров продуктов для массового применения
+            model_numbers: Список номеров моделей для массового применения
+            apply_mode: Режим применения:
+                - "all": применить всё (тип + коэффициенты + члены + критерии)
+                - "coeffs_only": только коэффициенты и члены уравнения
+                - "type_only": только тип расчета
         """
         # Сначала сбрасываем подсветку всех полей
         self._reset_all_field_highlights()
 
         try:
-            if self.current_editing_row is None or not self.current_equation_data:
-                if product_numbers is False or model_numbers is None:
-                    QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
-                    return
+            # Определяем режим сохранения
+            is_mass_save = (product_numbers is not None and model_numbers is not None)
+
+            if not is_mass_save and (self.current_editing_row is None or not self.current_equation_data):
+                QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
+                return
 
             # ПРОВЕРЯЕМ ВСЕ ПОЛЯ ПЕРЕД СОХРАНЕНИЕМ
             validation_errors, error_fields = self._validate_all_numeric_fields()
             if validation_errors:
                 error_message = "Обнаружены ошибки ввода:\n\n" + "\n".join(validation_errors)
-                self._highlight_error_fields(error_fields)  # Подсвечиваем поля с ошибками
+                self._highlight_error_fields(error_fields)
                 QMessageBox.critical(self, "Ошибки ввода данных", error_message)
                 return
 
@@ -957,18 +956,19 @@ class EquationsPage(QWidget):
             meas_type = 0 if self.regression_radio.isChecked() else 1
             el_nmb = self.current_equation_data.get('el_nmb', 0)
 
+            # Определяем, что обновлять в зависимости от режима
+            update_criteria_and_type = (apply_mode == "all")
+            update_coeffs_only = (apply_mode == "coeffs_only")
+            update_type_only = (apply_mode == "type_only")
+
             # Подготавливаем данные для обновления
             update_data = {
                 'meas_type': meas_type,
                 'el_nmb': el_nmb,
             }
 
-            # Определяем, обновлять ли критерии и диапазоны
-            update_criteria = product_numbers is False and model_numbers is None
-
-            if update_criteria:
-                # Обычное сохранение - обновляем ВСЕ поля
-                # ИСПРАВЛЕНИЕ: преобразуем операторы в boolean
+            # ОБНОВЛЯЕМ КРИТЕРИИ И ДИАПАЗОНЫ (только в режиме "all")
+            if update_criteria_and_type:
                 w_operator_value = bool(self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()))
                 e_operator_value = bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()))
 
@@ -983,156 +983,168 @@ class EquationsPage(QWidget):
                     'c_max': self._safe_float_convert(self.c_max_edit.text(), "C макс")
                 })
 
-            # Коэффициенты корректировки
-            if meas_type == 0:
-                update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
-                update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
-            else:
-                update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
-                update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
+            # ОБНОВЛЯЕМ КОЭФФИЦИЕНТЫ КОРРЕКТИРОВКИ И ЧЛЕНЫ УРАВНЕНИЯ
+            # (во всех режимах кроме "type_only")
+            if not update_type_only:
+                # Коэффициенты корректировки и члены уравнения
+                for i in range(6):
+                    member_widget = self.equation_members[i]
+                    coeff_value = self._safe_float_convert(member_widget.coeff_edit.text(), f"A{i}")
 
-            # Члены уравнения
-            for i in range(6):
-                member_widget = self.equation_members[i]
-                coeff_value = self._safe_float_convert(member_widget.coeff_edit.text(), f"A{i}")
+                    if meas_type == 0:  # РЕГРЕССИЯ
+                        # Сохраняем коэффициенты для регрессии
+                        if i == 0:  # k0, k1
+                            update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
+                            update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
 
-                if meas_type == 0:
-                    update_data[f'k_i_alin{i:02d}'] = coeff_value
-                    if i > 0 and member_widget.interaction_combo:
-                        interaction_data = member_widget.interaction_combo.itemData(
-                            member_widget.interaction_combo.currentIndex())
-                        if interaction_data:
-                            update_data[f'operand_i_01_{i:02d}'] = interaction_data.get('x1', 0)
-                            update_data[f'operand_i_02_{i:02d}'] = interaction_data.get('x2', 0)
-                            update_data[f'operator_i_{i:02d}'] = interaction_data.get('op', 0)
-                else:
-                    update_data[f'k_c_alin{i:02d}'] = coeff_value
-                    if i > 0 and member_widget.interaction_combo:
-                        interaction_data = member_widget.interaction_combo.itemData(
-                            member_widget.interaction_combo.currentIndex())
-                        if interaction_data:
-                            update_data[f'operand_c_01_{i:02d}'] = interaction_data.get('x1', 0)
-                            update_data[f'operand_c_02_{i:02d}'] = interaction_data.get('x2', 0)
-                            update_data[f'operator_c_{i:02d}'] = interaction_data.get('op', 0)
+                        update_data[f'k_i_alin{i:02d}'] = coeff_value
+                        if i > 0 and member_widget.interaction_combo:
+                            interaction_data = member_widget.interaction_combo.itemData(
+                                member_widget.interaction_combo.currentIndex())
+                            if interaction_data:
+                                update_data[f'operand_i_01_{i:02d}'] = interaction_data.get('x1', 0)
+                                update_data[f'operand_i_02_{i:02d}'] = interaction_data.get('x2', 0)
+                                update_data[f'operator_i_{i:02d}'] = interaction_data.get('op', 0)
+                    else:  # КОРРЕЛЯЦИЯ
+                        # Сохраняем коэффициенты для корреляции
+                        if i == 0:  # k0, k1
+                            update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
+                            update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
 
-            # Формируем SQL запрос
-            if meas_type == 0:
-                if update_criteria:
-                    base_fields = """
-                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?,
-                    e_operator = ?, c_min = ?, c_max = ?,
-                    k_i_klin00 = ?, k_i_klin01 = ?,
-                    k_i_alin00 = ?,
-                    k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
-                    k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
-                    k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
-                    k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
-                    k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
-                    """
-                    base_params = [
-                        update_data['meas_type'],
-                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                        update_data['c_min'], update_data['c_max'],
-                        update_data['k_i_klin00'], update_data['k_i_klin01'],
-                        update_data['k_i_alin00'],
-                        update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
-                        update_data['operator_i_01'],
-                        update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
-                        update_data['operator_i_02'],
-                        update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
-                        update_data['operator_i_03'],
-                        update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
-                        update_data['operator_i_04'],
-                        update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
-                        update_data['operator_i_05']
-                    ]
-                else:
-                    base_fields = """
-                    k_i_klin00 = ?, k_i_klin01 = ?,
-                    k_i_alin00 = ?,
-                    k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
-                    k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
-                    k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
-                    k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
-                    k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
-                    """
-                    base_params = [
-                        update_data['k_i_klin00'], update_data['k_i_klin01'],
-                        update_data['k_i_alin00'],
-                        update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
-                        update_data['operator_i_01'],
-                        update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
-                        update_data['operator_i_02'],
-                        update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
-                        update_data['operator_i_03'],
-                        update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
-                        update_data['operator_i_04'],
-                        update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
-                        update_data['operator_i_05']
-                    ]
-            else:
-                if update_criteria:
-                    base_fields = """
-                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb =?,
-                    e_operator = ?, c_min = ?, c_max = ?,
-                    k_c_klin00 = ?, k_c_klin01 = ?,
-                    k_c_alin00 = ?,
-                    k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
-                    k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
-                    k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
-                    k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
-                    k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
-                    """
-                    base_params = [
-                        update_data['meas_type'],
-                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                        update_data['c_min'], update_data['c_max'],
-                        update_data['k_c_klin00'], update_data['k_c_klin01'],
-                        update_data['k_c_alin00'],
-                        update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
-                        update_data['operator_c_01'],
-                        update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
-                        update_data['operator_c_02'],
-                        update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
-                        update_data['operator_c_03'],
-                        update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
-                        update_data['operator_c_04'],
-                        update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
-                        update_data['operator_c_05']
-                    ]
-                else:
-                    base_fields = """
-                    k_c_klin00 = ?, k_c_klin01 = ?,
-                    k_c_alin00 = ?,
-                    k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
-                    k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
-                    k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
-                    k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
-                    k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
-                    """
-                    base_params = [
-                        update_data['k_c_klin00'], update_data['k_c_klin01'],
-                        update_data['k_c_alin00'],
-                        update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
-                        update_data['operator_c_01'],
-                        update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
-                        update_data['operator_c_02'],
-                        update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
-                        update_data['operator_c_03'],
-                        update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
-                        update_data['operator_c_04'],
-                        update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
-                        update_data['operator_c_05']
-                    ]
+                        update_data[f'k_c_alin{i:02d}'] = coeff_value
+                        if i > 0 and member_widget.interaction_combo:
+                            interaction_data = member_widget.interaction_combo.itemData(
+                                member_widget.interaction_combo.currentIndex())
+                            if interaction_data:
+                                update_data[f'operand_c_01_{i:02d}'] = interaction_data.get('x1', 0)
+                                update_data[f'operand_c_02_{i:02d}'] = interaction_data.get('x2', 0)
+                                update_data[f'operator_c_{i:02d}'] = interaction_data.get('op', 0)
 
-            # Выполняем запрос
-            if product_numbers is not False and model_numbers is not None:
-                # Режим массового применения
+            # ФОРМИРУЕМ SQL ЗАПРОС В ЗАВИСИМОСТИ ОТ РЕЖИМА И ТИПА УРАВНЕНИЯ
+            if is_mass_save:
+                # РЕЖИМ МАССОВОГО ПРИМЕНЕНИЯ
                 if not product_numbers or not model_numbers:
                     QMessageBox.warning(self, "Ошибка", "Списки продуктов и моделей не могут быть пустыми.")
                     return
+
+                # Формируем SQL в зависимости от типа уравнения и режима
+                if update_type_only:
+                    # Только тип расчета
+                    base_fields = "meas_type = ?"
+                    base_params = [update_data['meas_type']]
+                elif update_coeffs_only:
+                    # Только коэффициенты и члены уравнения
+                    if meas_type == 0:  # РЕГРЕССИЯ
+                        base_fields = """
+                        k_i_klin00 = ?, k_i_klin01 = ?,
+                        k_i_alin00 = ?,
+                        k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
+                        k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
+                        k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
+                        k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
+                        k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
+                        """
+                        base_params = [
+                            update_data['k_i_klin00'], update_data['k_i_klin01'],
+                            update_data['k_i_alin00'],
+                            update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
+                            update_data['operator_i_01'],
+                            update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
+                            update_data['operator_i_02'],
+                            update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
+                            update_data['operator_i_03'],
+                            update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
+                            update_data['operator_i_04'],
+                            update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
+                            update_data['operator_i_05']
+                        ]
+                    else:  # КОРРЕЛЯЦИЯ
+                        base_fields = """
+                        k_c_klin00 = ?, k_c_klin01 = ?,
+                        k_c_alin00 = ?,
+                        k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
+                        k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
+                        k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
+                        k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
+                        k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
+                        """
+                        base_params = [
+                            update_data['k_c_klin00'], update_data['k_c_klin01'],
+                            update_data['k_c_alin00'],
+                            update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
+                            update_data['operator_c_01'],
+                            update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
+                            update_data['operator_c_02'],
+                            update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
+                            update_data['operator_c_03'],
+                            update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
+                            update_data['operator_c_04'],
+                            update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
+                            update_data['operator_c_05']
+                        ]
+                else:
+                    # ВСЁ (all) - тип + коэффициенты + критерии
+                    base_fields = """
+                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
+                    e_operator = ?, c_min = ?, c_max = ?,
+                    """
+
+                    if meas_type == 0:  # РЕГРЕССИЯ
+                        base_fields += """
+                        k_i_klin00 = ?, k_i_klin01 = ?,
+                        k_i_alin00 = ?,
+                        k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
+                        k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
+                        k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
+                        k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
+                        k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
+                        """
+                        base_params = [
+                            update_data['meas_type'],
+                            update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                            update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                            update_data['c_min'], update_data['c_max'],
+                            update_data['k_i_klin00'], update_data['k_i_klin01'],
+                            update_data['k_i_alin00'],
+                            update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
+                            update_data['operator_i_01'],
+                            update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
+                            update_data['operator_i_02'],
+                            update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
+                            update_data['operator_i_03'],
+                            update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
+                            update_data['operator_i_04'],
+                            update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
+                            update_data['operator_i_05']
+                        ]
+                    else:  # КОРРЕЛЯЦИЯ
+                        base_fields += """
+                        k_c_klin00 = ?, k_c_klin01 = ?,
+                        k_c_alin00 = ?,
+                        k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
+                        k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
+                        k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
+                        k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
+                        k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
+                        """
+                        base_params = [
+                            update_data['meas_type'],
+                            update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                            update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                            update_data['c_min'], update_data['c_max'],
+                            update_data['k_c_klin00'], update_data['k_c_klin01'],
+                            update_data['k_c_alin00'],
+                            update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
+                            update_data['operator_c_01'],
+                            update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
+                            update_data['operator_c_02'],
+                            update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
+                            update_data['operator_c_03'],
+                            update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
+                            update_data['operator_c_04'],
+                            update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
+                            update_data['operator_c_05']
+                        ]
 
                 # Создаем плейсхолдеры для IN условий
                 product_placeholders = ','.join(['?' for _ in product_numbers])
@@ -1154,13 +1166,86 @@ class EquationsPage(QWidget):
                 self.db.execute(query, params)
 
                 # Уведомление об успехе
-                QMessageBox.information(self, "Успех", f"Коэффициенты и члены уравнения успешно применены "
-                                                       f"для продуктов {', '.join(map(str, product_numbers))} "
-                                                       f"и моделей {', '.join(map(str, model_numbers))}!")
+                mode_descriptions = {
+                    "all": "Тип расчета, коэффициенты и члены уравнения",
+                    "coeffs_only": "Коэффициенты и члены уравнения",
+                    "type_only": "Тип расчета"
+                }
+
+                QMessageBox.information(self, "Успех",
+                                        f"{mode_descriptions[apply_mode]} успешно применены "
+                                        f"для продуктов {', '.join(map(str, product_numbers))} "
+                                        f"и моделей {', '.join(map(str, model_numbers))}!")
+
+                # ОБНОВЛЯЕМ ТАБЛИЦУ после массового сохранения
+                self.load_equations()
+
             else:
-                # Режим обычного сохранения
+                # ОБЫЧНОЕ СОХРАНЕНИЕ
                 pr_nmb = self.current_equation_data.get('pr_nmb', 0)
                 mdl_nmb = self.current_equation_data.get('mdl_nmb', 0)
+
+                # Формируем запрос для обычного сохранения в зависимости от типа уравнения
+                if meas_type == 0:  # РЕГРЕССИЯ
+                    base_fields = """
+                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
+                    e_operator = ?, c_min = ?, c_max = ?,
+                    k_i_klin00 = ?, k_i_klin01 = ?,
+                    k_i_alin00 = ?,
+                    k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
+                    k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
+                    k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
+                    k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
+                    k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
+                    """
+                    base_params = [
+                        update_data['meas_type'],
+                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                        update_data['c_min'], update_data['c_max'],
+                        update_data['k_i_klin00'], update_data['k_i_klin01'],
+                        update_data['k_i_alin00'],
+                        update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
+                        update_data['operator_i_01'],
+                        update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
+                        update_data['operator_i_02'],
+                        update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
+                        update_data['operator_i_03'],
+                        update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
+                        update_data['operator_i_04'],
+                        update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
+                        update_data['operator_i_05']
+                    ]
+                else:  # КОРРЕЛЯЦИЯ
+                    base_fields = """
+                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
+                    e_operator = ?, c_min = ?, c_max = ?,
+                    k_c_klin00 = ?, k_c_klin01 = ?,
+                    k_c_alin00 = ?,
+                    k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
+                    k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
+                    k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
+                    k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
+                    k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
+                    """
+                    base_params = [
+                        update_data['meas_type'],
+                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                        update_data['c_min'], update_data['c_max'],
+                        update_data['k_c_klin00'], update_data['k_c_klin01'],
+                        update_data['k_c_alin00'],
+                        update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
+                        update_data['operator_c_01'],
+                        update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
+                        update_data['operator_c_02'],
+                        update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
+                        update_data['operator_c_03'],
+                        update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
+                        update_data['operator_c_04'],
+                        update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
+                        update_data['operator_c_05']
+                    ]
 
                 # Добавляем параметры WHERE
                 params = base_params + [pr_nmb, mdl_nmb, el_nmb]
@@ -1178,7 +1263,6 @@ class EquationsPage(QWidget):
                 self.save_intensity_data()
 
                 # ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ СОХРАНЕНИЯ
-                # Загружаем обновленные данные из базы
                 self.refresh_current_equation_data(pr_nmb, mdl_nmb, el_nmb)
 
                 # Обновляем таблицу
@@ -1285,8 +1369,34 @@ class EquationsPage(QWidget):
         dialog = ApplyToDialog(self)
         if dialog.exec() == QDialog.Accepted:
             try:
-                product_numbers, model_numbers = dialog.get_data()
-                self.save_equation_changes(product_numbers, model_numbers)
+                product_numbers, model_numbers, apply_mode = dialog.get_data()
+
+                # Подтверждение для пользователя
+                mode_descriptions = {
+                    "all": "тип расчета, коэффициенты и члены уравнения",
+                    "coeffs_only": "только коэффициенты и члены уравнения",
+                    "type_only": "только тип расчета"
+                }
+
+                # Создаем кастомное сообщение с кнопками Да/Нет
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("Подтверждение")
+                msg_box.setText(
+                    f"Вы уверены, что хотите применить {mode_descriptions[apply_mode]} "
+                    f"для продуктов {product_numbers} и моделей {model_numbers}?"
+                )
+                msg_box.setIcon(QMessageBox.Question)
+
+                # Добавляем кнопки Да и Нет
+                yes_button = msg_box.addButton("Да", QMessageBox.YesRole)
+                no_button = msg_box.addButton("Нет", QMessageBox.NoRole)
+                msg_box.setDefaultButton(no_button)
+
+                msg_box.exec()
+
+                if msg_box.clickedButton() == yes_button:
+                    self.save_equation_changes(product_numbers, model_numbers, apply_mode)
+
             except ValueError as e:
                 QMessageBox.warning(self, "Ошибка ввода", f"Некорректный формат ввода:\n{str(e)}")
 
@@ -1453,7 +1563,6 @@ class EquationsPage(QWidget):
 
     def _build_expression(self, operand1: int, operand2: int, operator: int, meas_type: int) -> str:
         """Формирует математическое выражение на основе operand'ов и operator"""
-        print(f"DEBUG _build_expression: operand1={operand1}, operand2={operand2}, operator={operator}, meas_type={meas_type}")
         # Для корреляции используем префикс C_ и имена элементов
         if meas_type == 0:
             prefix = "I_"
@@ -1525,16 +1634,13 @@ class EquationsPage(QWidget):
 
     def _get_element_name(self, el_nmb: int) -> str:
         """Получает имя элемента по его номеру (ИСПОЛЬЗУЕТ math_config)"""
-        print(f"DEBUG _get_element_name INPUT: el_nmb={el_nmb}")  # ← ДОБАВЬТЕ
 
         elements_config = self.math_config.get('elements', [])
         for element in elements_config:
             if isinstance(element, dict) and element.get('original_number') == el_nmb:
                 name = element.get('name', f"Element_{el_nmb}")
-                print(f"DEBUG _get_element_name FOUND: el_nmb={el_nmb}, name='{name}'")  # ← ДОБАВЬТЕ
                 return name
 
-        print(f"DEBUG _get_element_name NOT FOUND: el_nmb={el_nmb}")  # ← ДОБАВЬТЕ
         return f"Element_{el_nmb}"
 
     def _get_range_name(self, range_nmb: int) -> str:
@@ -1574,7 +1680,6 @@ class EquationsPage(QWidget):
         # Загружаем данные
         self.load_equations()
 
-
 class ApplyToDialog(QDialog):
     """Диалоговое окно для ввода продуктов и моделей для массового применения"""
 
@@ -1582,10 +1687,11 @@ class ApplyToDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Применить коэффициенты и члены уравнения для...")
         self.setModal(True)
-        self.resize(300, 200)
+        self.resize(400, 300)
 
         layout = QVBoxLayout(self)
 
+        # Секция выбора продуктов и моделей
         self.products_label = QLabel("Номера продуктов (через запятую, например: 1,2,3):")
         self.products_edit = QTextEdit()
         self.products_edit.setMaximumHeight(60)
@@ -1594,15 +1700,36 @@ class ApplyToDialog(QDialog):
         self.models_edit = QTextEdit()
         self.models_edit.setMaximumHeight(60)
 
-        # Кнопки OK/Cancel
+        # Секция: Выбор что применять
+        options_group = QGroupBox("Что применять?")
+        options_layout = QVBoxLayout()
+
+        self.apply_all_radio = QRadioButton("Применить ВСЁ (тип расчета + коэффициенты + члены уравнения)")
+        self.apply_coeffs_only_radio = QRadioButton("Применить только коэффициенты и члены уравнения")
+        self.apply_type_only_radio = QRadioButton("Применить только тип расчета")
+
+        # Устанавливаем значение по умолчанию
+        self.apply_all_radio.setChecked(True)
+
+        options_layout.addWidget(self.apply_all_radio)
+        options_layout.addWidget(self.apply_coeffs_only_radio)
+        options_layout.addWidget(self.apply_type_only_radio)
+        options_group.setLayout(options_layout)
+
+        # Кнопки OK/Отмена
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+
+        # Устанавливаем русские надписи
+        self.button_box.button(QDialogButtonBox.Ok).setText("OK")
+        self.button_box.button(QDialogButtonBox.Cancel).setText("Отмена")
 
         layout.addWidget(self.products_label)
         layout.addWidget(self.products_edit)
         layout.addWidget(self.models_label)
         layout.addWidget(self.models_edit)
+        layout.addWidget(options_group)
         layout.addWidget(self.button_box)
 
     def get_data(self):
@@ -1633,7 +1760,15 @@ class ApplyToDialog(QDialog):
             if not product_numbers or not model_numbers:
                 raise ValueError("Необходимо ввести хотя бы один номер продукта и одну модель.")
 
-            return product_numbers, model_numbers
+            # Определяем что применять
+            if self.apply_all_radio.isChecked():
+                apply_mode = "all"
+            elif self.apply_coeffs_only_radio.isChecked():
+                apply_mode = "coeffs_only"
+            else:
+                apply_mode = "type_only"
+
+            return product_numbers, model_numbers, apply_mode
 
         except ValueError as e:
             raise e
