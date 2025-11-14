@@ -21,9 +21,14 @@ class RegressionPage(QWidget):
         self.current_sample = []
         self.current_element = None
         self.current_meas_type = 0  # 0 - по интенсивностям, 1 - по концентрациям
-        self.is_initializing = True
         self.init_ui()
-        self.is_initializing = False
+
+        # Подключаем обработчики
+        self.combo_element.currentIndexChanged.connect(self.load_data)
+        self.combo_meas_type.currentIndexChanged.connect(self.load_data)
+        for combo in self.combo_equation_terms:
+            combo.currentIndexChanged.connect(self.perform_regression)
+
 
         # Загружаем данные при открытии страницы
         if self.combo_element.count() > 0:
@@ -76,16 +81,22 @@ class RegressionPage(QWidget):
         # Заполняем имена коэффициентов
         gray_bg = "#f0f0f0"
         for row, name in enumerate(["A0", "A1", "A2", "A3", "A4", "A5"]):
+            # Имя коэффициента
             item = QTableWidgetItem(name)
             item.setBackground(Qt.GlobalColor.lightGray)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.coeff_table.setItem(row, 0, item)
 
-            # Инициализируем нулевыми значениями
+            # ★ Инициализация столбца множителей
+            multiplier_item = QTableWidgetItem("-")
+            multiplier_item.setFlags(multiplier_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.coeff_table.setItem(row, 1, multiplier_item)
+
+            # Значение
             value_item = QTableWidgetItem("0.0")
             self.coeff_table.setItem(row, 2, value_item)
 
-            # Инициализируем значимость
+            # Значимость
             significance_item = QTableWidgetItem("0.0")
             self.coeff_table.setItem(row, 3, significance_item)
 
@@ -184,12 +195,6 @@ class RegressionPage(QWidget):
         # Загружаем начальные данные
         self.ini_load_elements()
 
-        # Подключаем обработчики
-        self.combo_element.currentIndexChanged.connect(self.load_data)
-        self.combo_meas_type.currentIndexChanged.connect(self.load_data)
-        for combo in self.combo_equation_terms:
-            combo.currentIndexChanged.connect(self.on_equation_term_changed)
-
     def ini_load_elements(self):
         """Загрузка элементов из JSON файла"""
         try:
@@ -212,29 +217,6 @@ class RegressionPage(QWidget):
         except Exception as e:
             print(f"Ошибка загрузки элементов: {e}")
             self.combo_element.addItems(["Cu", "Ni", "Fe", "ТФ"])
-
-    def on_equation_term_changed(self):
-        """Обработчик изменения членов уравнения - запускает регрессию"""
-        if self.is_initializing or not hasattr(self, 'raw_buffer') or not self.raw_buffer:
-            return
-
-        # Обновляем множители в таблице коэффициентов
-        self._update_multipliers()
-
-        # Выполняем регрессию
-        self.perform_regression()
-
-    def _update_multipliers(self):
-        """Обновляет столбец 'Множитель' в таблице коэффициентов на основе выбранных членов"""
-        for i, combo in enumerate(self.combo_equation_terms):
-            term_desc = combo.currentText().strip()
-            multiplier_item = self.coeff_table.item(i + 1, 1)  # +1 потому что A0 не имеет множителя
-
-            if multiplier_item:
-                if term_desc and term_desc != "":
-                    multiplier_item.setText(term_desc)
-                else:
-                    multiplier_item.setText("-")
 
     def _reset_coefficients(self):
         """Сброс коэффициентов к нулевым значениям"""
@@ -268,9 +250,6 @@ class RegressionPage(QWidget):
             self.load_data()
 
     def load_data(self):
-        """Выгрузка параметров и данных → буфер"""
-        if self.is_initializing:
-            return
 
         try:
             # 1. Загружаем параметры выборки
@@ -332,7 +311,6 @@ class RegressionPage(QWidget):
             self._update_data_table_from_buffer()
 
             # 8. Обновляем множители и выполняем регрессию
-            self._update_multipliers()
             self.perform_regression()
 
             QMessageBox.information(self, "Готово", f"Данные загружены: {len(self.raw_buffer)} записей")
@@ -635,6 +613,24 @@ class RegressionPage(QWidget):
             return np.zeros(6), {}, np.zeros(6), np.zeros(6), np.ones(6)
 
     def _update_coefficients_table(self, coefficients, p_values):
+        """Обновляет столбец 'Множитель' в таблице коэффициентов"""
+        # A0 не имеет множителя (константа)
+        a0_item = self.coeff_table.item(0, 1)
+        if a0_item:
+            a0_item.setText("-")  # или можно оставить пустым
+
+        # A1..A5 - множители из комбобоксов
+        for i in range(1, 6):  # A1..A5
+            combo = self.combo_equation_terms[i-1]
+            term_desc = combo.currentText().strip()
+            multiplier_item = self.coeff_table.item(i, 1)
+
+            if multiplier_item:
+                if term_desc and term_desc != "":
+                    multiplier_item.setText(term_desc)
+                else:
+                    multiplier_item.setText("-")
+
         """Обновляет таблицу коэффициентов со значимостью"""
         for i, (coeff, p_value) in enumerate(zip(coefficients, p_values)):
             # Значение коэффициента
