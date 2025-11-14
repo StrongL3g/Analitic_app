@@ -41,6 +41,54 @@ class EquationsPage(QWidget):
         config_dir.mkdir(exist_ok=True)
         return config_dir
 
+    def _highlight_error_fields(self, error_fields):
+        """Подсвечивает поля с ошибками"""
+        # Сначала сбрасываем подсветку всех полей
+        all_fields = [
+            self.water_crit_edit, self.empty_crit_edit, self.c_min_edit, self.c_max_edit,
+            self.k0_edit, self.k1_edit
+        ]
+        for i in range(6):
+            all_fields.append(self.equation_members[i].coeff_edit)
+
+        for field in all_fields:
+            field.setStyleSheet("")
+
+        # Подсвечиваем поля с ошибками
+        for field_name, field in error_fields:
+            field.setStyleSheet("background-color: #ffcccc; border: 1px solid red;")
+
+    def _validate_all_numeric_fields(self):
+        """Проверяет все числовые поля на корректность и возвращает список ошибок и полей с ошибками"""
+        errors = []
+        error_fields = []  # Список для подсветки полей
+
+        # Список полей для проверки
+        fields_to_check = [
+            (self.water_crit_edit, "Критерий Вода"),
+            (self.empty_crit_edit, "Критерий Пусто"),
+            (self.c_min_edit, "C мин"),
+            (self.c_max_edit, "C макс"),
+            (self.k0_edit, "k0"),
+            (self.k1_edit, "k1")
+        ]
+
+        # Добавляем коэффициенты A0-A5
+        for i in range(6):
+            fields_to_check.append((self.equation_members[i].coeff_edit, f"A{i}"))
+
+        # Проверяем каждое поле
+        for field, field_name in fields_to_check:
+            text = field.text().strip()
+            if text:  # Проверяем только непустые поля
+                try:
+                    self._safe_float_convert(text, field_name)
+                except ValueError as e:
+                    errors.append(str(e))
+                    error_fields.append((field_name, field))
+
+        return errors, error_fields
+
     def _load_config_file(self, filename: str) -> dict:
         """Загружает конфигурационный файл JSON"""
         config_path = self._config_dir / filename
@@ -97,19 +145,17 @@ class EquationsPage(QWidget):
         if not text or text.strip() == '':
             return 0.0
 
-        # Очищаем и нормализуем текст
         cleaned = text.strip()
 
-        # Проверяем, соответствует ли текст шаблону числа
+        # Проверяем, соответствует ли текст шаблону числа с научной нотацией
         pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
         if not pattern.match(cleaned):
-            error_msg = f"Некорректный формат числа в поле '{field_name}': {text}\n\n"
+            error_msg = f"Поле '{field_name}': '{text}'\n"
             error_msg += "Допустимые форматы:\n"
-            error_msg += "- Обычные числа: 1.5, -2.3, 0.001\n"
-            error_msg += "- С запятой: 1,5, 0,001\n"
-            error_msg += "- Научная нотация: 3.79e-01, 1.5E+02, 2,3е-5\n"
-            error_msg += "- С русской Е: 3.79Е-01\n\n"
-            error_msg += "Примеры: 0.5, -2.1, 3.79e-5, 1,5Е+03"
+            error_msg += "• 1.5, -2.3, 0.001\n"
+            error_msg += "• 1,5, 0,001\n"
+            error_msg += "• 3.79e-01, 1.5E+02\n"
+            error_msg += "• 3.79Е-01, 2,3е-5\n"
             raise ValueError(error_msg)
 
         # Нормализуем для преобразования
@@ -119,8 +165,8 @@ class EquationsPage(QWidget):
         try:
             return float(cleaned)
         except ValueError as e:
-            error_msg = f"Ошибка преобразования числа в поле '{field_name}': {text}\n"
-            error_msg += f"Ошибка: {str(e)}"
+            error_msg = f"Поле '{field_name}': '{text}'\n"
+            error_msg += f"Ошибка преобразования: {str(e)}"
             raise ValueError(error_msg)
 
     def init_ui(self):
@@ -269,7 +315,7 @@ class EquationsPage(QWidget):
         water_label.setFixedWidth(150)
         self.water_crit_edit = QLineEdit()
         self.water_crit_edit.setFixedWidth(100)
-        self.water_crit_edit.setValidator(ScientificDoubleValidator())
+        #self.water_crit_edit.setValidator(ScientificDoubleValidator())
 
         # Выбор линии для критерия
         self.w_element_combo = QComboBox()
@@ -285,7 +331,7 @@ class EquationsPage(QWidget):
         cmin_label.setFixedWidth(50)
         self.c_min_edit = QLineEdit()
         self.c_min_edit.setFixedWidth(100)
-        self.c_min_edit.setValidator(ScientificDoubleValidator())
+        #self.c_min_edit.setValidator(ScientificDoubleValidator())
 
         criteria_layout.addWidget(water_label)
         criteria_layout.addWidget(self.w_element_combo)
@@ -306,7 +352,7 @@ class EquationsPage(QWidget):
         empty_label.setFixedWidth(150)
         self.empty_crit_edit = QLineEdit()
         self.empty_crit_edit.setFixedWidth(100)
-        self.empty_crit_edit.setValidator(ScientificDoubleValidator())
+        #self.empty_crit_edit.setValidator(ScientificDoubleValidator())
 
         # Выбор линии для критерия
         self.e_element_combo = QComboBox()
@@ -322,7 +368,7 @@ class EquationsPage(QWidget):
         cmax_label.setFixedWidth(50)
         self.c_max_edit = QLineEdit()
         self.c_max_edit.setFixedWidth(100)
-        self.c_max_edit.setValidator(ScientificDoubleValidator())
+        #self.c_max_edit.setValidator(ScientificDoubleValidator())
 
         empty_layout.addWidget(empty_label)
         empty_layout.addWidget(self.e_element_combo)
@@ -340,10 +386,10 @@ class EquationsPage(QWidget):
         corr_layout = QHBoxLayout()
         self.k0_edit = QLineEdit()
         self.k0_edit.setFixedWidth(120)
-        self.k0_edit.setValidator(ScientificDoubleValidator())
+        #self.k0_edit.setValidator(ScientificDoubleValidator())
         self.k1_edit = QLineEdit()
         self.k1_edit.setFixedWidth(120)
-        self.k1_edit.setValidator(ScientificDoubleValidator())
+        #self.k1_edit.setValidator(ScientificDoubleValidator())
         corr_layout.addWidget(QLabel("k0:"))
         corr_layout.addWidget(self.k0_edit)
         corr_layout.addWidget(QLabel("k1:"))
@@ -427,7 +473,7 @@ class EquationsPage(QWidget):
         layout.addWidget(QLabel(f"A{index}:"))
         coeff_edit = QLineEdit("0.000000")
         coeff_edit.setFixedWidth(100)
-        coeff_edit.setValidator(ScientificDoubleValidator())
+        #coeff_edit.setValidator(ScientificDoubleValidator())
         layout.addWidget(coeff_edit)
 
         # Один комбобокс вместо трех (только для A1-A5)
@@ -526,6 +572,9 @@ class EquationsPage(QWidget):
 
     def on_product_or_model_changed(self, index):
         """Обработчик изменения продукта или модели - скрывает окно редактирования и перезагружает конфигурации"""
+        # Сбрасываем подсветку при смене продукта/модели
+        self._reset_all_field_highlights()
+
         # Скрываем окно редактирования
         self.edit_widget.setVisible(False)
         self.current_editing_row = None
@@ -665,6 +714,13 @@ class EquationsPage(QWidget):
             self.table_widget.setRowCount(len(results))
 
             for row_idx, row in enumerate(results):
+                el_nmb = row.get('el_nmb', 0)
+                element_name = self._get_element_name(el_nmb)
+                print(f"DEBUG load_equations: row_idx={row_idx}, el_nmb={el_nmb}, element_name='{element_name}'")
+                # ДОБАВЬТЕ ЭТУ ПРОВЕРКУ:
+                print(f"DEBUG row data: {row}")  # Посмотрим все данные строки
+
+
                 equation = self._build_equation(row)
                 correction_coeffs = self._build_correction_coeffs(row)
 
@@ -880,11 +936,22 @@ class EquationsPage(QWidget):
         Сохраняет изменения уравнения в базу.
         Если product_numbers и model_numbers переданы, применяет изменения массово.
         """
+        # Сначала сбрасываем подсветку всех полей
+        self._reset_all_field_highlights()
+
         try:
             if self.current_editing_row is None or not self.current_equation_data:
                 if product_numbers is False or model_numbers is None:
                     QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
                     return
+
+            # ПРОВЕРЯЕМ ВСЕ ПОЛЯ ПЕРЕД СОХРАНЕНИЕМ
+            validation_errors, error_fields = self._validate_all_numeric_fields()
+            if validation_errors:
+                error_message = "Обнаружены ошибки ввода:\n\n" + "\n".join(validation_errors)
+                self._highlight_error_fields(error_fields)  # Подсвечиваем поля с ошибками
+                QMessageBox.critical(self, "Ошибки ввода данных", error_message)
+                return
 
             # Собираем данные из полей редактора
             meas_type = 0 if self.regression_radio.isChecked() else 1
@@ -1119,7 +1186,6 @@ class EquationsPage(QWidget):
 
                 QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
 
-
         except ValueError as e:
             QMessageBox.critical(self, "Ошибка ввода данных", str(e))
             return
@@ -1239,6 +1305,9 @@ class EquationsPage(QWidget):
 
     def clear_equation(self):
         """Очищает введенное уравнение и сбрасывает коэффициенты корректировки"""
+        # Сбрасываем подсветку при очистке
+        self._reset_all_field_highlights()
+
         try:
             # Сбрасываем коэффициенты корректировки
             self.k0_edit.setText("0")
@@ -1318,10 +1387,13 @@ class EquationsPage(QWidget):
             operand1 = row.get(operand1_key, 0)
             operand2 = row.get(operand2_key, 0)
 
-            # Для корреляции используем имена элементов вместо диапазонов
-            expression = self._build_expression(operand1, operand2, operator, meas_type)
+            # ИСПОЛЬЗУЕМ ГОТОВЫЕ ОПИСАНИЯ ИЗ КОНФИГОВ
+            if meas_type == 1:  # Корреляция
+                expression = self._get_interaction_description(el_nmb, operand1, operand2, operator)
+            else:  # Регрессия
+                expression = self._get_line_interaction_description(operand1, operand2, operator)
 
-            if expression == "0":
+            if expression == "0" or not expression:
                 continue
 
             sign = "+" if k_value > 0 else "-"
@@ -1331,15 +1403,64 @@ class EquationsPage(QWidget):
 
         return "".join(equation_parts)
 
+    def _get_interaction_description(self, el_nmb: int, x1: int, x2: int, op: int) -> str:
+        """Получает описание взаимодействия из math_interactions.json"""
+        element_name = self._get_element_name(el_nmb)
+        interactions_data = self.math_config.get('interactions', [])
+
+        # Находим interactions для текущего элемента
+        for element_data in interactions_data:
+            if element_data.get('element_name') == element_name:
+                interactions = element_data.get('interactions', [])
+                # Ищем взаимодействие с matching x1, x2, op
+                for interaction in interactions:
+                    if (interaction.get('x1') == x1 and
+                            interaction.get('x2') == x2 and
+                            interaction.get('op') == op):
+                        return interaction.get('description', '')
+
+        return ""  # Если не нашли, возвращаем пустую строку
+
+    def _reset_all_field_highlights(self):
+        """Сбрасывает подсветку всех числовых полей"""
+        fields = [
+            self.water_crit_edit, self.empty_crit_edit,
+            self.c_min_edit, self.c_max_edit,
+            self.k0_edit, self.k1_edit
+        ]
+
+        # Добавляем коэффициенты A0-A5
+        for i in range(6):
+            fields.append(self.equation_members[i].coeff_edit)
+
+        for field in fields:
+            if field:
+                field.setStyleSheet("")  # Сбрасываем стиль
+
+
+    def _get_line_interaction_description(self, x1: int, x2: int, op: int) -> str:
+        """Получает описание взаимодействия линий из lines_math_interactions.json"""
+        interactions = self.lines_math_config.get('interactions', [])
+
+        # Ищем взаимодействие с matching x1, x2, op
+        for interaction in interactions:
+            if (interaction.get('x1') == x1 and
+                    interaction.get('x2') == x2 and
+                    interaction.get('op') == op):
+                return interaction.get('description', '')
+
+        return ""  # Если не нашли, возвращаем пустую строку
+
     def _build_expression(self, operand1: int, operand2: int, operator: int, meas_type: int) -> str:
         """Формирует математическое выражение на основе operand'ов и operator"""
+        print(f"DEBUG _build_expression: operand1={operand1}, operand2={operand2}, operator={operator}, meas_type={meas_type}")
         # Для корреляции используем префикс C_ и имена элементов
         if meas_type == 0:
             prefix = "I_"
-            get_name_func = self._get_range_name
+            get_name_func = self._get_range_name  # ← ДЛЯ ИНТЕНСИВНОСТЕЙ используем диапазоны
         else:
             prefix = "C_"
-            get_name_func = self._get_element_name
+            get_name_func = self._get_element_name  # ← ДЛЯ КОНЦЕНТРАЦИЙ используем элементы
 
         # Проверка на допустимость оператора
         if operator == 7 and meas_type != 0:
@@ -1349,53 +1470,44 @@ class EquationsPage(QWidget):
             return "0"
 
         elif operator == 1:  # 1 - берем только operand_i_01_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 (для NC)
-            if operand1 >= 0:  # было operand1 > 0
+            if operand1 >= 0:
                 name1 = get_name_func(operand1)
-                # Проверяем, что имя не пустое
                 if name1:
                     return f"{prefix}{name1}"
             return "0"
 
         elif operator == 2:  # 2 - operand_i_01_01 * operand_i_02_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
-            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
+            if operand1 >= 0 and operand2 >= 0:
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
-                # Проверяем, что оба имени не пустые
                 if name1 and name2:
                     return f"{prefix}{name1}*{prefix}{name2}"
             return "0"
 
         elif operator == 3:  # 3 - operand_i_01_01 / operand_i_02_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
-            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
+            if operand1 >= 0 and operand2 >= 0:
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
-                # Проверяем, что оба имени не пустые
                 if name1 and name2:
                     return f"{prefix}{name1}/{prefix}{name2}"
             return "0"
 
         elif operator == 4:  # 4 - operand_i_01_01 * operand_i_01_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
-            if operand1 >= 0:  # было operand1 > 0
+            if operand1 >= 0:
                 name1 = get_name_func(operand1)
                 if name1:
                     return f"{prefix}{name1}*{prefix}{name1}"
             return "0"
 
         elif operator == 5:  # 5 - 1 / operand_i_01_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
-            if operand1 >= 0:  # было operand1 > 0
+            if operand1 >= 0:
                 name1 = get_name_func(operand1)
                 if name1:
                     return f"1/{prefix}{name1}"
             return "0"
 
         elif operator == 6:  # 6 - operand_i_01_01 / operand_i_02_01 * operand_i_02_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0 или operand2 = 0
-            if operand1 >= 0 and operand2 >= 0:  # было operand1 > 0 and operand2 > 0
+            if operand1 >= 0 and operand2 >= 0:
                 name1 = get_name_func(operand1)
                 name2 = get_name_func(operand2)
                 if name1 and name2:
@@ -1403,8 +1515,7 @@ class EquationsPage(QWidget):
             return "0"
 
         elif operator == 7:  # 7 - 1 / operand_i_01_01 * operand_i_01_01
-            # ИСПРАВЛЕНИЕ: разрешаем operand1 = 0
-            if operand1 >= 0:  # было operand1 > 0
+            if operand1 >= 0:
                 name1 = get_name_func(operand1)
                 if name1:
                     return f"1/{prefix}{name1}*{prefix}{name1}"
@@ -1413,21 +1524,17 @@ class EquationsPage(QWidget):
         return "0"
 
     def _get_element_name(self, el_nmb: int) -> str:
-        """Получает имя элемента по его номеру"""
-        # Используем adjusted_number из math_config
-        if el_nmb < 0:
-            return ""
+        """Получает имя элемента по его номеру (ИСПОЛЬЗУЕТ math_config)"""
+        print(f"DEBUG _get_element_name INPUT: el_nmb={el_nmb}")  # ← ДОБАВЬТЕ
 
-        # Сначала ищем в math_config
         elements_config = self.math_config.get('elements', [])
         for element in elements_config:
             if isinstance(element, dict) and element.get('original_number') == el_nmb:
-                return element.get('name', f"Element_{el_nmb}")
+                name = element.get('name', f"Element_{el_nmb}")
+                print(f"DEBUG _get_element_name FOUND: el_nmb={el_nmb}, name='{name}'")  # ← ДОБАВЬТЕ
+                return name
 
-        # Если не нашли в math_config, ищем в elements_config
-        for element in self.elements_config:
-            if isinstance(element, dict) and element.get('number') == el_nmb:
-                return element.get('name', f"Element_{el_nmb}")
+        print(f"DEBUG _get_element_name NOT FOUND: el_nmb={el_nmb}")  # ← ДОБАВЬТЕ
         return f"Element_{el_nmb}"
 
     def _get_range_name(self, range_nmb: int) -> str:
@@ -1531,26 +1638,3 @@ class ApplyToDialog(QDialog):
         except ValueError as e:
             raise e
 
-class ScientificDoubleValidator(QValidator):
-    """Валидатор для чисел с плавающей точкой в научной нотации"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        # Регулярное выражение для чисел в научной нотации (разрешает E, e, Е, е)
-        self.pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
-
-    def validate(self, text, pos):
-        if not text:
-            return QValidator.Intermediate, text, pos
-
-        # Проверяем соответствие шаблону
-        if self.pattern.match(text):
-            return QValidator.Acceptable, text, pos
-        else:
-            return QValidator.Invalid, text, pos
-
-    def fixup(self, text):
-        # Заменяем запятые на точки и русские Е на английские E для корректного преобразования
-        text = text.replace(',', '.')
-        text = text.replace('Е', 'E').replace('е', 'e')
-        return text
