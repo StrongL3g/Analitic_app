@@ -13,27 +13,7 @@ from pathlib import Path
 from config import AC_COUNT, PR_COUNT, DB_CONFIG
 
 
-class ScientificDoubleValidator(QValidator):
-    """Валидатор для чисел с плавающей точкой в научной нотации"""
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        # Регулярное выражение для чисел в научной нотации
-        self.pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$')
-
-    def validate(self, text, pos):
-        if not text:
-            return QValidator.Intermediate, text, pos
-
-        # Проверяем соответствие шаблону
-        if self.pattern.match(text):
-            return QValidator.Acceptable, text, pos
-        else:
-            return QValidator.Invalid, text, pos
-
-    def fixup(self, text):
-        # Заменяем запятые на точки для корректного преобразования
-        return text.replace(',', '.')
 
 
 class EquationsPage(QWidget):
@@ -112,24 +92,36 @@ class EquationsPage(QWidget):
                     numbers.append(element.get('number', 0))
         return numbers
 
-    def _safe_float_convert(self, text):
+    def _safe_float_convert(self, text, field_name=""):
         """Безопасно преобразует строку в float, поддерживая научную нотацию и запятые"""
         if not text or text.strip() == '':
             return 0.0
 
+        # Очищаем и нормализуем текст
+        cleaned = text.strip()
+
+        # Проверяем, соответствует ли текст шаблону числа
+        pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
+        if not pattern.match(cleaned):
+            error_msg = f"Некорректный формат числа в поле '{field_name}': {text}\n\n"
+            error_msg += "Допустимые форматы:\n"
+            error_msg += "- Обычные числа: 1.5, -2.3, 0.001\n"
+            error_msg += "- С запятой: 1,5, 0,001\n"
+            error_msg += "- Научная нотация: 3.79e-01, 1.5E+02, 2,3е-5\n"
+            error_msg += "- С русской Е: 3.79Е-01\n\n"
+            error_msg += "Примеры: 0.5, -2.1, 3.79e-5, 1,5Е+03"
+            raise ValueError(error_msg)
+
+        # Нормализуем для преобразования
+        cleaned = cleaned.replace(',', '.').lower()
+        cleaned = cleaned.replace('е', 'e')  # русская е в английскую
+
         try:
-            # Заменяем запятые на точки и преобразуем в нижний регистр для научной нотации
-            cleaned_text = text.strip().replace(',', '.').lower()
-            return float(cleaned_text)
-        except ValueError:
-            # Если преобразование не удалось, пробуем убрать возможные проблемы
-            try:
-                # Убираем лишние символы, оставляем только цифры, точки, E, +, -
-                cleaned = re.sub(r'[^\d.eE+-]', '', text)
-                cleaned = cleaned.replace(',', '.')
-                return float(cleaned)
-            except ValueError:
-                return 0.0
+            return float(cleaned)
+        except ValueError as e:
+            error_msg = f"Ошибка преобразования числа в поле '{field_name}': {text}\n"
+            error_msg += f"Ошибка: {str(e)}"
+            raise ValueError(error_msg)
 
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
@@ -914,28 +906,28 @@ class EquationsPage(QWidget):
                 e_operator_value = bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()))
 
                 update_data.update({
-                    'water_crit': self._safe_float_convert(self.water_crit_edit.text()),
+                    'water_crit': self._safe_float_convert(self.water_crit_edit.text(), "Критерий Вода"),
                     'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
-                    'w_operator': w_operator_value,  # ← ИСПРАВЛЕНО: boolean
-                    'empty_crit': self._safe_float_convert(self.empty_crit_edit.text()),
+                    'w_operator': w_operator_value,
+                    'empty_crit': self._safe_float_convert(self.empty_crit_edit.text(), "Критерий Пусто"),
                     'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                    'e_operator': e_operator_value,  # ← ИСПРАВЛЕНО: boolean
-                    'c_min': self._safe_float_convert(self.c_min_edit.text()),
-                    'c_max': self._safe_float_convert(self.c_max_edit.text())
+                    'e_operator': e_operator_value,
+                    'c_min': self._safe_float_convert(self.c_min_edit.text(), "C мин"),
+                    'c_max': self._safe_float_convert(self.c_max_edit.text(), "C макс")
                 })
 
             # Коэффициенты корректировки
             if meas_type == 0:
-                update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text())
-                update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text())
+                update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
+                update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
             else:
-                update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text())
-                update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text())
+                update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
+                update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
 
             # Члены уравнения
             for i in range(6):
                 member_widget = self.equation_members[i]
-                coeff_value = self._safe_float_convert(member_widget.coeff_edit.text())
+                coeff_value = self._safe_float_convert(member_widget.coeff_edit.text(), f"A{i}")
 
                 if meas_type == 0:
                     update_data[f'k_i_alin{i:02d}'] = coeff_value
@@ -1127,8 +1119,14 @@ class EquationsPage(QWidget):
 
                 QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
 
+
+        except ValueError as e:
+            QMessageBox.critical(self, "Ошибка ввода данных", str(e))
+            return
+
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения/применения уравнения: {str(e)}")
+            QMessageBox.critical(self, "Ошибка сохранения", f"Ошибка сохранения/применения уравнения: {str(e)}")
+            return
 
     def save_intensity_data(self):
         """Сохраняет данные границ интенсивности"""
@@ -1423,7 +1421,7 @@ class EquationsPage(QWidget):
         # Сначала ищем в math_config
         elements_config = self.math_config.get('elements', [])
         for element in elements_config:
-            if isinstance(element, dict) and element.get('adjusted_number') == el_nmb:
+            if isinstance(element, dict) and element.get('original_number') == el_nmb:
                 return element.get('name', f"Element_{el_nmb}")
 
         # Если не нашли в math_config, ищем в elements_config
@@ -1532,3 +1530,27 @@ class ApplyToDialog(QDialog):
 
         except ValueError as e:
             raise e
+
+class ScientificDoubleValidator(QValidator):
+    """Валидатор для чисел с плавающей точкой в научной нотации"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Регулярное выражение для чисел в научной нотации (разрешает E, e, Е, е)
+        self.pattern = re.compile(r'^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eEЕе][-+]?\d+)?$')
+
+    def validate(self, text, pos):
+        if not text:
+            return QValidator.Intermediate, text, pos
+
+        # Проверяем соответствие шаблону
+        if self.pattern.match(text):
+            return QValidator.Acceptable, text, pos
+        else:
+            return QValidator.Invalid, text, pos
+
+    def fixup(self, text):
+        # Заменяем запятые на точки и русские Е на английские E для корректного преобразования
+        text = text.replace(',', '.')
+        text = text.replace('Е', 'E').replace('е', 'e')
+        return text
