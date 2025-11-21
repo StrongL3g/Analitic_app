@@ -107,7 +107,7 @@ source venv/bin/activate
 ### 3. Установка зависимостей
 ```bash
 pip install --upgrade pip
-pip install PySide6 pyodbc python-dotenv matplotlib
+pip install -r requirements.txt
 ```
 
 ### 4. Настройка подключения к БД
