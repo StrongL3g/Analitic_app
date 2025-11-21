@@ -10,7 +10,7 @@ from PySide6.QtGui import QColor
 from database.db import Database
 # Импортируем AC_COUNT из конфигурации
 from config import get_config
-
+from utils.path_manager import get_config_path
 
 class RangesPage(QWidget):
     def __init__(self, db: Database):
@@ -78,9 +78,8 @@ class RangesPage(QWidget):
         """Загружает имена линий из JSON файла"""
         try:
             # Определяем путь к JSON файлу
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(base_dir, "..", "..", "config")
-            json_path = os.path.join(config_dir, "lines.json")
+            config_dir = get_config_path()
+            json_path = config_dir / "lines.json"
 
             # Проверяем существование файла
             if not os.path.exists(json_path):
@@ -456,10 +455,8 @@ class RangesPage(QWidget):
             range_data.sort(key=lambda x: x["number"])
 
             # Определяем путь к JSON файлу
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(base_dir, "..", "..", "config")
-            os.makedirs(config_dir, exist_ok=True) # Создаем папку, если её нет
-            json_path = os.path.join(config_dir, "range.json")
+            config_dir = get_config_path()
+            json_path = config_dir / "range.json"
 
             # Записываем в файл
             with open(json_path, "w", encoding="utf-8") as f:
@@ -585,9 +582,8 @@ class RangesPage(QWidget):
         """Генерирует JSON-файл с математическими взаимодействиями линий"""
         try:
             # Загружаем данные из range.json
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(base_dir, "..", "..", "config")
-            range_json_path = os.path.join(config_dir, "range.json")
+            config_dir = get_config_path()
+            range_json_path = config_dir / "range.json"
 
             if not os.path.exists(range_json_path):
                 print(f"Файл {range_json_path} не найден")
@@ -702,7 +698,7 @@ class RangesPage(QWidget):
                 })
 
             # Сохраняем в файл
-            output_json_path = os.path.join(config_dir, "lines_math_interactions.json")
+            output_json_path = config_dir / "lines_math_interactions.json"
 
             with open(output_json_path, "w", encoding="utf-8") as f:
                 json.dump({

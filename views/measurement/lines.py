@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from database.db import Database
-
+from utils.path_manager import get_config_path
 
 class LinesPage(QWidget):
     def __init__(self, db: Database):
@@ -360,10 +360,8 @@ class LinesPage(QWidget):
                 lines_data.insert(0, {"number": -1, "name": "-"})
 
             # Определяем путь к JSON файлу
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(base_dir, "..", "..", "config")
-            os.makedirs(config_dir, exist_ok=True)
-            json_path = os.path.join(config_dir, "lines.json")
+            config_dir = get_config_path()
+            json_path = config_dir / "lines.json"
 
             # Записываем в файл
             with open(json_path, "w", encoding="utf-8") as f:

@@ -13,6 +13,7 @@ from database.db import Database
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from views.data.sample_dialog import SampleDialog
+from utils.path_manager import get_config_path
 
 class RegressionPage(QWidget):
     def __init__(self, db: Database):
@@ -198,7 +199,7 @@ class RegressionPage(QWidget):
     def ini_load_elements(self):
         """Загрузка элементов из JSON файла"""
         try:
-            elements_path = "config/elements.json"
+            elements_path = get_config_path() / "elements.json"
             if os.path.exists(elements_path):
                 with open(elements_path, "r", encoding="utf-8") as f:
                     elements_data = json.load(f)
@@ -253,7 +254,7 @@ class RegressionPage(QWidget):
 
         try:
             # 1. Загружаем параметры выборки
-            sample_path = "config/sample/s_regress.json"
+            sample_path = get_config_path() / "sample" / "s_regress.json"
             if not os.path.exists(sample_path):
                 QMessageBox.warning(self, "Ошибка", "Файл выборки не найден: config/sample/s_regress.json")
                 return
@@ -325,7 +326,7 @@ class RegressionPage(QWidget):
         """Заполняет 5 комбобоксов на основе meas_type и el_nmb"""
         try:
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
-            json_path = f"config/{json_file}"
+            json_path = get_config_path() / json_file
 
             if not os.path.exists(json_path):
                 print(f"❌ {json_path} не найден")
@@ -420,7 +421,7 @@ class RegressionPage(QWidget):
             op_type = "operator_i_" if meas_type == 0 else "operator_c_"
 
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
-            json_path = f"config/{json_file}"
+            json_path = get_config_path() / json_file
 
             if not os.path.exists(json_path):
                 print(f"⚠️ {json_path} не найден — пропускаем заполнение членов")
@@ -767,7 +768,7 @@ class RegressionPage(QWidget):
             return [0.0] * len(self.raw_buffer)
 
         json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
-        json_path = f"config/{json_file}"
+        json_path = get_config_path() / json_file
 
         if not os.path.exists(json_path):
             return [0.0] * len(self.raw_buffer)

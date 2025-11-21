@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from database.db import Database
-
+from utils.path_manager import get_config_path
 
 class ElementsPage(QWidget):
     def __init__(self, db: Database):
@@ -198,10 +198,8 @@ class ElementsPage(QWidget):
                     })
 
             # Определяем путь к файлу относительно текущего скрипта
-            base_dir = os.path.dirname(os.path.abspath(__file__))  # Путь к папке views/measurement
-            config_dir = os.path.join(base_dir, "..", "..", "config")  # Поднимаемся к Analitic_app/config
-            os.makedirs(config_dir, exist_ok=True)  # Создаём папку, если её нет
-            json_path = os.path.join(config_dir, "elements.json")
+            config_dir = get_config_path()
+            json_path = config_dir / "elements.json"
 
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(rows, f, ensure_ascii=False, indent=4)
@@ -350,10 +348,8 @@ class ElementsPage(QWidget):
                 math_interactions.append(element_set)
 
             # Сохраняем в файл
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            config_dir = os.path.join(base_dir, "..", "..", "config")
-            os.makedirs(config_dir, exist_ok=True)
-            json_path = os.path.join(config_dir, "math_interactions.json")
+            config_dir = get_config_path()
+            json_path = config_dir / "math_interactions.json"
 
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump({
