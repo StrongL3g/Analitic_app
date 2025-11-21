@@ -11,15 +11,13 @@ import re
 from database.db import Database
 from pathlib import Path
 from config import AC_COUNT, PR_COUNT, DB_CONFIG
-
+from utils.path_manager import get_config_path
 
 class EquationsPage(QWidget):
     """Виджет для отображения уравнений расчета концентраций"""
     def __init__(self, db: Database):
         super().__init__()  # Инициализация родительского класса QWidget
         self.db = db  # Подключение к базе данных
-        #  Работа с конфигурационными файлами
-        self._config_dir = self._get_config_directory()  # Путь к папке config
         # Загрузка конфигурационных файлов:
         self.elements_config = self._load_elements_config()  # elements.json
         self.range_config = self._load_range_config()  # range.json
@@ -155,15 +153,15 @@ class EquationsPage(QWidget):
         self.clear_btn.clicked.connect(self.clear_equation)
         self.regression_radio.toggled.connect(self.on_measurement_type_changed)
         self.correlation_radio.toggled.connect(self.on_measurement_type_changed)
-    def _get_config_directory(self) -> Path:
-        """Получает путь к директории конфигурации"""
-        base_dir = Path(__file__).parent
-        config_dir = base_dir.parent.parent / "config"
-        config_dir.mkdir(exist_ok=True)
-        return config_dir
     def _load_config_file(self, filename: str) -> dict:
         """Загружает конфигурационный файл JSON"""
-        config_path = self._config_dir / filename
+        # ЗАМЕНЯЕМ старый код на новый:
+        # Старый код (удаляем):
+        # config_path = self._config_dir / filename
+
+        # Новый код (добавляем):
+        config_path = get_config_path() / filename
+
         if not config_path.exists():
             print(f"Файл конфигурации не найден: {config_path}")
             return {}

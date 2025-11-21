@@ -8,7 +8,7 @@ from database.db import Database
 import math
 import json
 from pathlib import Path
-
+from utils.path_manager import get_config_path
 
 class TimeEdit15Min(QTimeEdit):
     """Кастомный QTimeEdit с шагом 15 минут"""
@@ -50,19 +50,11 @@ class CompositionPage(QWidget):
         self.db = db
         self.original_data = {}
         self.intensity_columns = []
-        self._config_dir = self._get_config_directory()
         self.init_ui()
-
-    def _get_config_directory(self) -> Path:
-        """Получает путь к директории конфигурации"""
-        base_dir = Path(__file__).parent
-        config_dir = base_dir.parent.parent / "config"
-        config_dir.mkdir(exist_ok=True)
-        return config_dir
 
     def _load_config_file(self, filename: str) -> list:
         """Загружает конфигурационный файл JSON"""
-        config_path = self._config_dir / filename
+        config_path = get_config_path() / filename
 
         if not config_path.exists():
             print(f"Файл конфигурации не найден: {config_path}")

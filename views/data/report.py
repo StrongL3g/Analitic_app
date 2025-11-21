@@ -11,7 +11,7 @@ import math
 import json
 from pathlib import Path
 import statistics
-
+from utils.path_manager import get_config_path
 
 class TimeEdit15Min(QTimeEdit):
     """Кастомный QTimeEdit с шагом 15 минут"""
