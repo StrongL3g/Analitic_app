@@ -1,23 +1,64 @@
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv
 import os
+import json
+from pathlib import Path
+from typing import Dict, Any
 
-# Загружаем переменные из .env
+# Загружаем переменные из .env (ТОЛЬКО ДЛЯ ЧТЕНИЯ)
 load_dotenv()
 
-# Функция для получения значения переменной
+# Функция для получения значения переменной (read-only) - сохраняем название
 def get_config(key, default=None):
     return os.getenv(key, default)
 
-# Функция для установки значения переменной
+# Функция для установки значения переменной - сохраняем название, но меняем реализацию
 def set_config(key, value):
-    os.environ[key] = str(value)
-    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-    set_key(env_path, key, str(value))
+    """Сохраняет настройки в config.json вместо .env"""
+    try:
+        from utils.path_manager import get_config_path
 
-# Функция для удаления переменной
+        # Загружаем текущий config
+        config_file = get_config_path() / "config.json"
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        else:
+            config = {}
+
+        # Обновляем значение
+        config[key] = value
+
+        # Сохраняем обратно
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+
+        print(f"Настройка {key} сохранена в config.json")
+
+    except Exception as e:
+        print(f"Ошибка сохранения настройки {key}: {e}")
+
+# Функция для удаления переменной - сохраняем название
 def unset_config(key):
-    if key in os.environ:
-        del os.environ[key]
+    """Удаляет настройку из config.json"""
+    try:
+        from utils.path_manager import get_config_path
+
+        config_file = get_config_path() / "config.json"
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            if key in config:
+                del config[key]
+
+                with open(config_file, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, ensure_ascii=False, indent=2)
+
+                print(f"Настройка {key} удалена из config.json")
+
+    except Exception as e:
+        print(f"Ошибка удаления настройки {key}: {e}")
 
 # Тип базы данных (mssql/postgres)
 DB_TYPE = get_config("DB_TYPE", "mssql").lower()
@@ -51,6 +92,7 @@ DB_CONFIG = get_db_config()
 
 # Функция для получения конфигурации из базы данных
 def get_db_settings():
+    """Получает AC_COUNT и PR_COUNT из базы данных"""
     try:
         # Импортируем здесь, чтобы избежать циклической зависимости
         from database.db import Database
@@ -72,10 +114,44 @@ def get_db_settings():
         print(f"Ошибка при получении конфигурации из БД: {e}")
         return {"AC_COUNT": 1, "PR_COUNT": 1}
 
-# Получаем настройки из БД
-db_settings = get_db_settings()
+# Функция для загрузки настроек приложения
+def load_app_config():
+    """Загружает настройки приложения из config.json"""
+    try:
+        from utils.path_manager import get_config_path
 
-# Количество приборов и принтеров
-AC_COUNT = db_settings["AC_COUNT"]
-PR_COUNT = db_settings["PR_COUNT"]
+        config_file = get_config_path() / "config.json"
 
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            # Если файла нет, создаем с настройками по умолчанию
+            default_config = {"AC_COUNT": 1, "PR_COUNT": 8}
+            save_app_config(default_config)
+            return default_config
+
+    except Exception as e:
+        print(f"Ошибка загрузки config.json: {e}")
+        return {"AC_COUNT": 1, "PR_COUNT": 8}
+
+def save_app_config(config: Dict[str, Any]):
+    """Сохраняет настройки приложения в config.json"""
+    try:
+        from utils.path_manager import get_config_path
+
+        config_file = get_config_path() / "config.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        print(f"Ошибка сохранения config.json: {e}")
+
+# Загружаем настройки приложения
+app_config = load_app_config()
+
+# Количество приборов и принтеров (теперь из config.json)
+AC_COUNT = app_config.get("AC_COUNT", 1)
+PR_COUNT = app_config.get("PR_COUNT", 8)
