@@ -35,12 +35,12 @@ class SettingsPage(QWidget):
 
         self.ac_count_spinbox = QSpinBox()
         self.ac_count_spinbox.setRange(1, 10)
-        self.ac_count_spinbox.setValue(int(get_config("AC_COUNT", 1)))
+        self.ac_count_spinbox.setValue(int(AC_COUNT))
         self.ac_count_spinbox.setSuffix(" прибор(ов)")
 
         self.pr_count_spinbox = QSpinBox()
         self.pr_count_spinbox.setRange(1, 10)
-        self.pr_count_spinbox.setValue(int(get_config("PR_COUNT", 1)))
+        self.pr_count_spinbox.setValue(int(PR_COUNT))
         self.pr_count_spinbox.setSuffix(" продукт(ов)")
 
         apply_and_update_btn = QPushButton("Применить настройки и обновить БД")

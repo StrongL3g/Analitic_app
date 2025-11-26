@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from database.db import Database
-from config import get_config
+from config import AC_COUNT
 
 
 class ParamsPage(QWidget):
@@ -33,9 +33,7 @@ class ParamsPage(QWidget):
         selector_layout.addWidget(QLabel("Прибор:"))
 
         self.ac_selector = QComboBox()
-        # ПОЛУЧАЕМ КОЛИЧЕСТВО ПРИБОРОВ ИЗ КОНФИГА
-        ac_count = int(get_config("AC_COUNT", 1))
-        for i in range(1, ac_count + 1):
+        for i in range(1, AC_COUNT + 1):
             self.ac_selector.addItem(f"Прибор {i}", i)
         self.ac_selector.currentIndexChanged.connect(self.on_ac_changed)
         selector_layout.addWidget(self.ac_selector)
