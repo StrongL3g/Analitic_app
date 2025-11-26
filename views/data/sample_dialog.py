@@ -11,7 +11,7 @@ import datetime
 import json
 import os
 from typing import List, Dict
-
+from utils.path_manager import get_config_path
 
 class SampleDialog(QDialog):
     def __init__(self, db: Database, parent=None):
@@ -228,8 +228,15 @@ class SampleDialog(QDialog):
     def load_sample_from_file(self):
         """Загружает выборку из файла"""
         try:
-            if os.path.exists("config/sample/s_regress.json"):
-                with open("config/sample/s_regress.json", "r", encoding="utf-8") as f:
+            # ЗАМЕНИТЬ эту строку:
+            # if os.path.exists("config/sample/s_regress.json"):
+            # НА эту:
+            sample_path = get_config_path() / "sample" / "s_regress.json"
+            if sample_path.exists():
+                # И заменить эту строку:
+                # with open("config/sample/s_regress.json", "r", encoding="utf-8") as f:
+                # НА эту:
+                with open(sample_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
                         self.sample_data = data
@@ -240,8 +247,14 @@ class SampleDialog(QDialog):
     def save_sample_to_file(self):
         """Сохраняет выборку в файл"""
         try:
-            os.makedirs("config", exist_ok=True)
-            with open("config/sample/s_regress.json", "w", encoding="utf-8") as f:
+            # ЗАМЕНИТЬ эти строки:
+            # os.makedirs("config", exist_ok=True)
+            # with open("config/sample/s_regress.json", "w", encoding="utf-8") as f:
+            # НА эти:
+            sample_dir = get_config_path() / "sample"
+            sample_dir.mkdir(parents=True, exist_ok=True)
+            sample_path = sample_dir / "s_regress.json"
+            with open(sample_path, "w", encoding="utf-8") as f:
                 json.dump(self.sample_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Ошибка сохранения выборки в файл: {e}")
