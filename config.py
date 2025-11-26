@@ -9,7 +9,14 @@ load_dotenv()
 
 # Функция для получения значения переменной (read-only) - сохраняем название
 def get_config(key, default=None):
-    return os.getenv(key, default)
+    # 1. Сначала — переменные окружения (включая .env)
+    env_val = os.getenv(key)
+    if env_val is not None:
+        return env_val
+
+    # 2. Потом — config.json
+    app_conf = load_app_config()  # или кешировать app_config глобально
+    return app_conf.get(key, default)
 
 # Функция для установки значения переменной - сохраняем название, но меняем реализацию
 def set_config(key, value):
