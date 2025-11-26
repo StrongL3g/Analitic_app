@@ -81,11 +81,25 @@ class SettingsPage(QWidget):
             old_ac_count = int(get_config("AC_COUNT", 1))
             old_pr_count = int(get_config("PR_COUNT", 1))
 
+            print(new_ac_count)
+            print(old_ac_count)
+
+            print(new_pr_count)
+            print(old_pr_count)
+
             # Обновляем SET00
             self._update_set00(new_ac_count, new_pr_count)
 
             if new_ac_count != old_ac_count:
                 set_config("AC_COUNT", new_ac_count)
+                # Обновляем таблицы для приборов
+                self._update_db_groups_for_table("SET02", "ac_nmb", new_ac_count, rows_per_group=21)
+                self._update_db_groups_for_table("SET03", "ac_nmb", new_ac_count, rows_per_group=40)
+                self._update_db_groups_for_table("SET04", "ac_nmb", new_ac_count, rows_per_group=1)
+                self._update_db_groups_for_table("SET06", "ac_nmb", new_ac_count, rows_per_group=8)
+                # Обновляем cfg01 для приборов
+                self._update_cfg01_groups(new_ac_count)
+
                 QMessageBox.information(
                     self,
                     "Настройки сохранены",
@@ -94,24 +108,19 @@ class SettingsPage(QWidget):
 
             if new_pr_count != old_pr_count:
                 set_config("PR_COUNT", new_pr_count)
+                # Обновляем таблицы для продуктов
+                self._update_db_groups_for_table("SET07", "pr_nmb", new_pr_count, rows_per_group=20)
+                self._update_db_groups_for_table("PR_SET", "pr_nmb", new_pr_count, rows_per_group=24)
+                # Обновляем set08 для продуктов
+                self._update_set08_groups(new_pr_count)
+                # Обновляем cfg02 для продуктов
+                self._update_cfg02_groups(new_pr_count)
+
                 QMessageBox.information(
                     self,
                     "Настройки сохранены",
                     f"Количество продуктов изменено с {old_pr_count} на {new_pr_count}"
                 )
-
-            # Обновляем все таблицы
-            self._update_db_groups_for_table("SET02", "ac_nmb", new_ac_count, rows_per_group=21)
-            self._update_db_groups_for_table("SET03", "ac_nmb", new_ac_count, rows_per_group=40)
-            self._update_db_groups_for_table("SET04", "ac_nmb", new_ac_count, rows_per_group=1)
-            self._update_db_groups_for_table("SET06", "ac_nmb", new_ac_count, rows_per_group=8)
-
-            # Обновляем таблицы для продуктов
-            self._update_db_groups_for_table("SET07", "pr_nmb", new_pr_count, rows_per_group=20)
-            self._update_db_groups_for_table("PR_SET", "pr_nmb", new_pr_count, rows_per_group=24)
-
-            # 10.11.2025 RD # Обновляем set08 для продуктов
-            self._update_set08_groups(new_pr_count)
 
             QMessageBox.information(
                 self,
@@ -123,6 +132,233 @@ class SettingsPage(QWidget):
             error_msg = f"Ошибка при применении настроек и обновлении БД: {e}"
             print(error_msg)
             QMessageBox.critical(self, "Ошибка", error_msg)
+
+    def _update_cfg01_groups(self, new_ac_count: int):
+        """Обновляет группы приборов в таблице cfg01"""
+        try:
+            table_name = "cfg01"
+            group_field = "ac_nmb"
+
+            # Проверяем/создаём базовую группу (ac_nmb = 1), если её нет
+            if not self._check_group_exists_in_table(table_name, group_field, 1):
+                if self._create_base_group_cfg01():
+                    print(f"Базовая группа (ac_nmb=1) создана в {table_name}")
+                else:
+                    raise Exception(f"Не удалось создать базовую группу для {table_name}")
+
+            # Создаём недостающие группы (ac_nmb = 2..new_ac_count)
+            groups_created = []
+            for ac_nmb in range(2, new_ac_count + 1):
+                if not self._check_group_exists_in_table(table_name, group_field, ac_nmb):
+                    if self._create_cfg01_group_from_template(ac_nmb, template_ac_nmb=1):
+                        groups_created.append(ac_nmb)
+                    else:
+                        QMessageBox.warning(self, "Предупреждение", f"Не удалось создать прибор {ac_nmb} в {table_name}")
+
+            # Удаляем лишние группы (ac_nmb > new_ac_count)
+            existing_groups = self._get_existing_groups_in_table(table_name, group_field)
+            groups_to_delete = [g for g in existing_groups if g > new_ac_count]
+
+            if groups_to_delete:
+                delete_list = ", ".join(map(str, groups_to_delete))
+                reply = QMessageBox.question(
+                    self,
+                    "Подтверждение удаления",
+                    f"Будут удалены приборы: {delete_list} из таблицы {table_name}.\n"
+                    f"Это действие необратимо!\nПродолжить?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    for ac_nmb in groups_to_delete:
+                        if self._delete_group_from_table(table_name, group_field, ac_nmb):
+                            print(f"Прибор {ac_nmb} удален из {table_name}")
+                        else:
+                            QMessageBox.warning(self, "Ошибка", f"Не удалось удалить прибор {ac_nmb} из {table_name}")
+                else:
+                    QMessageBox.information(self, "Отмена", f"Удаление из {table_name} отменено.")
+
+        except Exception as e:
+            error_msg = f"Ошибка при обновлении cfg01: {e}"
+            print(error_msg)
+            raise e
+
+    def _create_base_group_cfg01(self) -> bool:
+        """Создает базовую группу приборов (ac_nmb = 1) в cfg01"""
+        try:
+            insert_query = """
+            INSERT INTO cfg01
+            (meas_nmb, cuv_nmb, pr_nmb, sp_nmb, ac_nmb)
+            VALUES (?, ?, ?, ?, ?)
+            """
+
+            # Данные для базовой группы (ac_nmb = 1)
+            base_data = [
+                [101, 1, 1, 1, 1],
+                [102, 2, 3, 2, 1],
+                [103, 1, 1, 3, 1],
+                [104, 2, 3, 4, 1],
+                [105, 1, 1, 5, 1],
+                [106, 2, 3, 6, 1],
+                [107, 1, 1, 7, 1],
+                [108, 2, 3, 8, 1]
+            ]
+
+            for data in base_data:
+                self.db.execute(insert_query, data)
+
+            print("Базовая группа приборов (ac_nmb=1) успешно создана в cfg01")
+            return True
+        except Exception as e:
+            error_msg = f"Ошибка при создании базовой группы в cfg01: {e}"
+            print(error_msg)
+            return False
+
+    def _create_cfg01_group_from_template(self, ac_nmb: int, template_ac_nmb: int = 1) -> bool:
+        """Создает группу приборов в cfg01 на основе шаблона"""
+        try:
+            # Получаем данные из шаблонной группы
+            select_query = """
+            SELECT meas_nmb, cuv_nmb, pr_nmb, sp_nmb
+            FROM cfg01
+            WHERE ac_nmb = ?
+            ORDER BY meas_nmb
+            """
+            template_rows = self.db.fetch_all(select_query, [template_ac_nmb])
+
+            if not template_rows:
+                print(f"Шаблонная группа (ac_nmb={template_ac_nmb}) в cfg01 не найдена")
+                return False
+
+            insert_query = """
+            INSERT INTO cfg01
+            (meas_nmb, cuv_nmb, pr_nmb, sp_nmb, ac_nmb)
+            VALUES (?, ?, ?, ?, ?)
+            """
+
+            for row in template_rows:
+                # Преобразуем meas_nmb: первая цифра становится номером прибора
+                old_meas_nmb = row['meas_nmb']
+                new_meas_nmb = int(str(ac_nmb) + str(old_meas_nmb)[1:])
+
+                # cuv_nmb оставляем как в шаблоне, pr_nmb и sp_nmb ставим 0 для нового прибора
+                new_cuv_nmb = row['cuv_nmb']
+                new_pr_nmb = 0  # Для новых приборов ставим 0
+                new_sp_nmb = 0  # Для новых приборов ставим 0
+
+                self.db.execute(insert_query, [new_meas_nmb, new_cuv_nmb, new_pr_nmb, new_sp_nmb, ac_nmb])
+
+            print(f"Группа приборов (ac_nmb={ac_nmb}) успешно создана в cfg01")
+            return True
+
+        except Exception as e:
+            error_msg = f"Ошибка при создании группы приборов (ac_nmb={ac_nmb}) в cfg01: {e}"
+            print(error_msg)
+            return False
+
+    def _update_cfg02_groups(self, new_pr_count: int):
+        """Обновляет группы продуктов в таблице cfg02"""
+        try:
+            table_name = "cfg02"
+            group_field = "pr_nmb"
+
+            # Проверяем/создаём базовую группу (pr_nmb = 1), если её нет
+            if not self._check_group_exists_in_table(table_name, group_field, 1):
+                if self._create_base_group_cfg02():
+                    print(f"Базовая группа (pr_nmb=1) создана в {table_name}")
+                else:
+                    raise Exception(f"Не удалось создать базовую группу для {table_name}")
+
+            # Создаём недостающие группы (pr_nmb = 2..new_pr_count)
+            groups_created = []
+            for pr_nmb in range(2, new_pr_count + 1):
+                if not self._check_group_exists_in_table(table_name, group_field, pr_nmb):
+                    if self._create_cfg02_group(pr_nmb):
+                        groups_created.append(pr_nmb)
+                    else:
+                        QMessageBox.warning(self, "Предупреждение", f"Не удалось создать продукт {pr_nmb} в {table_name}")
+
+            # Удаляем лишние группы (pr_nmb > new_pr_count)
+            existing_groups = self._get_existing_groups_in_table(table_name, group_field)
+            groups_to_delete = [g for g in existing_groups if g > new_pr_count]
+
+            if groups_to_delete:
+                delete_list = ", ".join(map(str, groups_to_delete))
+                reply = QMessageBox.question(
+                    self,
+                    "Подтверждение удаления",
+                    f"Будут удалены продукты: {delete_list} из таблицы {table_name}.\n"
+                    f"Это действие необратимо!\nПродолжить?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    for pr_nmb in groups_to_delete:
+                        if self._delete_group_from_table(table_name, group_field, pr_nmb):
+                            print(f"Продукт {pr_nmb} удален из {table_name}")
+                        else:
+                            QMessageBox.warning(self, "Ошибка", f"Не удалось удалить продукт {pr_nmb} из {table_name}")
+                else:
+                    QMessageBox.information(self, "Отмена", f"Удаление из {table_name} отменено.")
+
+        except Exception as e:
+            error_msg = f"Ошибка при обновлении cfg02: {e}"
+            print(error_msg)
+            raise e
+
+    def _create_base_group_cfg02(self) -> bool:
+        """Создает базовые продукты в cfg02"""
+        try:
+            insert_query = """
+            INSERT INTO cfg02
+            (pr_nmb, pr_name, pr_desc)
+            VALUES (?, ?, ?)
+            """
+
+            # Базовые продукты
+            base_products = [
+                [1, "Продукт №1", "Концентрат Ni-пирротиновый ТОФ"],
+                [2, "Продукт №2", "Конц. коллект. флотации"],
+                [3, "Продукт №3", "Тонкоизмельченные обороты из ЦПСиШ"],
+                [4, "Продукт №4", "Хвост селективной флотации"],
+                [5, "Продукт №5", "Конц. Cu флотации"],
+                [6, "Продукт №6", "Конц. Mo перечистки"],
+                [7, "Продукт №7", "Общие хвосты"],
+                [8, "Продукт №8", "хвост Cu флотации"]
+            ]
+
+            for product in base_products:
+                self.db.execute(insert_query, product)
+
+            print("Базовые продукты успешно созданы в cfg02")
+            return True
+        except Exception as e:
+            error_msg = f"Ошибка при создании базовых продуктов в cfg02: {e}"
+            print(error_msg)
+            return False
+
+    def _create_cfg02_group(self, pr_nmb: int) -> bool:
+        """Создает новый продукт в cfg02"""
+        try:
+            insert_query = """
+            INSERT INTO cfg02
+            (pr_nmb, pr_name, pr_desc)
+            VALUES (?, ?, ?)
+            """
+
+            # Для новых продуктов используем стандартные названия и описание
+            pr_name = f"Продукт №{pr_nmb}"
+            pr_desc = "-"
+
+            self.db.execute(insert_query, [pr_nmb, pr_name, pr_desc])
+
+            print(f"Продукт {pr_nmb} успешно создан в cfg02")
+            return True
+
+        except Exception as e:
+            error_msg = f"Ошибка при создании продукта {pr_nmb} в cfg02: {e}"
+            print(error_msg)
+            return False
 
     def _update_set08_groups(self, new_pr_count: int):
         """Обновляет группы продуктов в таблице SET08 (по 8 элементов на продукт, все delta = 0)"""
