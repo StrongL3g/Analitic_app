@@ -1,3 +1,7 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+block_cipher = None
+
 a = Analysis(
     ['main.py'],
     pathex=[],
@@ -7,7 +11,7 @@ a = Analysis(
         ('config/*.json', 'config'),
         ('config/sample/*.json', 'config/sample'),
         ('views/data/*.py', 'views/data'),
-        ('views/measurement/*.py', 'views/measurement'), 
+        ('views/measurement/*.py', 'views/measurement'),
         ('views/products/*.py', 'views/products'),
     ],
     hiddenimports=[
@@ -15,21 +19,12 @@ a = Analysis(
         'database.db',
         'utils.helpers',
         'utils.path_manager',
-        
-        # Добавляем ВСЕ модули которые могут быть нужны
-        'utils',  # ← ДОБАВЬ ЭТУ СТРОКУ
-        'json',
-        'os',
-        'sys',
-        'pathlib',
-        
-        # Все view модули
         'views.dashboard',
-        'views.logs', 
+        'views.logs',
         'views.settings',
         'views.users',
         'views.data.composition',
-        'views.data.correction', 
+        'views.data.correction',
         'views.data.recalc',
         'views.data.regression',
         'views.data.report',
@@ -38,17 +33,12 @@ a = Analysis(
         'views.measurement.background',
         'views.measurement.criteria',
         'views.measurement.elements',
-        'views.measurement.lines', 
+        'views.measurement.lines',
         'views.measurement.params',
         'views.measurement.ranges',
         'views.products.equations',
         'views.products.models',
-        
-        # Дополнительные импорты для конфигов
-        'dotenv',
-        'python-dotenv',
-        
-        'psycopg2._psycopg',
+        'psycopg2._psycopg',  # Важно для Windows
     ],
     hookspath=[],
     hooksconfig={},
@@ -58,4 +48,29 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='Analitic_app',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,  # Сжатие - уменьшает размер
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,  # False - без консоли (GUI приложение)
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+#    icon='icon.ico',  # Добавь иконку если есть
 )
