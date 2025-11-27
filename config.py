@@ -7,6 +7,27 @@ from typing import Dict, Any
 # Загружаем переменные из .env (ТОЛЬКО ДЛЯ ЧТЕНИЯ)
 load_dotenv()
 
+# Функция для загрузки настроек приложения
+def load_app_config():
+    """Загружает настройки приложения из config.json"""
+    try:
+        from utils.path_manager import get_config_path
+
+        config_file = get_config_path() / "config.json"
+
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            # Если файла нет, создаем с настройками по умолчанию
+            default_config = {"AC_COUNT": 1, "PR_COUNT": 8}
+            save_app_config(default_config)
+            return default_config
+
+    except Exception as e:
+        print(f"Ошибка загрузки config.json: {e}")
+        return {"AC_COUNT": 1, "PR_COUNT": 8}
+
 # Функция для получения значения переменной (read-only) - сохраняем название
 def get_config(key, default=None):
     # 1. Сначала — переменные окружения (включая .env)
@@ -120,27 +141,6 @@ def get_db_settings():
     except Exception as e:
         print(f"Ошибка при получении конфигурации из БД: {e}")
         return {"AC_COUNT": 1, "PR_COUNT": 1}
-
-# Функция для загрузки настроек приложения
-def load_app_config():
-    """Загружает настройки приложения из config.json"""
-    try:
-        from utils.path_manager import get_config_path
-
-        config_file = get_config_path() / "config.json"
-
-        if config_file.exists():
-            with open(config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            # Если файла нет, создаем с настройками по умолчанию
-            default_config = {"AC_COUNT": 1, "PR_COUNT": 8}
-            save_app_config(default_config)
-            return default_config
-
-    except Exception as e:
-        print(f"Ошибка загрузки config.json: {e}")
-        return {"AC_COUNT": 1, "PR_COUNT": 8}
 
 def save_app_config(config: Dict[str, Any]):
     """Сохраняет настройки приложения в config.json"""
