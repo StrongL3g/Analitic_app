@@ -32,7 +32,8 @@ jobs:
 
     - name: List build results
       run: |
-        dir dist\ /s
+        # Исправленная команда для PowerShell
+        Get-ChildItem -Path dist -Recurse
 
     - name: Upload Windows EXE
       uses: actions/upload-artifact@v4
