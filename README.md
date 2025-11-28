@@ -110,22 +110,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Настройка подключения к БД
-```bash
-cp .env.example .env
-```
-
-Отредактируйте файл `.env`:
-```env
-DB_TYPE=postgres
-
-USERNAME=your_username
-PASSWORD=your_password
-```
-тип базы выбирается именно в .env файле (postgres/mssql)
-также нужно коментить/раскоментить нужные строки в зависимости от выбранной базы
-
-### 5. Запуск приложения
+### 4. Запуск приложения
 ```bash
 python3 main.py
 ```
