@@ -3,10 +3,6 @@ venv/
 __pycache__/
 *.pyc
 
-# Переменные окружения
-#.env
-#.env.*
-
 # Файлы Python
 *.pyc
 *~
