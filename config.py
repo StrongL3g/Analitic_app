@@ -1,11 +1,7 @@
-from dotenv import load_dotenv
 import os
 import json
 from pathlib import Path
 from typing import Dict, Any
-
-# Загружаем переменные из .env (ТОЛЬКО ДЛЯ ЧТЕНИЯ)
-load_dotenv()
 
 # Функция для загрузки настроек приложения
 def load_app_config():
@@ -20,7 +16,19 @@ def load_app_config():
                 return json.load(f)
         else:
             # Если файла нет, создаем с настройками по умолчанию
-            default_config = {"AC_COUNT": 1, "PR_COUNT": 8}
+            default_config = {
+                # Переносим все настройки в config.json
+                "DB_TYPE": "postgres",
+                "DB_HOST": "192.168.222.34",
+                "DB_PORT": "5432",
+                "DB_NAME": "AMMKASAKDB01",
+                "DB_USER": "lastadmin",
+                "DB_PASSWORD": "Dwd#RX9R",
+                "DB_SERVER": "192.168.222.167\\CPA02_EXPRESS",
+                "DB_DRIVER": "ODBC Driver 18 for SQL Server",
+                "PR_COUNT": 8,
+                "AC_COUNT": 1
+            }
             save_app_config(default_config)
             return default_config
 
@@ -28,18 +36,13 @@ def load_app_config():
         print(f"Ошибка загрузки config.json: {e}")
         return {"AC_COUNT": 1, "PR_COUNT": 8}
 
-# Функция для получения значения переменной (read-only) - сохраняем название
+# Функция для получения значения переменной (read-only) - СОХРАНЯЕМ ОРИГИНАЛЬНУЮ ЛОГИКУ
 def get_config(key, default=None):
-    # 1. Сначала — переменные окружения (включая .env)
-    env_val = os.getenv(key)
-    if env_val is not None:
-        return env_val
-
-    # 2. Потом — config.json
-    app_conf = load_app_config()  # или кешировать app_config глобально
+    # config.json
+    app_conf = load_app_config()
     return app_conf.get(key, default)
 
-# Функция для установки значения переменной - сохраняем название, но меняем реализацию
+# Остальные функции остаются БЕЗ ИЗМЕНЕНИЙ
 def set_config(key, value):
     """Сохраняет настройки в config.json вместо .env"""
     try:
@@ -66,7 +69,6 @@ def set_config(key, value):
     except Exception as e:
         print(f"Ошибка сохранения настройки {key}: {e}")
 
-# Функция для удаления переменной - сохраняем название
 def unset_config(key):
     """Удаляет настройку из config.json"""
     try:
