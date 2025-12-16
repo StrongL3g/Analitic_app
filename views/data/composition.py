@@ -270,7 +270,7 @@ class CompositionPage(QWidget):
                 QMessageBox.warning(self, "Ошибка", "Не загружены названия столбцов интенсивностей")
                 return
 
-            intensity_columns = [f"[i_00_{i:02d}]" for i in range(num_columns)]
+            intensity_columns = [f"i_00_{i:02d}" for i in range(num_columns)]
             select_columns = ", ".join(intensity_columns)
 
             query = f"""
