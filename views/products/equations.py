@@ -860,7 +860,7 @@ class EquationsPage(QWidget):
             ln_nmb = data.get('ln_nmb', -1)
 
             # Получаем название линии
-            line_name = self._get_line_name(ln_nmb)
+            line_name = self._get_line_name(sq_nmb,ln_nmb)
 
             # 3 колонки:
             # 0: Название линии
@@ -882,22 +882,16 @@ class EquationsPage(QWidget):
             i_max_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.intensity_table.setItem(row_idx, 2, i_max_item)
 
-    def _get_line_name(self, ln_nmb):
+    def _get_line_name(self, sq_nmb, ln_nmb):
         """Получает название линии по номеру"""
         if ln_nmb == -1:
             return "Не используется"
 
         # Сопоставление номеров линий с названиями из range.json
         for range_item in self.range_config:
-            if isinstance(range_item, dict) and range_item.get('number') == ln_nmb:
+            if isinstance(range_item, dict) and range_item.get('number') == sq_nmb:
                 return range_item.get('name', f"Линия {ln_nmb}")
 
-        # Если не найдено в конфиге, используем стандартные названия
-        line_names = {
-            1: "INT", 2: "NC", 21: "Fe_Ka", 23: "Co_Ka",
-            25: "Ni_Ka", 27: "Cu_Ka"
-        }
-        return line_names.get(ln_nmb, f"Линия {ln_nmb}")
 
     def update_all_combos(self):
         """Обновляет все комбобоксы с новыми данными из конфигурационных файлов"""
