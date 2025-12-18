@@ -727,7 +727,7 @@ class ReportPage(QWidget):
                 i_00_10, i_00_11, i_00_12, i_00_13, i_00_14, i_00_15, i_00_16, i_00_17, i_00_18, i_00_19
             FROM pr_meas
             WHERE meas_dt BETWEEN ? AND ?
-            AND pr_nmb = ? AND mdl_nmb = ? AND active_model = 1
+            AND pr_nmb = ? AND active_model = 1
             AND (
                 c_chem_01 <> 0 OR c_chem_02 <> 0 OR c_chem_03 <> 0 OR c_chem_04 <> 0 OR
                 c_chem_05 <> 0 OR c_chem_06 <> 0 OR c_chem_07 <> 0 OR c_chem_08 <> 0
@@ -735,7 +735,7 @@ class ReportPage(QWidget):
             ORDER BY meas_dt
             """
 
-            params = [dt_from, dt_to, pr_nmb, active_model]
+            params = [dt_from, dt_to, pr_nmb]
             rows = self.db.fetch_all(query, params)
 
             if not rows:
