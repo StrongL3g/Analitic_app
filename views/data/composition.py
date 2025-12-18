@@ -273,13 +273,22 @@ class CompositionPage(QWidget):
             intensity_columns = [f"i_00_{i:02d}" for i in range(num_columns)]
             select_columns = ", ".join(intensity_columns)
 
-            query = f"""
-            SELECT 
-                id, mdl_nmb, meas_dt, {select_columns}
-            FROM pr_meas
-            WHERE meas_dt BETWEEN ? AND ?
-            AND pr_nmb = ? AND active_model = 1
-            """
+            if self.db.db_type == 'postgres':
+                query = f"""
+                SELECT 
+                    id, mdl_nmb, meas_dt, {select_columns}
+                FROM pr_meas
+                WHERE meas_dt BETWEEN ? AND ?
+                AND pr_nmb = ? AND active_model = 1
+                """
+            else:
+                query = f"""
+                SELECT TOP (1000)
+                    id, mdl_nmb, meas_dt, {select_columns}
+                FROM pr_meas
+                WHERE meas_dt BETWEEN ? AND ?
+                AND pr_nmb = ? AND active_model = 1
+                """
 
             params = [dt_from, dt_to, pr_nmb]
 
@@ -292,7 +301,10 @@ class CompositionPage(QWidget):
             if conditions:
                 query += " AND " + " AND ".join(conditions)
 
-            query += " ORDER BY timestamp LIMIT 1000"
+            if self.db.db_type == 'postgres':
+                query += " ORDER BY timestamp LIMIT 1000"
+            else:
+                query += " ORDER BY timestamp"
 
             rows = self.db.fetch_all(query, params)
 
@@ -365,16 +377,28 @@ class CompositionPage(QWidget):
                 QMessageBox.warning(self, "Ошибка", "Неверный формат номера продукта")
                 return
 
-            query = """
-            SELECT 
-                id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb,
-                c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
-                c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
-                c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
-            FROM pr_meas
-            WHERE meas_dt BETWEEN ? AND ?
-            AND pr_nmb = ? AND active_model = 1
-            """
+            if self.db.db_type == 'postgres':
+                query = """
+                SELECT 
+                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb,
+                    c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
+                    c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
+                    c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
+                FROM pr_meas
+                WHERE meas_dt BETWEEN ? AND ?
+                AND pr_nmb = ? AND active_model = 1
+                """
+            else:
+                query = """
+                SELECT TOP (1000)
+                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb,
+                    c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
+                    c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
+                    c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
+                FROM pr_meas
+                WHERE meas_dt BETWEEN ? AND ?
+                AND pr_nmb = ? AND active_model = 1
+                """
 
             params = [dt_from, dt_to, pr_nmb]
 
@@ -388,7 +412,10 @@ class CompositionPage(QWidget):
             if conditions:
                 query += " AND " + " AND ".join(conditions)
 
-            query += " ORDER BY timestamp LIMIT 1000"
+            if self.db.db_type == 'postgres':
+                query += " ORDER BY timestamp LIMIT 1000"
+            else:
+                query += " ORDER BY timestamp"
 
             rows = self.db.fetch_all(query, params)
 

@@ -3,10 +3,11 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QSizePolicy, QPushButton, QComboBox, QMessageBox)
 from PySide6.QtCore import Qt
 from pathlib import Path
+from database.db import Database
 
 
 class ModelsPage(QWidget):
-    def __init__(self, db):
+    def __init__(self, db: Database):
         super().__init__()
         self.db = db
         self.original_data = {}
@@ -141,21 +142,37 @@ class ModelsPage(QWidget):
     def load_cuv_data(self, cuv_number, table_widget):
         """Загрузка данных для конкретной кюветы"""
         try:
-            query = """
-                SELECT 
-                    c.ac_nmb, 
-                    c.pr_nmb, 
-                    p.mdl_nmb, 
-                    p.mdl_desc, 
-                    c.cuv_nmb
-                FROM cfg01 c
-                JOIN pr_set p ON c.pr_nmb = p.pr_nmb 
-                WHERE c.cuv_nmb = ? 
-                    AND p.active_model = 1
-                    AND p.el_nmb = 1
-                ORDER BY c.pr_nmb
-                LIMIT 4
-            """
+            if self.db.db_type == 'postgres':
+                query = """
+                    SELECT 
+                        c.ac_nmb, 
+                        c.pr_nmb, 
+                        p.mdl_nmb, 
+                        p.mdl_desc, 
+                        c.cuv_nmb
+                    FROM cfg01 c
+                    JOIN pr_set p ON c.pr_nmb = p.pr_nmb 
+                    WHERE c.cuv_nmb = ? 
+                        AND p.active_model = 1
+                        AND p.el_nmb = 1
+                    ORDER BY c.pr_nmb
+                    LIMIT 4
+                """
+            else:
+                query = """
+                    SELECT TOP (4)
+                        c.ac_nmb, 
+                        c.pr_nmb, 
+                        p.mdl_nmb, 
+                        p.mdl_desc, 
+                        c.cuv_nmb
+                    FROM cfg01 c
+                    JOIN pr_set p ON c.pr_nmb = p.pr_nmb 
+                    WHERE c.cuv_nmb = ? 
+                        AND p.active_model = 1
+                        AND p.el_nmb = 1
+                    ORDER BY c.pr_nmb 
+                """
 
             params = (cuv_number,)
             rows = self.db.fetch_all(query, params)
