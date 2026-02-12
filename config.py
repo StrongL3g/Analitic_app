@@ -19,12 +19,12 @@ def load_app_config():
             default_config = {
                 # Переносим все настройки в config.json
                 "DB_TYPE": "postgres",
-                "DB_HOST": "192.168.222.34",
-                "DB_PORT": "5432",
-                "DB_NAME": "AMMKASAKDB01",
-                "DB_USER": "lastadmin",
-                "DB_PASSWORD": "Dwd#RX9R",
-                "DB_SERVER": "192.168.222.167\\CPA02_EXPRESS",
+                "DB_HOST": "ip",
+                "DB_PORT": "port", # postgres - 5432 \ mssql - 1433
+                "DB_NAME": "name",
+                "DB_USER": "user",
+                "DB_PASSWORD": "password",
+                "DB_SERVER": "server", 
                 "DB_DRIVER": "ODBC Driver 18 for SQL Server",
                 "PR_COUNT": 8,
                 "AC_COUNT": 1
