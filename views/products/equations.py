@@ -1076,9 +1076,12 @@ class EquationsPage(QWidget):
                         ]
                 else:
                     # ВСЁ (all) - тип + коэффициенты + критерии
+                    #base_fields = """
+                    #meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
+                    #e_operator = ?, c_min = ?, c_max = ?,
+                    #"""
                     base_fields = """
-                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
-                    e_operator = ?, c_min = ?, c_max = ?,
+                         meas_type = ?, c_min = ?, c_max = ?,
                     """
 
                     if meas_type == 0:  # РЕГРЕССИЯ
@@ -1093,8 +1096,8 @@ class EquationsPage(QWidget):
                         """
                         base_params = [
                             update_data['meas_type'],
-                            update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                            update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                            #update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                            #update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
                             update_data['c_min'], update_data['c_max'],
                             update_data['k_i_klin00'], update_data['k_i_klin01'],
                             update_data['k_i_alin00'],
@@ -1121,8 +1124,8 @@ class EquationsPage(QWidget):
                         """
                         base_params = [
                             update_data['meas_type'],
-                            update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                            update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
+                            #update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
+                            #update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
                             update_data['c_min'], update_data['c_max'],
                             update_data['k_c_klin00'], update_data['k_c_klin01'],
                             update_data['k_c_alin00'],
@@ -1250,6 +1253,37 @@ class EquationsPage(QWidget):
 
                 # Выполняем загрузку в базу
                 self.db.execute(query, params)
+
+                # Считываем общие критерии
+                water_crit = self._safe_float_convert(self.water_crit_edit.text(), "Критерий Вода")
+                empty_crit = self._safe_float_convert(self.empty_crit_edit.text(), "Критерий Пусто")
+                w_sq_nmb = self.w_element_combo.itemData(self.w_element_combo.currentIndex())
+                e_sq_nmb = self.e_element_combo.itemData(self.e_element_combo.currentIndex())
+                w_operator = self.w_operator_combo.itemData(self.w_operator_combo.currentIndex())
+                e_operator = self.e_operator_combo.itemData(self.e_operator_combo.currentIndex())
+
+                # Запрос для массового обновления критериев в рамках одной модели
+                criteria_query = """
+                        UPDATE pr_set 
+                        SET water_crit = ?, w_sq_nmb = ?, w_operator = ?, 
+                            empty_crit = ?, e_sq_nmb = ?, e_operator = ?
+                        WHERE pr_nmb = ? AND mdl_nmb = ?
+                        """
+
+                is_mass_save = product_numbers is not None and model_numbers is not None
+
+                if not is_mass_save:
+
+                    # Б. Обновляем критерии для ВСЕХ элементов текущей модели
+                    pr_nmb = self.product_combo.currentIndex() + 1
+                    mdl_nmb = self.model_combo.currentIndex() + 1
+
+                    self.db.execute(criteria_query, [
+                        water_crit, w_sq_nmb, w_operator,
+                        empty_crit, e_sq_nmb, e_operator,
+                        pr_nmb, mdl_nmb
+                    ])
+
 
                 # Сохраняем границы интенсивности
                 self.save_intensity_data()
