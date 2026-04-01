@@ -10,11 +10,11 @@ from PySide6.QtCore import Qt#, QCoreApplication
 from config import DB_CONFIG
 
 # Импортируем Alarm manager и перечень аварий
-from services.alarm_manager import AlarmManager
-from plc.alarms_list import alarms
+#from services.alarm_manager import AlarmManager
+#from plc.alarms_list import alarms
 
 #Импортируем класс подключения к OPC UA
-from plc.connection import OPCUAWorker
+#from plc.connection import OPCUAWorker
 
 
 # Настройки масштабирования для HighDPI
