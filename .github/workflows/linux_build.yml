@@ -9,7 +9,6 @@ on:
 
 jobs:
   build-linux:
-    # 20.04 — это ключ к успеху для Astra. Она стабильнее, чем контейнеры.
     runs-on: ubuntu-20.04
 
     steps:
