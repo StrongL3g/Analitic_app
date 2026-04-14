@@ -9,22 +9,26 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest  # Используем быстрый современный сервер
+    runs-on: ubuntu-latest
 
-    # Запускаем сборку внутри контейнера со старым GLIBC (совместимость с Astra)
     container:
-      image: python:3.11-slim-buster
+      # Используем Bullseye (Debian 11) - он стабилен и актуален для Astra
+      image: python:3.11-slim-bullseye
 
     steps:
     - name: Install system dependencies
       run: |
         apt-get update
-        # Устанавливаем инструменты для компиляции и сборки
         apt-get install -y --no-install-recommends \
           binutils \
           gcc \
           libc6-dev \
-          && rm -rf /var/lib/apt/lists/*
+          git \
+        && rm -rf /var/lib/apt/lists/*
+
+    - name: Fix git safe directory
+      run: |
+        git config --global --add safe.directory '*'
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -37,8 +41,7 @@ jobs:
 
     - name: Build Linux Executable
       run: |
-        # ВНИМАНИЕ: Проверь, что твой главный файл называется main.py
-        # Если нет — замени main.py на нужное имя ниже
+        # Убедись, что файл называется main.py
         pyinstaller --onefile --name AnaliticApp-Astra main.py
 
     - name: Upload Linux Binary
