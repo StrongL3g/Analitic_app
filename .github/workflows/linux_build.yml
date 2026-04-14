@@ -9,18 +9,27 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest  # Используем быстрый современный сервер
+
+    # Запускаем сборку внутри контейнера со старым GLIBC (совместимость с Astra)
+    container:
+      image: python:3.11-slim-buster
 
     steps:
+    - name: Install system dependencies
+      run: |
+        apt-get update
+        # Устанавливаем инструменты для компиляции и сборки
+        apt-get install -y --no-install-recommends \
+          binutils \
+          gcc \
+          libc6-dev \
+          && rm -rf /var/lib/apt/lists/*
+
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install dependencies
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -28,13 +37,13 @@ jobs:
 
     - name: Build Linux Executable
       run: |
-        # Флаг --onefile соберет всё в один файл (как exe, только для Linux)
-        # Флаг --name задаст имя готовому файлу
-        pyinstaller --onefile --name AnaliticApp-Linux main.py
+        # ВНИМАНИЕ: Проверь, что твой главный файл называется main.py
+        # Если нет — замени main.py на нужное имя ниже
+        pyinstaller --onefile --name AnaliticApp-Astra main.py
 
     - name: Upload Linux Binary
       uses: actions/upload-artifact@v4
       with:
-        name: AnaliticApp-Linux-Build
-        path: dist/AnaliticApp-Linux
+        name: AnaliticApp-Astra-Build
+        path: dist/AnaliticApp-Astra
         retention-days: 30
