@@ -3,79 +3,46 @@ name: Build Linux Application
 
 
 on:
-
   push:
-
     tags: ['v*']
-
   workflow_dispatch:
-
   pull_request:
-
     branches: [ main, master ]
 
-
-
 jobs:
-
   build-linux:
-
     runs-on: ubuntu-latest
 
-
-
     steps:
-
     - name: Checkout code
-
       uses: actions/checkout@v4
 
-
-
     - name: Set up Python 3.11
-
       uses: actions/setup-python@v4
 
       with:
-
         python-version: '3.11'
 
 
 
     - name: Install dependencies
-
       run: |
 
         python -m pip install --upgrade pip
-
         pip install -r requirements.txt
-
         pip install pyinstaller
 
 
 
     - name: Build Linux Executable
-
       run: |
-
-        # Замени 'main.py' на имя твоего главного файла
-
-        # Флаг --onefile соберет всё в один файл (как exe, только для Linux)
-
-        # Флаг --name задаст имя готовому файлу
-
         pyinstaller --onefile --name AnaliticApp-Linux main.py
 
 
 
     - name: Upload Linux Binary
-
       uses: actions/upload-artifact@v4
-
       with:
-
         name: AnaliticApp-Linux-Build
-
         path: dist/AnaliticApp-Linux
-
         retention-days: 30
