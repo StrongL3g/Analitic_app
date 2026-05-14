@@ -1,4 +1,4 @@
-# main3.py
+# main.py
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem,
@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt#, QCoreApplication
 
 # Импортируем конфиг БД
-from config import DB_CONFIG
+from config import DB_CONFIG, refresh_app_settings
 
 # Импортируем Alarm manager и перечень аварий
 #from services.alarm_manager import AlarmManager
@@ -45,15 +45,20 @@ from views.settings import SettingsPage
 from views.users import UsersPage
 from views.logs import LogsPage
 #from views.ac.ac import ACPage
-from views.cfg.cfg_01 import Cfg01Page
-from views.cfg.cfg_02 import Cfg02Page
-from views.cfg.cfg_03 import Cfg03Page
+from views.cfg.cfg_main import CfgMainPage
+from views.cfg.cfg_ac import CfgacPage
+from views.cfg.cfg_pr import CfgprPage
+from views.cfg.cfg_sp import CfgspPage
 
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # 1. ОБНОВЛЯЕМ НАСТРОЙКИ ИЗ БД ПЕРЕД СОЗДАНИЕМ ИНТЕРФЕЙСА
+        refresh_app_settings()
+
         self.setWindowTitle("Система анализа спектров")
         self.setMinimumSize(1200, 800)
         #self.resize(1920, 1080)
@@ -108,10 +113,10 @@ class MainWindow(QMainWindow):
         #data_item.addChild(self.create_menu_item("Нормативы", "standards"))
         #data_item.addChild(self.create_menu_item("Отчет", "report"))
 
-        cfg_item = self.create_menu_item("Конфигуратор", "cfg")
-        cfg_item.addChild(self.create_menu_item("Измерения", "cfg_measure"))
-        cfg_item.addChild(self.create_menu_item("Продукты", "cfg_products"))
-        cfg_item.addChild(self.create_menu_item("Отбор", "cfg_samplers"))
+        cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
+        cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))
+        cfg_item.addChild(self.create_menu_item("Продукты", "cfg_pr"))
+        cfg_item.addChild(self.create_menu_item("Пробоотборники", "cfg_sp"))
 
         #ac_item = self.create_menu_item("АК21", "ac")
         #ac_item.addChild(self.create_menu_item("Управление", "ac"))
@@ -154,9 +159,10 @@ class MainWindow(QMainWindow):
             "settings": SettingsPage,
             "users": UsersPage,
             "logs": LogsPage,
-            "cfg_measure": Cfg01Page,
-            "cfg_products": Cfg02Page,
-            "cfg_samplers": Cfg03Page,
+            "cfg_main": CfgMainPage,
+            "cfg_ac": CfgacPage,
+            "cfg_pr": CfgprPage,
+            "cfg_sp": CfgspPage,
             #"ac": ACPage
         }
 
@@ -164,8 +170,8 @@ class MainWindow(QMainWindow):
         self.db_pages = {
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "settings",
-            "equations", "models", "standards", "report", "cfg_measure",
-            "cfg_products", "cfg_samplers", #"ac"
+            "equations", "models", "standards", "report", "cfg_main", "cfg_ac",
+            "cfg_pr", "cfg_sp", #"ac"
         }
 
         # Страницы, требующие проброса Alarm Manager
@@ -198,36 +204,26 @@ class MainWindow(QMainWindow):
         return item
 
     def show_page(self, key):
-        """Показывает страницу (создает при первом обращении, далее использует кэш)"""
         if key not in self.page_classes:
             return
 
-        # Проверяем, есть ли страница в кэше
         if key in self.page_cache:
-            # Если есть - просто показываем
             page = self.page_cache[key]
         else:
-            # Если нет - создаем и сохраняем в кэш
-            # Определяем аргументы для создания страницы
             args = []
-            # Если странице нужна БД — добавляем её в аргументы
             if key in self.db_pages:
                 args.append(self.db)
-            # Если странице нужен ПЛК — добавляем воркер в аргументы
-            #if key in self.plc_pages:
-            #    args.append(self.plc_worker)
-            # 3. Добавляем AlarmManager, если он нужен странице
-            #if hasattr(self, 'alarm_pages') and key in self.alarm_pages:
-            #    args.append(self.alarm_manager)
 
-            # Создаем экземпляр класса с собранными аргументами (*args распакует список)
             page = self.page_classes[key](*args)
-
-            # Сохраняем в кэш и добавляем в виджет
             self.page_cache[key] = page
             self.stacked_widget.addWidget(page)
 
-        # Показываем страницу
+        # --- НОВАЯ ЛОГИКА ---
+        # Если у страницы есть метод refresh, вызываем его перед показом
+        if hasattr(page, 'refresh'):
+            page.refresh()
+        # --------------------
+
         self.stacked_widget.setCurrentWidget(page)
 
     def on_item_clicked(self, item, column):
