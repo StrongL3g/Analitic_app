@@ -112,7 +112,12 @@ class CfgspPage(QWidget):
 
         if reply == QMessageBox.Yes:
             try:
+                # UPDATE зависимости
+                self.db.execute("UPDATE cfg01 SET sp_nmb = 1 WHERE sp_nmb = ?", (sp_nmb,))
+
+                # Удаляем пробоотборник
                 self.db.execute("DELETE FROM cfg04 WHERE sp_nmb = ?", (sp_nmb,))
+
                 self.load_data()
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка", f"Не удалось удалить: {e}")

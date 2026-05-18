@@ -302,11 +302,17 @@ class LinesPage(QWidget):
 
             if reply == QMessageBox.Yes:
                 try:
-                    # Удаляем из БД
+                    # 1. Сначала удаляем зависимости по ln_nmb
+                    self.db.execute("DELETE FROM set07 WHERE ln_nmb = ?", [nmb])
+                    self.db.execute("DELETE FROM set06 WHERE ln_nmb = ?", [nmb])
+                    self.db.execute("DELETE FROM set03 WHERE ln_nmb = ?", [nmb])
+                    self.db.execute("DELETE FROM set02 WHERE ln_nmb = ?", [nmb])
+
+                    # 2. Теперь удаляем саму линию из SET01 (по её внутреннему id)
                     query = f"""
-                    DELETE FROM SET01
-                    WHERE id = ?
-                    """
+                                DELETE FROM SET01
+                                WHERE id = ?
+                                """
                     self.db.execute(query, [row_id_to_delete])
 
                     # Удаляем строку из таблицы
@@ -319,7 +325,8 @@ class LinesPage(QWidget):
                     # Обновляем JSON
                     self.export_to_json()
 
-                    QMessageBox.information(self, "Успех", f"Строка с номером {nmb} удалена из базы данных")
+                    QMessageBox.information(self, "Успех",
+                                            f"Строка с номером {nmb} и все её настройки удалены из базы данных")
 
                 except Exception as e:
                     error_msg = f"Ошибка при удалении строки из БД: {e}"

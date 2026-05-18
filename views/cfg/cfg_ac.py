@@ -133,12 +133,21 @@ class CfgacPage(QWidget):
             return
 
         ac_nmb = self.table.item(row, 0).text()
-        reply = QMessageBox.question(self, 'Подтверждение', f"Удалить прибор №{ac_nmb}?",
+        reply = QMessageBox.question(self, 'Подтверждение', f"Удалить прибор №{ac_nmb} и все связанные с ним данные?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             try:
+                # Сначала удаляем все зависимые записи по внешнему ключу ac_nmb
+                self.db.execute("DELETE FROM cfg01 WHERE ac_nmb = ?", (ac_nmb,))
+                self.db.execute("DELETE FROM set06 WHERE ac_nmb = ?", (ac_nmb,))
+                self.db.execute("DELETE FROM set03 WHERE ac_nmb = ?", (ac_nmb,))
+                self.db.execute("DELETE FROM set02 WHERE ac_nmb = ?", (ac_nmb,))
+                self.db.execute("DELETE FROM set04 WHERE ac_nmb = ?", (ac_nmb,))
+
+                # Теперь безопасно удаляем сам прибор
                 self.db.execute("DELETE FROM cfg00 WHERE ac_nmb = ?", (ac_nmb,))
+
                 self.load_data()
                 refresh_app_settings()
             except Exception as e:

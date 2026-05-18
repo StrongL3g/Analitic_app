@@ -58,6 +58,36 @@ class CfgprPage(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         layout.addWidget(self.table)
 
+    def clone_settings_from_template(self, new_pr_nmb):
+        """
+        Универсально клонирует все настройки из продукта №1 для нового продукта.
+        Автоматически подстраивается под любые колонки в таблицах.
+        """
+        tables_to_clone = ['pr_set', 'el_set', 'set07']
+
+        for table in tables_to_clone:
+            rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE pr_nmb = 1")
+
+            for row in rows:
+                if 'id' in row:
+                    del row['id']
+
+                row['pr_nmb'] = new_pr_nmb
+
+                columns = list(row.keys())
+
+                # --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+                # Оборачиваем каждое название колонки в квадратные скобки: [column_name]
+                escaped_columns = [f"[{col}]" for col in columns]
+
+                placeholders = ", ".join(["?"] * len(columns))
+
+                # Используем escaped_columns вместо columns для имен полей
+                query = f"INSERT INTO {table} ({', '.join(escaped_columns)}) VALUES ({placeholders})"
+                # -------------------------
+
+                self.db.execute(query, list(row.values()))
+
     def load_data(self):
         """Загрузка данных из таблицы cfg02"""
         self.table.setRowCount(0)
@@ -111,21 +141,27 @@ class CfgprPage(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
 
     def add_row(self):
-        """Добавление нового продукта с автоинкрементом ID"""
+        """Добавление нового продукта с копированием настроек из продукта №1"""
         try:
-            # Находим следующий свободный номер
+            # 1. Находим следующий свободный номер
             query = "SELECT MAX(pr_nmb) as max_id FROM cfg02"
             res = self.db.fetch_one(query)
             new_id = (res['max_id'] or 0) + 1
 
-            # Вставляем пустую заготовку
+            # 2. Вставляем сам продукт
             self.db.execute("INSERT INTO cfg02 (pr_nmb, pr_name, pr_desc) VALUES (?, ?, ?)",
-                            (new_id, f"Продукт {new_id}", ""))
+                            (new_id, f"Продукт {new_id}", "Клон продукта №1"))
+
+            # 3. Запускаем нашего клонировщика!
+            self.clone_settings_from_template(new_id)
+
+            # Обновляем интерфейс
             self.load_data()
             refresh_app_settings()
-
-            # Прокручиваем к новой строке
             self.table.scrollToBottom()
+
+            QMessageBox.information(self, "Успех", f"Продукт №{new_id} успешно создан на базе продукта №1!")
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось добавить продукт: {e}")
 
@@ -137,15 +173,31 @@ class CfgprPage(QWidget):
             return
 
         pr_nmb = self.table.item(row, 0).text()
+
+        # --- НОВАЯ ЗАЩИТА ---
+        if str(pr_nmb) == "1":
+            QMessageBox.warning(self, "Запрет", "Продукт №1 является системным шаблоном. Его нельзя удалить!")
+            return
+        # --------------------
+
         pr_name = self.table.item(row, 1).text()
 
         reply = QMessageBox.question(self, 'Подтверждение',
-                                     f"Удалить продукт №{pr_nmb} ({pr_name})?",
+                                     f"Удалить продукт №{pr_nmb} ({pr_name}) и все связанные с ним настройки?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             try:
+                # Удаляем зависимости
+                # Сбрасываем продукт на 1-й (дефолтный), чтобы не ломать циклограмму прибора
+                self.db.execute("UPDATE cfg01 SET pr_nmb = 1 WHERE pr_nmb = ?", (pr_nmb,))
+                self.db.execute("DELETE FROM el_set WHERE pr_nmb = ?", (pr_nmb,))
+                self.db.execute("DELETE FROM set07 WHERE pr_nmb = ?", (pr_nmb,))
+                self.db.execute("DELETE FROM pr_set WHERE pr_nmb = ?", (pr_nmb,))
+
+                # Удаляем сам продукт
                 self.db.execute("DELETE FROM cfg02 WHERE pr_nmb = ?", (pr_nmb,))
+
                 self.load_data()
                 refresh_app_settings()
             except Exception as e:
