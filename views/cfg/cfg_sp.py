@@ -107,12 +107,19 @@ class CfgspPage(QWidget):
         if row < 0: return
 
         sp_nmb = self.table.item(row, 0).text()
+
+        # --- ЗАЩИТА ШАБЛОНА ---
+        if str(sp_nmb) == "1":
+            QMessageBox.warning(self, "Запрет", "Пробоотборник №1 является системным шаблоном. Его нельзя удалить!")
+            return
+        # ----------------------
+
         reply = QMessageBox.question(self, 'Подтверждение', f"Удалить пробоотборник №{sp_nmb}?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             try:
-                # UPDATE зависимости
+                # Сбрасываем пробоотборник на дефолтный в измерениях (мы это уже делали)
                 self.db.execute("UPDATE cfg01 SET sp_nmb = 1 WHERE sp_nmb = ?", (sp_nmb,))
 
                 # Удаляем пробоотборник

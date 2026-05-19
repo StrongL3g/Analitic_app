@@ -57,6 +57,32 @@ class CfgacPage(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         layout.addWidget(self.table)
 
+    def clone_settings_from_template(self, new_ac_nmb):
+        """
+        Универсально клонирует все настройки из прибора №1 для нового прибора.
+        Автоматически подстраивается под любые колонки в таблицах.
+        """
+        # Таблицы, зависящие от прибора (ac_nmb)
+        tables_to_clone = ['set04', 'set02', 'set03', 'set06', 'cfg01']
+
+        for table in tables_to_clone:
+            rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE ac_nmb = 1")
+
+            for row in rows:
+                if 'id' in row:
+                    del row['id']
+
+                # Подменяем номер прибора на новый
+                row['ac_nmb'] = new_ac_nmb
+
+                columns = list(row.keys())
+                # Экранируем названия колонок для MSSQL
+                escaped_columns = [f"[{col}]" for col in columns]
+                placeholders = ", ".join(["?"] * len(columns))
+
+                query = f"INSERT INTO {table} ({', '.join(escaped_columns)}) VALUES ({placeholders})"
+                self.db.execute(query, list(row.values()))
+
     def load_data(self):
         self.table.setRowCount(0)
         try:
@@ -102,29 +128,64 @@ class CfgacPage(QWidget):
 
                 # Обработка пустого ввода для номера измерения
                 meas_text = self.table.item(i, 3).text().strip()
-                meas_nmb = int(meas_text) if meas_text.isdigit() else 1
+                new_meas_nmb = int(meas_text) if meas_text.isdigit() else 1
 
+                # 1. Обновляем основные данные прибора в cfg00
                 query = "UPDATE cfg00 SET ac_name = ?, ac_desc = ?, meas_nmb = ? WHERE ac_nmb = ?"
-                self.db.execute(query, (ac_name, ac_desc, meas_nmb, ac_nmb))
+                self.db.execute(query, (ac_name, ac_desc, new_meas_nmb, ac_nmb))
 
-            QMessageBox.information(self, "Успех", "Данные приборов успешно сохранены!")
+                # 2. СИНХРОНИЗАЦИЯ ТАБЛИЦЫ ИЗМЕРЕНИЙ (cfg01)
+                # Если количество уменьшилось, удаляем лишние строки, превышающие новый лимит
+                self.db.execute("DELETE FROM cfg01 WHERE ac_nmb = ? AND meas_nmb > ?", (ac_nmb, new_meas_nmb))
+
+                # Проверяем текущее максимальное измерение в базе для этого прибора
+                res = self.db.fetch_one("SELECT MAX(meas_nmb) as max_meas FROM cfg01 WHERE ac_nmb = ?", (ac_nmb,))
+                current_max = res['max_meas'] if res and res['max_meas'] is not None else 0
+
+                # Если количество увеличилось, генерируем недостающие строки на базе дефолтных значений
+                if new_meas_nmb > current_max:
+                    for meas_idx in range(current_max + 1, new_meas_nmb + 1):
+                        # Чередуем кюветы: нечетные - 1, четные - 2
+                        cuv_nmb = 1 if meas_idx % 2 != 0 else 2
+
+                        insert_query = """
+                        INSERT INTO cfg01 (meas_nmb, cuv_nmb, pr_nmb, sp_nmb, ac_nmb) 
+                        VALUES (?, ?, ?, ?, ?)
+                        """
+                        # В качестве продукта и пробоотборника ставим шаблонные значения (1)
+                        self.db.execute(insert_query, (meas_idx, cuv_nmb, 1, 1, ac_nmb))
+
+            QMessageBox.information(self, "Успех", "Данные приборов и циклограммы измерений успешно синхронизированы!")
             refresh_app_settings()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить: {e}")
 
     def add_row(self):
+        """Добавление нового прибора с автогенерацией всех настроек из шаблона №1"""
         try:
             # Ищем максимальный номер
             query = "SELECT MAX(ac_nmb) as max_id FROM cfg00"
             res = self.db.fetch_one(query)
             new_id = (res['max_id'] or 0) + 1
 
+            # Узнаем, сколько измерений у прибора-шаблона, чтобы записать правильную цифру
+            template_ac = self.db.fetch_one("SELECT meas_nmb FROM cfg00 WHERE ac_nmb = 1")
+            template_meas_nmb = template_ac['meas_nmb'] if template_ac else 1
+
+            # Добавляем прибор
             self.db.execute("INSERT INTO cfg00 (ac_nmb, ac_name, ac_desc, meas_nmb) VALUES (?, ?, ?, ?)",
-                            (new_id, f"Прибор {new_id}", "", 1))
+                            (new_id, f"Прибор {new_id}", "Клон прибора №1", template_meas_nmb))
+
+            # Запускаем клонирование зависимостей
+            self.clone_settings_from_template(new_id)
+
             self.load_data()
             refresh_app_settings()
+            self.table.scrollToBottom()
+
+            QMessageBox.information(self, "Успех", f"Прибор №{new_id} и все его настройки успешно созданы!")
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось добавить строку: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось добавить прибор: {e}")
 
     def delete_row(self):
         row = self.table.currentRow()
@@ -133,22 +194,30 @@ class CfgacPage(QWidget):
             return
 
         ac_nmb = self.table.item(row, 0).text()
+
+        # --- ЗАЩИТА ШАБЛОНА ---
+        if str(ac_nmb) == "1":
+            QMessageBox.warning(self, "Запрет", "Прибор №1 является системным шаблоном. Его нельзя удалить!")
+            return
+        # ----------------------
+
         reply = QMessageBox.question(self, 'Подтверждение', f"Удалить прибор №{ac_nmb} и все связанные с ним данные?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             try:
-                # Сначала удаляем все зависимые записи по внешнему ключу ac_nmb
+                # 1. Сначала удаляем все зависимые записи по внешнему ключу ac_nmb
                 self.db.execute("DELETE FROM cfg01 WHERE ac_nmb = ?", (ac_nmb,))
                 self.db.execute("DELETE FROM set06 WHERE ac_nmb = ?", (ac_nmb,))
                 self.db.execute("DELETE FROM set03 WHERE ac_nmb = ?", (ac_nmb,))
                 self.db.execute("DELETE FROM set02 WHERE ac_nmb = ?", (ac_nmb,))
                 self.db.execute("DELETE FROM set04 WHERE ac_nmb = ?", (ac_nmb,))
 
-                # Теперь безопасно удаляем сам прибор
+                # 2. Теперь безопасно удаляем сам прибор
                 self.db.execute("DELETE FROM cfg00 WHERE ac_nmb = ?", (ac_nmb,))
 
                 self.load_data()
                 refresh_app_settings()
+                QMessageBox.information(self, "Успех", f"Прибор №{ac_nmb} успешно удален.")
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка", f"Не удалось удалить: {e}")

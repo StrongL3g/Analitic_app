@@ -63,7 +63,7 @@ class CfgprPage(QWidget):
         Универсально клонирует все настройки из продукта №1 для нового продукта.
         Автоматически подстраивается под любые колонки в таблицах.
         """
-        tables_to_clone = ['pr_set', 'el_set', 'set07']
+        tables_to_clone = ['pr_set', 'el_set', 'set07', 'mdl_set']
 
         for table in tables_to_clone:
             rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE pr_nmb = 1")
@@ -194,6 +194,7 @@ class CfgprPage(QWidget):
                 self.db.execute("DELETE FROM el_set WHERE pr_nmb = ?", (pr_nmb,))
                 self.db.execute("DELETE FROM set07 WHERE pr_nmb = ?", (pr_nmb,))
                 self.db.execute("DELETE FROM pr_set WHERE pr_nmb = ?", (pr_nmb,))
+                self.db.execute("DELETE FROM mdl_set WHERE pr_nmb = ?", (pr_nmb,))
 
                 # Удаляем сам продукт
                 self.db.execute("DELETE FROM cfg02 WHERE pr_nmb = ?", (pr_nmb,))

@@ -73,6 +73,30 @@ class LinesPage(QWidget):
         self.setLayout(layout)
         self.load_data()
 
+    def clone_settings_from_template(self, new_ln_nmb):
+        """
+        Универсально клонирует все настройки из линии №1 для новой линии.
+        """
+        # Таблицы, зависящие от линии (ln_nmb)
+        tables_to_clone = ['set02', 'set03', 'set06', 'set07']
+
+        for table in tables_to_clone:
+            rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE ln_nmb = 1")
+
+            for row in rows:
+                if 'id' in row:
+                    del row['id']
+
+                # Подменяем номер линии
+                row['ln_nmb'] = new_ln_nmb
+
+                columns = list(row.keys())
+                escaped_columns = [f"[{col}]" for col in columns]
+                placeholders = ", ".join(["?"] * len(columns))
+
+                query = f"INSERT INTO {table} ({', '.join(escaped_columns)}) VALUES ({placeholders})"
+                self.db.execute(query, list(row.values()))
+
     def load_data(self):
         """Загружает спектральные линии из SET01"""
         # Используем имя базы из объекта db и сортируем по ln_nmb
@@ -217,33 +241,32 @@ class LinesPage(QWidget):
             QMessageBox.critical(self, "Ошибка", error_msg)
 
     def add_row(self):
-        """Добавляет новую строку в таблицу и в БД"""
+        """Добавляет новую строку в таблицу, БД и генерирует настройки-шаблоны"""
         try:
-            # Запрашиваем номер новой линии
             nmb, ok = QInputDialog.getInt(self, "Добавить строку", "Введите номер линии:", 1, 1, 9999, 1)
             if not ok:
                 return
 
-            # Проверяем, не существует ли уже такая строка
             for row in range(self.table.rowCount()):
                 item_nmb = self.table.item(row, 0)
                 if item_nmb and int(item_nmb.text()) == nmb:
                     QMessageBox.warning(self, "Ошибка", f"Строка с номером {nmb} уже существует!")
                     return
 
-            # Добавляем новую строку в БД
             try:
-                query = f"""
+                # 1. Создаем саму линию в SET01
+                query = """
                 INSERT INTO SET01
                 (ln_nmb, ln_name, ln_en, ln_desc, ln_nc, ln_back)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """
-                self.db.execute(query, [nmb, "", 0.0, "", 0, 0])
+                self.db.execute(query, [nmb, f"Линия {nmb}", 0.0, "Клон линии №1", 0, 0])
 
-                # После вставки перезагружаем данные, чтобы получить правильный ID
+                # 2. ЗАПУСКАЕМ КЛОНИРОВАНИЕ ЗАВИСИМОСТЕЙ
+                self.clone_settings_from_template(nmb)
+
                 self.load_data()
-
-                QMessageBox.information(self, "Успех", f"Добавлена новая строка с номером {nmb}")
+                QMessageBox.information(self, "Успех", f"Добавлена новая линия №{nmb} и сгенерированы её шаблоны!")
 
             except Exception as e:
                 error_msg = f"Ошибка при добавлении строки в БД: {e}"
@@ -275,6 +298,11 @@ class LinesPage(QWidget):
                 return
 
             nmb = int(nmb_text)
+
+            # --- ЗАЩИТА ШАБЛОНА ---
+            if nmb == 1:
+                QMessageBox.warning(self, "Запрет", "Линию №1 (системный шаблон) нельзя удалить!")
+                return
 
             # Проверяем, существует ли эта строка в БД (в original_data)
             row_id_to_delete = None
