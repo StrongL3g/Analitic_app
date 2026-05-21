@@ -23,6 +23,7 @@ from config import DB_CONFIG, refresh_app_settings
 #QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
 app = QApplication(sys.argv)
+app.setStyle("Fusion")
 
 # --- ИНТЕГРАЦИЯ СТИЛЕЙ ТЕМЫ ---
 from utils.theme_manager import apply_application_theme

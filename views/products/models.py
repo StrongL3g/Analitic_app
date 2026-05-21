@@ -1,8 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QTableWidget, QTableWidgetItem, QHeaderView,
-                               QSizePolicy, QPushButton, QComboBox, QMessageBox)
+                               QPushButton, QComboBox, QMessageBox, QLineEdit)
 from PySide6.QtCore import Qt
-from pathlib import Path
 from database.db import Database
 
 
@@ -10,349 +9,127 @@ class ModelsPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.original_data = {}
-        self.intensity_columns = []
-        self._config_dir = self._get_config_directory()
-        self.show_success_message = False  # Флаг для показа сообщения об успехе
         self.init_ui()
-        self.load_data_from_db(show_message=False)  # Первая загрузка без сообщения
-
-    def _get_config_directory(self) -> Path:
-        """Получает путь к директории конфигурации"""
-        base_dir = Path(__file__).parent
-        config_dir = base_dir.parent.parent / "config"
-        config_dir.mkdir(exist_ok=True)
-        return config_dir
+        self.load_devices()
 
     def init_ui(self):
-        """Инициализация пользовательского интерфейса"""
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
-        self.setLayout(main_layout)
-        self.setMinimumWidth(1200)
-        self.setMinimumHeight(400)
+        layout = QVBoxLayout(self)
 
-        # Кнопки управления
-        buttons_layout = QHBoxLayout()
-        self.refresh_btn = QPushButton("Обновить")
-        self.save_btn = QPushButton("Сохранить")
+        # Панель выбора прибора
+        ctrl_layout = QHBoxLayout()
+        self.ac_combo = QComboBox()
+        self.ac_combo.currentIndexChanged.connect(self.load_data)
+        ctrl_layout.addWidget(QLabel("Прибор:"))
+        ctrl_layout.addWidget(self.ac_combo)
+        ctrl_layout.addStretch()
 
-        buttons_layout.addWidget(self.refresh_btn)
-        buttons_layout.addWidget(self.save_btn)
-        buttons_layout.addStretch()
-
-        main_layout.addLayout(buttons_layout)
-
-        # Создаем контейнер для двух таблиц
-        tables_container = QWidget()
-        tables_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        tables_layout = QHBoxLayout(tables_container)
-        tables_layout.setContentsMargins(0, 0, 0, 0)
-        tables_layout.setSpacing(20)
-        main_layout.addWidget(tables_container)
-
-        # Таблица для кюветы 1
-        cuv1_widget = QWidget()
-        cuv1_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cuv1_layout = QVBoxLayout(cuv1_widget)
-        cuv1_layout.setContentsMargins(0, 0, 0, 0)
-        cuv1_layout.setSpacing(5)
-        cuv1_layout.setAlignment(Qt.AlignTop)
-
-        cuv1_title = QLabel("Выбор активной модели кювета 1")
-        cuv1_title.setStyleSheet("font-size: 14px; font-weight: bold;")
-        cuv1_title.setAlignment(Qt.AlignCenter)
-        cuv1_layout.addWidget(cuv1_title)
-
-        self.table_cuv1 = QTableWidget()
-        self.table_cuv1.setColumnCount(4)
-        self.table_cuv1.setHorizontalHeaderLabels(["Прибор №", "Продукт №", "Модель №", "Описание"])
-        self.table_cuv1.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table_cuv1.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.table_cuv1.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.table_cuv1.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
-        self.table_cuv1.verticalHeader().setVisible(False)
-        self.table_cuv1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cuv1_layout.addWidget(self.table_cuv1)
-        tables_layout.addWidget(cuv1_widget)
-
-        # Таблица для кюветы 2
-        cuv2_widget = QWidget()
-        cuv2_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cuv2_layout = QVBoxLayout(cuv2_widget)
-        cuv2_layout.setContentsMargins(0, 0, 0, 0)
-        cuv2_layout.setSpacing(5)
-        cuv2_layout.setAlignment(Qt.AlignTop)
-
-        cuv2_title = QLabel("Выбор активной модели кювета 2")
-        cuv2_title.setStyleSheet("font-size: 14px; font-weight: bold;")
-        cuv2_title.setAlignment(Qt.AlignCenter)
-        cuv2_layout.addWidget(cuv2_title)
-
-        self.table_cuv2 = QTableWidget()
-        self.table_cuv2.setColumnCount(4)
-        self.table_cuv2.setHorizontalHeaderLabels(["Прибор №", "Продукт №", "Модель №", "Описание"])
-        self.table_cuv2.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table_cuv2.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.table_cuv2.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.table_cuv2.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
-        self.table_cuv2.verticalHeader().setVisible(False)
-        self.table_cuv2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cuv2_layout.addWidget(self.table_cuv2)
-        tables_layout.addWidget(cuv2_widget)
-
-        # Устанавливаем равное соотношение для двух таблиц
-        tables_layout.setStretchFactor(cuv1_widget, 1)
-        tables_layout.setStretchFactor(cuv2_widget, 1)
-
-        # Добавляем растягивающийся элемент внизу, чтобы все осталось вверху
-        main_layout.addStretch()
-
-        # Подключаем кнопки
-        self.refresh_btn.clicked.connect(self.refresh_data)
+        self.save_btn = QPushButton("Сохранить изменения")
         self.save_btn.clicked.connect(self.save_data)
+        ctrl_layout.addWidget(self.save_btn)
+        layout.addLayout(ctrl_layout)
 
-    def showEvent(self, event):
-        """Обработчик события показа страницы - загружаем данные"""
-        super().showEvent(event)
-        self.load_data_from_db(show_message=False)  # При открытии страницы - без сообщения
+        # Основная таблица
+        self.table = QTableWidget()
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels([
+            "Продукт", "Модель К1", "Описание К1", " ", "Продукт", "Модель К2", "Описание К2"
+        ])
 
-    def refresh_data(self):
-        """Обновление данных по кнопке"""
-        self.load_data_from_db(show_message=True)  # По кнопке - с сообщением
+        # 1. Настройка колонок:
+        # Продукты (0 и 4) и Модели (1 и 5) — под контент
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
 
-    def load_data_from_db(self, show_message=False):
-        """Загрузка данных из базы данных"""
-        try:
-            # Загрузка данных для кюветы 1
-            self.load_cuv_data(1, self.table_cuv1)
+        # Разделитель (3) — фиксированный
+        self.table.setColumnWidth(3, 20)
 
-            # Загрузка данных для кюветы 2
-            self.load_cuv_data(2, self.table_cuv2)
+        # 2. Описание К1 (2) и Описание К2 (6) — увеличиваем и растягиваем
+        # Устанавливаем базовую ширину 250px (увеличенная в 2.5 раза от стандартных 100)
+        self.table.setColumnWidth(2, 250)
+        self.table.setColumnWidth(6, 250)
 
-            if show_message or self.show_success_message:
-                QMessageBox.information(self, "Успех", "Данные успешно обновлены!")
-                self.show_success_message = False  # Сбрасываем флаг после показа
+        # Разрешаем этим колонкам растягиваться, если окно расширят
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(6, QHeaderView.Stretch)
 
-        except Exception as e:
-            print(f"Ошибка при загрузке данных из БД: {e}")
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при загрузке данных: {e}")
+        layout.addWidget(self.table)
 
-    def load_cuv_data(self, cuv_number, table_widget):
-        """Загрузка данных для конкретной кюветы"""
-        try:
-            if self.db.db_type == 'postgres':
-                query = """
-                    SELECT 
-                        c.ac_nmb, 
-                        c.pr_nmb, 
-                        p.mdl_nmb, 
-                        p.mdl_desc, 
-                        c.cuv_nmb
-                    FROM cfg01 c
-                    JOIN pr_set p ON c.pr_nmb = p.pr_nmb 
-                    WHERE c.cuv_nmb = ? 
-                        AND p.active_model = 1
-                        AND p.el_nmb = 1
-                    ORDER BY c.pr_nmb
-                    LIMIT 4
-                """
-            else:
-                query = """
-                    SELECT TOP (4)
-                        c.ac_nmb, 
-                        c.pr_nmb, 
-                        p.mdl_nmb, 
-                        p.mdl_desc, 
-                        c.cuv_nmb
-                    FROM cfg01 c
-                    JOIN pr_set p ON c.pr_nmb = p.pr_nmb 
-                    WHERE c.cuv_nmb = ? 
-                        AND p.active_model = 1
-                        AND p.el_nmb = 1
-                    ORDER BY c.pr_nmb 
-                """
+    def load_devices(self):
+        ac_list = self.db.fetch_all("SELECT ac_nmb FROM cfg00 ORDER BY ac_nmb")
+        for row in ac_list:
+            self.ac_combo.addItem(f"Прибор {row['ac_nmb']}", row['ac_nmb'])
 
-            params = (cuv_number,)
-            rows = self.db.fetch_all(query, params)
-            print(f"Запрос для кюветы {cuv_number}: найдено {len(rows)} строк")
+    def load_data(self):
+        ac_nmb = self.ac_combo.currentData()
+        if not ac_nmb: return
 
-            # Сохраняем оригинальные данные для сравнения при сохранении
-            self.original_data[cuv_number] = []
+        # Получаем данные: 6 пар (К1 и К2)
+        items = self.db.fetch_all("""
+            SELECT c.pr_nmb, c.cuv_nmb, m.mdl_nmb, m.mdl_desc, m.id 
+            FROM cfg01 c
+            JOIN mdl_set m ON c.pr_nmb = m.pr_nmb AND m.active_model = 1
+            WHERE c.ac_nmb = ?
+            ORDER BY c.cuv_nmb, c.pr_nmb
+        """, [ac_nmb])
 
-            # Всегда устанавливаем 4 строки
-            table_widget.setRowCount(4)
+        if len(items) < 12:
+            return
 
-            for i in range(4):
-                if i < len(rows):
-                    row = rows[i]
+        self.table.setRowCount(6)
+        for i in range(6):
+            k1_row = items[i]
+            k2_row = items[i + 6]
 
-                    # Сохраняем оригинальные данные
-                    original_row = {
-                        'ac_nmb': row['ac_nmb'],
-                        'pr_nmb': row['pr_nmb'],
-                        'mdl_nmb': row['mdl_nmb'],
-                        'mdl_desc': row['mdl_desc'],
-                        'cuv_nmb': row['cuv_nmb']
-                    }
-                    self.original_data[cuv_number].append(original_row)
+            # К1 (левая часть)
+            self.table.setItem(i, 0, QTableWidgetItem(f"Прод. {k1_row['pr_nmb']}"))
+            self._fill_row_data(i, 1, k1_row)
 
-                    # Прибор № и Продукт № - только для чтения
-                    item_ac = QTableWidgetItem(str(row['ac_nmb']))
-                    item_ac.setFlags(item_ac.flags() & ~Qt.ItemIsEditable)
-                    table_widget.setItem(i, 0, item_ac)
+            # К2 (правая часть)
+            self.table.setItem(i, 4, QTableWidgetItem(f"Прод. {k2_row['pr_nmb']}"))
+            self._fill_row_data(i, 5, k2_row)
 
-                    item_pr = QTableWidgetItem(str(row['pr_nmb']))
-                    item_pr.setFlags(item_pr.flags() & ~Qt.ItemIsEditable)
-                    table_widget.setItem(i, 1, item_pr)
+    def _fill_row_data(self, row_idx, col_start, data):
+        combo = QComboBox()
+        combo.addItems(["1", "2", "3"])
+        combo.setCurrentText(str(data['mdl_nmb']))
+        combo.setProperty("row_id", data['id'])
+        combo.currentTextChanged.connect(lambda text, r=row_idx, c=col_start: self.on_model_changed(text, r, c))
+        self.table.setCellWidget(row_idx, col_start, combo)
 
-                    # Модель № - комбобокс с выбором
-                    combo_mdl = QComboBox()
-                    combo_mdl.addItems(["1", "2", "3"])  # Доступные модели
-                    combo_mdl.setCurrentText(str(row['mdl_nmb']))
-                    table_widget.setCellWidget(i, 2, combo_mdl)
+        desc = QLineEdit(data['mdl_desc'] or "")
+        self.table.setCellWidget(row_idx, col_start + 1, desc)
 
-                    # Описание - редактируемое поле
-                    description = str(row['mdl_desc']) if row['mdl_desc'] else ""
-                    item_desc = QTableWidgetItem(description)
-                    table_widget.setItem(i, 3, item_desc)
+    def on_model_changed(self, text, row, col_idx):
+        col_product = 0 if col_idx == 1 else 4
+        pr_item = self.table.item(row, col_product)
+        if not pr_item: return
 
-                else:
-                    # Заполняем пустые строки прочерками
-                    item_ac = QTableWidgetItem("-")
-                    item_ac.setFlags(item_ac.flags() & ~Qt.ItemIsEditable)
-                    table_widget.setItem(i, 0, item_ac)
+        pr_nmb = int(pr_item.text().replace("Прод. ", ""))
+        new_desc = self.db.fetch_one("SELECT mdl_desc FROM mdl_set WHERE pr_nmb = ? AND mdl_nmb = ?",
+                                     [pr_nmb, int(text)])
 
-                    item_pr = QTableWidgetItem("-")
-                    item_pr.setFlags(item_pr.flags() & ~Qt.ItemIsEditable)
-                    table_widget.setItem(i, 1, item_pr)
-
-                    combo_mdl = QComboBox()
-                    combo_mdl.addItems(["1", "2", "3"])
-                    combo_mdl.setCurrentText("-")
-                    combo_mdl.setEnabled(False)
-                    table_widget.setCellWidget(i, 2, combo_mdl)
-
-                    item_desc = QTableWidgetItem("")
-                    item_desc.setFlags(item_desc.flags() & ~Qt.ItemIsEditable)
-                    table_widget.setItem(i, 3, item_desc)
-
-                    self.original_data[cuv_number].append(None)
-
-            # Устанавливаем высоту строк
-            row_height = 40
-            for i in range(4):
-                table_widget.setRowHeight(i, row_height)
-
-            # Устанавливаем фиксированную высоту таблицы
-            header_height = table_widget.horizontalHeader().height()
-            total_height = header_height + (4 * row_height) + 2
-            table_widget.setFixedHeight(total_height)
-
-        except Exception as e:
-            print(f"Ошибка при загрузке данных для кюветы {cuv_number}: {e}")
-            # Все равно создаем 4 пустые строки
-            table_widget.setRowCount(4)
-            for i in range(4):
-                item_ac = QTableWidgetItem("-")
-                item_ac.setFlags(item_ac.flags() & ~Qt.ItemIsEditable)
-                table_widget.setItem(i, 0, item_ac)
-
-                item_pr = QTableWidgetItem("-")
-                item_pr.setFlags(item_pr.flags() & ~Qt.ItemIsEditable)
-                table_widget.setItem(i, 1, item_pr)
-
-                combo_mdl = QComboBox()
-                combo_mdl.addItems(["1", "2", "3"])
-                combo_mdl.setCurrentText("-")
-                combo_mdl.setEnabled(False)
-                table_widget.setCellWidget(i, 2, combo_mdl)
-
-                item_desc = QTableWidgetItem("")
-                item_desc.setFlags(item_desc.flags() & ~Qt.ItemIsEditable)
-                table_widget.setItem(i, 3, item_desc)
-
-            # Устанавливаем фиксированную высоту даже при ошибке
-            row_height = 40
-            header_height = table_widget.horizontalHeader().height()
-            total_height = header_height + (4 * row_height) + 2
-            table_widget.setFixedHeight(total_height)
+        if new_desc:
+            desc_edit = self.table.cellWidget(row, col_idx + 1)
+            if desc_edit: desc_edit.setText(new_desc['mdl_desc'] or "")
 
     def save_data(self):
-        """Сохранение изменений в базе данных"""
         try:
-            changes_made = False
+            for i in range(self.table.rowCount()):
+                for col_idx in [1, 5]:
+                    combo = self.table.cellWidget(i, col_idx)
+                    desc_edit = self.table.cellWidget(i, col_idx + 1)
+                    if combo:
+                        pr_nmb = int(self.table.item(i, 0 if col_idx == 1 else 4).text().replace("Прод. ", ""))
+                        new_mdl = int(combo.currentText())
+                        new_desc = desc_edit.text()
 
-            # Обрабатываем изменения для каждой кюветы
-            for cuv_number, table_widget in [(1, self.table_cuv1), (2, self.table_cuv2)]:
-                if cuv_number not in self.original_data:
-                    continue
-
-                for i in range(4):
-                    original_row = self.original_data[cuv_number][i]
-                    if not original_row:
-                        continue
-
-                    # Получаем текущие значения из таблицы
-                    combo_mdl = table_widget.cellWidget(i, 2)
-                    current_mdl_nmb = int(combo_mdl.currentText()) if combo_mdl and combo_mdl.isEnabled() else \
-                    original_row['mdl_nmb']
-
-                    item_desc = table_widget.item(i, 3)
-                    current_mdl_desc = item_desc.text() if item_desc else original_row['mdl_desc']
-
-                    pr_nmb = original_row['pr_nmb']
-                    original_mdl_nmb = original_row['mdl_nmb']
-                    original_mdl_desc = original_row['mdl_desc']
-
-                    # Проверяем, изменилась ли модель
-                    if current_mdl_nmb != original_mdl_nmb:
-                        changes_made = True
-
-                        # 1. Устанавливаем active_model = 0 для всех моделей этого продукта
-                        query_deactivate = """
-                            UPDATE pr_set 
-                            SET active_model = 0 
-                            WHERE pr_nmb = ?
-                        """
-                        self.db.execute(query_deactivate, (pr_nmb,))
-
-                        # 2. Устанавливаем active_model = 1 для выбранной модели
-                        query_activate = """
-                            UPDATE pr_set 
-                            SET active_model = 1 
-                            WHERE pr_nmb = ? AND mdl_nmb = ?
-                        """
-                        self.db.execute(query_activate, (pr_nmb, current_mdl_nmb))
-
-                        print(
-                            f"Изменена активная модель для продукта {pr_nmb}: {original_mdl_nmb} -> {current_mdl_nmb}")
-
-                    # Проверяем, изменилось ли описание
-                    if current_mdl_desc != original_mdl_desc:
-                        changes_made = True
-
-                        # Обновляем описание для всех строк этой модели
-                        query_desc = """
-                            UPDATE pr_set 
-                            SET mdl_desc = ? 
-                            WHERE pr_nmb = ? AND mdl_nmb = ?
-                        """
-                        self.db.execute(query_desc, (current_mdl_desc, pr_nmb, current_mdl_nmb))
-
-                        print(
-                            f"Изменено описание для продукта {pr_nmb}, модель {current_mdl_nmb}: '{original_mdl_desc}' -> '{current_mdl_desc}'")
-
-            if changes_made:
-                #QMessageBox.information(self, "Успех", "Изменения успешно сохранены в базе данных!")
-                # Устанавливаем флаг для показа сообщения при следующей загрузке
-                self.show_success_message = True
-                # Обновляем данные после сохранения
-                self.load_data_from_db(show_message=False)
-            else:
-                QMessageBox.information(self, "Информация", "Нет изменений для сохранения.")
-
+                        self.db.execute("UPDATE mdl_set SET active_model = 0 WHERE pr_nmb = ?", [pr_nmb])
+                        self.db.execute(
+                            "UPDATE mdl_set SET active_model = 1, mdl_desc = ? WHERE pr_nmb = ? AND mdl_nmb = ?",
+                            [new_desc, pr_nmb, new_mdl])
+            QMessageBox.information(self, "Успех", "Данные сохранены!")
+            self.load_data()
         except Exception as e:
-            print(f"Ошибка при сохранении данных: {e}")
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении данных: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения: {e}")

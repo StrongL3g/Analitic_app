@@ -96,7 +96,7 @@ class EquationsPage(QWidget):
         self.table_widget.setHorizontalHeaderLabels(["Коэффициенты корректировки", "Уравнения расчета концентраций"])
         self.table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table_widget.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table_widget.setAlternatingRowColors(True)
+        #self.table_widget.setAlternatingRowColors(True)
         self.table_widget.setSelectionBehavior(QTableWidget.SelectRows)
 
         # Добавляем разделитель
@@ -148,7 +148,7 @@ class EquationsPage(QWidget):
         self.model_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
         self.apply_to_btn.clicked.connect(self.show_apply_to_dialog)
         self.table_widget.cellClicked.connect(self.on_table_cell_clicked)
-        self.save_btn.clicked.connect(self.save_equation_changes)
+        self.save_btn.clicked.connect(lambda: self.save_equation_changes())
         self.cancel_btn.clicked.connect(self.cancel_editing)
         self.clear_btn.clicked.connect(self.clear_equation)
         self.regression_radio.toggled.connect(self.on_measurement_type_changed)
@@ -454,7 +454,7 @@ class EquationsPage(QWidget):
         self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.intensity_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
-        self.intensity_table.setAlternatingRowColors(True)
+        #self.intensity_table.setAlternatingRowColors(True)
         self.intensity_table.setRowCount(20)  # 20 линий
 
         container_layout.addWidget(self.intensity_table)
@@ -901,73 +901,92 @@ class EquationsPage(QWidget):
                 return
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
+    def _get_params_from_ui(self):
+        """Собирает все текущие данные из полей ввода в список"""
+        meas_type = 0 if self.regression_radio.isChecked() else 1
+
+        # Базовые параметры
+        params = [
+            meas_type,
+            self._safe_float_convert(self.c_min_edit.text()),
+            self._safe_float_convert(self.c_max_edit.text()),
+            self._safe_float_convert(self.k0_edit.text()),
+            self._safe_float_convert(self.k1_edit.text())
+        ]
+
+        # Члены A0-A5
+        for i in range(6):
+            member = self.equation_members[i]
+            params.append(self._safe_float_convert(member.coeff_edit.text()))
+            if i > 0 and member.interaction_combo:
+                data = member.interaction_combo.itemData(member.interaction_combo.currentIndex())
+                params.extend([data.get('x1', 0), data.get('x2', 0), data.get('op', 0)])
+            elif i > 0:
+                params.extend([0, 0, 0])
+
+        return params, meas_type
+
     def save_equation_changes(self, product_numbers=None, model_numbers=None, apply_mode="all"):
         self._reset_all_field_highlights()
         try:
-            meas_type = 0 if self.regression_radio.isChecked() else 1
-            pr_nmb = self.current_equation_data.get('pr_nmb')
-            mdl_nmb = self.current_equation_data.get('mdl_nmb')
-            el_nmb = self.current_equation_data.get('el_nmb')
+            # ИСПРАВЛЕНИЕ: если аргументы не переданы (вызов обычной кнопки),
+            # берем значения из текущих данных
+            if product_numbers is None:
+                product_numbers = [self.current_equation_data.get('pr_nmb')]
+            if model_numbers is None:
+                model_numbers = [self.current_equation_data.get('mdl_nmb')]
 
-            # 1. Подготовка списка параметров
-            # Базовые: meas_type (1) + c_min (1) + c_max (1) + k0 (1) + k1 (1) = 5 параметров
-            params = [
-                meas_type,
-                self._safe_float_convert(self.c_min_edit.text()),
-                self._safe_float_convert(self.c_max_edit.text()),
-                self._safe_float_convert(self.k0_edit.text()),
-                self._safe_float_convert(self.k1_edit.text())
-            ]
+            # Если вдруг пришли не списки, принудительно делаем их списками
+            if not isinstance(product_numbers, list): product_numbers = [product_numbers]
+            if not isinstance(model_numbers, list): model_numbers = [model_numbers]
 
-            # Члены A0-A5 (всего 6 членов)
-            for i in range(6):
-                member = self.equation_members[i]
-                params.append(self._safe_float_convert(member.coeff_edit.text()))  # k_alin
-                # Для A1-A5 добавляем взаимодействия (3 параметра), для A0 - ничего не добавляем
-                if i > 0 and member.interaction_combo:
-                    data = member.interaction_combo.itemData(member.interaction_combo.currentIndex())
-                    params.extend([data.get('x1', 0), data.get('x2', 0), data.get('op', 0)])
-                elif i > 0:
-                    params.extend([0, 0, 0])
-
+            params, meas_type = self._get_params_from_ui()
             p = 'i' if meas_type == 0 else 'c'
 
-            # 2. Исправленный запрос el_sql (без несуществующих колонок для A0)
-            el_sql = f"""UPDATE el_set SET 
-                meas_type = ?, c_min = ?, c_max = ?,
-                k_{p}_klin00 = ?, k_{p}_klin01 = ?,
-                k_{p}_alin00 = ?,
-                k_{p}_alin01 = ?, operand_{p}_01_01 = ?, operand_{p}_02_01 = ?, operator_{p}_01 = ?,
-                k_{p}_alin02 = ?, operand_{p}_01_02 = ?, operand_{p}_02_02 = ?, operator_{p}_02 = ?,
-                k_{p}_alin03 = ?, operand_{p}_01_03 = ?, operand_{p}_02_03 = ?, operator_{p}_03 = ?,
-                k_{p}_alin04 = ?, operand_{p}_01_04 = ?, operand_{p}_02_04 = ?, operator_{p}_04 = ?,
-                k_{p}_alin05 = ?, operand_{p}_01_05 = ?, operand_{p}_02_05 = ?, operator_{p}_05 = ?
-                WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?"""
+            for pr_nmb in product_numbers:
+                for mdl_nmb in model_numbers:
+                    # 1. Обновление el_set
+                    if apply_mode in ["all", "coeffs_only"]:
+                        el_sql = f"""UPDATE el_set SET 
+                            meas_type = ?, c_min = ?, c_max = ?,
+                            k_{p}_klin00 = ?, k_{p}_klin01 = ?, k_{p}_alin00 = ?,
+                            k_{p}_alin01 = ?, operand_{p}_01_01 = ?, operand_{p}_02_01 = ?, operator_{p}_01 = ?,
+                            k_{p}_alin02 = ?, operand_{p}_01_02 = ?, operand_{p}_02_02 = ?, operator_{p}_02 = ?,
+                            k_{p}_alin03 = ?, operand_{p}_01_03 = ?, operand_{p}_02_03 = ?, operator_{p}_03 = ?,
+                            k_{p}_alin04 = ?, operand_{p}_01_04 = ?, operand_{p}_02_04 = ?, operator_{p}_04 = ?,
+                            k_{p}_alin05 = ?, operand_{p}_01_05 = ?, operand_{p}_02_05 = ?, operator_{p}_05 = ?
+                            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?"""
+                        self.db.execute(el_sql, params + [pr_nmb, mdl_nmb, self.current_equation_data.get('el_nmb')])
+                    elif apply_mode == "type_only":
+                        self.db.execute(
+                            "UPDATE el_set SET meas_type = ? WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?",
+                            [meas_type, pr_nmb, mdl_nmb, self.current_equation_data.get('el_nmb')])
 
-            self.db.execute(el_sql, params + [pr_nmb, mdl_nmb, el_nmb])
-
-            # 3. Обновление mdl_set
-            mdl_sql = """UPDATE mdl_set SET 
-                water_crit = ?, empty_crit = ?, w_sq_nmb = ?, e_sq_nmb = ?, 
-                w_operator = ?, e_operator = ? 
-                WHERE pr_nmb = ? AND mdl_nmb = ?"""
-
-            self.db.execute(mdl_sql, [
-                self._safe_float_convert(self.water_crit_edit.text()),
-                self._safe_float_convert(self.empty_crit_edit.text()),
-                self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
-                self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                1 if self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()) else 0,
-                1 if self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()) else 0,
-                pr_nmb, mdl_nmb
-            ])
+                    # 2. Обновление mdl_set
+                    if apply_mode == "all":
+                        mdl_sql = """UPDATE mdl_set SET 
+                            water_crit = ?, empty_crit = ?, w_sq_nmb = ?, e_sq_nmb = ?, 
+                            w_operator = ?, e_operator = ? 
+                            WHERE pr_nmb = ? AND mdl_nmb = ?"""
+                        self.db.execute(mdl_sql, [
+                            self._safe_float_convert(self.water_crit_edit.text()),
+                            self._safe_float_convert(self.empty_crit_edit.text()),
+                            self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
+                            self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
+                            1 if self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()) else 0,
+                            1 if self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()) else 0,
+                            pr_nmb, mdl_nmb
+                        ])
 
             self.save_intensity_data()
-            self.refresh_current_equation_data(pr_nmb, mdl_nmb, el_nmb)
+            self.refresh_current_equation_data(self.current_equation_data.get('pr_nmb'),
+                                               self.current_equation_data.get('mdl_nmb'),
+                                               self.current_equation_data.get('el_nmb'))
             self.load_equations()
             QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
 
         except Exception as e:
+            # Для отладки можно добавить print(e), если ошибка повторится
             QMessageBox.critical(self, "Ошибка сохранения", str(e))
 
     def save_intensity_data(self):
