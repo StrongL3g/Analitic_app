@@ -1,10 +1,10 @@
 [
   {
-    "product_id": 1,
-    "product_text": "1 - Продукт 1",
-    "date_from": "26.11.2024",
-    "time_from": "10:33",
-    "date_to": "27.11.2025",
-    "time_to": "10:33"
+    "product_id": 2,
+    "product_text": "2 - Продукт 2",
+    "date_from": "01.12.2024",
+    "time_from": "00:00",
+    "date_to": "21.05.2026",
+    "time_to": "16:59"
   }
 ]

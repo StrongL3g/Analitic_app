@@ -1,11 +1,11 @@
 [
     {
         "number": 1,
-        "name": "Ni"
+        "name": "Cu"
     },
     {
         "number": 2,
-        "name": "Cu"
+        "name": "Md"
     },
     {
         "number": 3,
@@ -13,19 +13,19 @@
     },
     {
         "number": 4,
-        "name": "Co"
-    },
-    {
-        "number": 5,
-        "name": "S"
-    },
-    {
-        "number": 6,
         "name": "ТФ"
     },
     {
+        "number": 5,
+        "name": "-"
+    },
+    {
+        "number": 6,
+        "name": "-"
+    },
+    {
         "number": 7,
-        "name": "P"
+        "name": "-"
     },
     {
         "number": 8,

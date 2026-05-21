@@ -3,10 +3,9 @@ import json
 import os
 import numpy as np
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
-    QComboBox, QLineEdit, QGroupBox, QSplitter, QTabWidget,
-    QMessageBox
+    QComboBox, QGroupBox, QSplitter, QMessageBox
 )
 from PySide6.QtCore import Qt
 from database.db import Database
@@ -14,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from views.data.sample_dialog import SampleDialog
 from utils.path_manager import get_config_path
+
 
 class RegressionPage(QWidget):
     def __init__(self, db: Database):
@@ -29,7 +29,6 @@ class RegressionPage(QWidget):
         self.combo_meas_type.currentIndexChanged.connect(self.load_data)
         for combo in self.combo_equation_terms:
             combo.currentIndexChanged.connect(self.perform_regression)
-
 
         # Загружаем данные при открытии страницы
         if self.combo_element.count() > 0:
@@ -71,33 +70,28 @@ class RegressionPage(QWidget):
         btn_layout.addStretch()
         left_top_layout.addLayout(btn_layout)
 
-        # === Таблица коэффициентов ===
+        # === Таблица коэффициентов (Расширена до 11) ===
         left_top_layout.addWidget(QLabel("Сводная таблица коэффициентов:"))
         self.coeff_table = QTableWidget()
-        self.coeff_table.setRowCount(6)  # A0–A5 → 6 строк
+        self.coeff_table.setRowCount(11)  # A0–A10
         self.coeff_table.setColumnCount(4)
         self.coeff_table.setHorizontalHeaderLabels(["Коэффициент", "Множитель", "Значение", "Значимость"])
         self.coeff_table.verticalHeader().setVisible(False)
 
-        # Заполняем имена коэффициентов
-        gray_bg = "#f0f0f0"
-        for row, name in enumerate(["A0", "A1", "A2", "A3", "A4", "A5"]):
-            # Имя коэффициента
+        for row in range(11):
+            name = f"A{row}"
             item = QTableWidgetItem(name)
             item.setBackground(Qt.GlobalColor.lightGray)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.coeff_table.setItem(row, 0, item)
 
-            # ★ Инициализация столбца множителей
             multiplier_item = QTableWidgetItem("-")
             multiplier_item.setFlags(multiplier_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.coeff_table.setItem(row, 1, multiplier_item)
 
-            # Значение
             value_item = QTableWidgetItem("0.0")
             self.coeff_table.setItem(row, 2, value_item)
 
-            # Значимость
             significance_item = QTableWidgetItem("0.0")
             self.coeff_table.setItem(row, 3, significance_item)
 
@@ -125,21 +119,16 @@ class RegressionPage(QWidget):
             self.stats_table.setItem(row, 1, value_item)
 
         left_top_layout.addWidget(self.stats_table)
-
         left_top_group.setLayout(left_top_layout)
 
         # === Верхняя правая часть (график) ===
         right_top_group = QGroupBox("График зависимости C_хим от C_расч")
         right_top_layout = QVBoxLayout()
-
-        # Создаем график
         self.fig, self.ax = plt.subplots(figsize=(5, 4))
         self.canvas = FigureCanvas(self.fig)
         right_top_layout.addWidget(self.canvas)
-
         right_top_group.setLayout(right_top_layout)
 
-        # Добавляем левую и правую части в верхний layout
         top_layout.addWidget(left_top_group, 40)
         top_layout.addWidget(right_top_group, 60)
         top_widget.setLayout(top_layout)
@@ -148,44 +137,47 @@ class RegressionPage(QWidget):
         bottom_widget = QWidget()
         bottom_layout = QVBoxLayout()
 
-        # Комбо-боксы
+        # Комбо-боксы выборки
         combo_layout = QHBoxLayout()
-
-        # Комбобокс элемента
         self.combo_element = QComboBox()
         combo_layout.addWidget(QLabel("Элемент:"))
         combo_layout.addWidget(self.combo_element)
 
-        # Комбобокс проб
         self.combo_meas_type = QComboBox()
         self.combo_meas_type.addItems(["Все пробы", "Ручные", "Цикл"])
         combo_layout.addWidget(QLabel("Пробы:"))
         combo_layout.addWidget(self.combo_meas_type)
-
-        # 5 комбо-боксов для членов уравнения
-        self.combo_equation_terms = []
-        combo_layout.addWidget(QLabel("Члены уравнения:"))
-        for i in range(5):
-            combo = QComboBox()
-            self.combo_equation_terms.append(combo)
-            combo_layout.addWidget(combo)
-
         combo_layout.addStretch()
         bottom_layout.addLayout(combo_layout)
 
-        # Таблица выборки
+        # 10 комбо-боксов для членов уравнения (Сетка)
+        terms_group = QGroupBox("Члены уравнения (A1 - A10)")
+        terms_layout = QGridLayout()
+        self.combo_equation_terms = []
+        for i in range(10):
+            combo = QComboBox()
+            combo.setMinimumWidth(120)
+            self.combo_equation_terms.append(combo)
+            row = i // 5
+            col = i % 5
+            terms_layout.addWidget(QLabel(f"A{i + 1}:"), row, col * 2)
+            terms_layout.addWidget(combo, row, col * 2 + 1)
+        terms_group.setLayout(terms_layout)
+        bottom_layout.addWidget(terms_group)
+
+        # Таблица выборки (Расширена до X10)
         bottom_layout.addWidget(QLabel("Таблица выборки:"))
         self.data_table = QTableWidget()
-        self.data_table.setColumnCount(11)
+        self.data_table.setColumnCount(16)
         self.data_table.setHorizontalHeaderLabels([
-            "Продукт", "Дата/Время", "X1", "X2", "X3", "X4", "X5",
+            "Продукт", "Дата/Время",
+            "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10",
             "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"
         ])
         bottom_layout.addWidget(self.data_table)
 
         bottom_widget.setLayout(bottom_layout)
 
-        # === Объединяем все части ===
         main_splitter.addWidget(top_widget)
         main_splitter.addWidget(bottom_widget)
         main_splitter.setSizes([400, 300])
@@ -193,11 +185,9 @@ class RegressionPage(QWidget):
         layout.addWidget(main_splitter)
         self.setLayout(layout)
 
-        # Загружаем начальные данные
         self.ini_load_elements()
 
     def ini_load_elements(self):
-        """Загрузка элементов из JSON файла"""
         try:
             elements_path = get_config_path() / "elements.json"
             if os.path.exists(elements_path):
@@ -209,51 +199,19 @@ class RegressionPage(QWidget):
                 self.combo_element.clear()
                 for elem in valid_elements:
                     self.combo_element.addItem(elem["name"], elem["number"])
-
-                print(f"Загружено элементов: {len(valid_elements)}")
             else:
-                print("Файл elements.json не найден")
                 self.combo_element.addItems(["Cu", "Ni", "Fe", "ТФ"])
-
         except Exception as e:
             print(f"Ошибка загрузки элементов: {e}")
             self.combo_element.addItems(["Cu", "Ni", "Fe", "ТФ"])
 
-    def _reset_coefficients(self):
-        """Сброс коэффициентов к нулевым значениям"""
-        for i in range(6):
-            value_item = self.coeff_table.item(i, 2)
-            if value_item:
-                value_item.setText("0.0")
-
-            significance_item = self.coeff_table.item(i, 3)
-            if significance_item:
-                significance_item.setText("0.0")
-
-        # Сбрасываем статистику
-        for i in range(6):
-            item = self.stats_table.item(i, 1)
-            if item:
-                item.setText("0.0")
-
-        # Очищаем график
-        self.ax.clear()
-        self.ax.set_xlabel("C_хим")
-        self.ax.set_ylabel("C_расч")
-        self.ax.set_title("График зависимости C_хим от C_расч")
-        self.canvas.draw()
-
     def open_sample_dialog(self):
-        """Открывает диалог формирования выборки"""
         dialog = SampleDialog(self.db, self)
         if dialog.exec():
-            print(f"Получена выборка: {len(self.current_sample)} строк")
             self.load_data()
 
     def load_data(self):
-
         try:
-            # 1. Загружаем параметры выборки
             sample_path = get_config_path() / "sample" / "s_regress.json"
             if not os.path.exists(sample_path):
                 QMessageBox.warning(self, "Ошибка", "Файл выборки не найден: config/sample/s_regress.json")
@@ -268,104 +226,72 @@ class RegressionPage(QWidget):
 
             pr_nmb = sample_config[0].get("product_id")
             if pr_nmb is None:
-                QMessageBox.critical(self, "Ошибка", "В выборке отсутствует product_id")
                 return
 
-            # 2. Получаем el_nmb из UI
             el_nmb = self.combo_element.currentData()
-            if el_nmb is None:
-                QMessageBox.warning(self, "Ошибка", "Сначала выберите элемент")
-                return
+            if el_nmb is None: return
 
-            # 3. Запрашиваем PR_SET для получения meas_type
-            query_pr_set = """
-                SELECT *
-                FROM PR_SET
-                WHERE pr_nmb = ? AND el_nmb = ? AND active_model = 1
+            query_el_set = """
+                SELECT * FROM el_set
+                WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = 1
             """
-            pr_set_row = self.db.fetch_one(query_pr_set, [pr_nmb, el_nmb])
-            if not pr_set_row:
-                QMessageBox.critical(self, "Ошибка",
-                                    f"Не найдена активная градуировка:\npr_nmb={pr_nmb}, el_nmb={el_nmb}")
+            el_set_row = self.db.fetch_one(query_el_set, [pr_nmb, el_nmb])
+            if not el_set_row:
+                QMessageBox.critical(self, "Ошибка", f"Не найдена модель 1 в el_set:\npr_nmb={pr_nmb}, el_nmb={el_nmb}")
                 return
 
-            meas_type = pr_set_row["meas_type"]
+            meas_type = el_set_row["meas_type"]
             self.current_meas_type = meas_type
-            print(f"✅ PR_SET: pr_nmb={pr_nmb}, el_nmb={el_nmb}, meas_type={meas_type}")
 
-            # 4. Заполняем комбобоксы членами уравнения
             self._load_equation_terms(meas_type, el_nmb)
-
-            # 5. Выгружаем данные из PR_MEAS → raw_buffer
             self.raw_buffer = self._fetch_pr_meas_data(sample_config, el_nmb, meas_type)
-            print(f"📥 Получено строк: {len(self.raw_buffer)}")
 
             if not self.raw_buffer:
                 QMessageBox.warning(self, "Информация", "По условиям выборки данных не найдено.")
                 self.data_table.setRowCount(0)
                 return
 
-            # 6. Загружаем начальное уравнение в комбобоксы
-            self._apply_initial_equation(pr_set_row, meas_type)
-
-            # 7. Обновляем таблицу данных (только базовые колонки)
+            self._apply_initial_equation(el_set_row, meas_type)
             self._update_data_table_from_buffer()
-
-            # 8. Обновляем множители и выполняем регрессию
             self.perform_regression()
-
-            QMessageBox.information(self, "Готово", f"Данные загружены: {len(self.raw_buffer)} записей")
 
         except Exception as e:
             import traceback
-            print("❌ Ошибка в load_data():")
             traceback.print_exc()
             QMessageBox.critical(self, "Ошибка", f"load_data() провалился:\n{str(e)}")
 
     def _load_equation_terms(self, meas_type, el_nmb):
-        """Заполняет 5 комбобоксов на основе meas_type и el_nmb"""
         try:
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
             json_path = get_config_path() / json_file
 
-            if not os.path.exists(json_path):
-                print(f"❌ {json_path} не найден")
-                terms_list = []
-            else:
+            terms_list = []
+            if os.path.exists(json_path):
                 with open(json_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                terms_list = []
                 if meas_type == 0:
                     interactions = data.get("interactions", [])
-                    terms_list = [term["description"] for term in interactions
-                                if term.get("description") and term["description"].strip()]
+                    terms_list = [t["description"] for t in interactions if t.get("description")]
                 else:
                     for group in data.get("interactions", []):
                         if group.get("element_original_number") == el_nmb:
                             interactions = group.get("interactions", [])
-                            terms_list = [term["description"] for term in interactions
-                                        if term.get("description") and term["description"].strip()]
+                            terms_list = [t["description"] for t in interactions if t.get("description")]
                             break
 
             for combo in self.combo_equation_terms:
-                combo.blockSignals(True)  # Блокируем сигналы во время обновления
+                combo.blockSignals(True)
                 combo.clear()
                 combo.addItem("")
                 combo.addItems(terms_list)
-                combo.setPlaceholderText("Член уравнения")
                 combo.blockSignals(False)
 
         except Exception as e:
-            print(f"❌ Ошибка в _load_equation_terms: {e}")
-            for combo in self.combo_equation_terms:
-                combo.clear()
-                combo.addItem("")
+            print(f"Ошибка в _load_equation_terms: {e}")
 
     def _fetch_pr_meas_data(self, sample_config, el_nmb, meas_type):
-        """Возвращает list[dict] — буфер данных из PR_MEAS"""
         all_rows = []
-
         for cond in sample_config:
             pr_nmb = cond["product_id"]
             start_dt = f"{cond['date_from']} {cond['time_from']}"
@@ -377,8 +303,8 @@ class RegressionPage(QWidget):
             else:
                 cols.extend([f"c_cor_{i:02d}" for i in range(1, 9)])
 
-            chem_col = f"c_chem_0{el_nmb}"
-            cor_col = f"c_cor_0{el_nmb}"
+            chem_col = f"c_chem_{el_nmb:02d}"
+            cor_col = f"c_cor_{el_nmb:02d}"
             cols.extend([chem_col, cor_col])
 
             select_list = ", ".join(f"{c}" for c in cols)
@@ -392,9 +318,7 @@ class RegressionPage(QWidget):
                     END AS ddc
                 FROM PR_MEAS
                 WHERE timestamp BETWEEN ? AND ?
-                AND pr_nmb = ?
-                AND {chem_col} <> 0
-                AND active_model = 1
+                AND pr_nmb = ? AND {chem_col} <> 0 AND active_model = 1
             """
 
             meas_index = self.combo_meas_type.currentIndex()
@@ -402,19 +326,16 @@ class RegressionPage(QWidget):
                 query += " AND meas_type = 0"
             elif meas_index == 2:
                 query += " AND meas_type = 1"
-
             query += " ORDER BY meas_dt, timestamp"
 
             try:
-                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
-                all_rows.extend(rows)
+                all_rows.extend(self.db.fetch_all(query, [start_dt, end_dt, pr_nmb]))
             except Exception as e:
-                print(f"⚠️ Ошибка запроса для pr_nmb={pr_nmb}: {e}")
+                print(f"Ошибка запроса: {e}")
 
         return all_rows
 
-    def _apply_initial_equation(self, pr_set_row, meas_type):
-        """Загружает начальное уравнение в комбобоксы"""
+    def _apply_initial_equation(self, el_set_row, meas_type):
         try:
             k_prefix = "k_i_" if meas_type == 0 else "k_c_"
             op_prefix = "operand_i_" if meas_type == 0 else "operand_c_"
@@ -423,9 +344,7 @@ class RegressionPage(QWidget):
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
             json_path = get_config_path() / json_file
 
-            if not os.path.exists(json_path):
-                print(f"⚠️ {json_path} не найден — пропускаем заполнение членов")
-                return
+            if not os.path.exists(json_path): return
 
             with open(json_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
@@ -433,21 +352,18 @@ class RegressionPage(QWidget):
             term_lookup = {}
             if meas_type == 0:
                 for term in json_data.get("interactions", []):
-                    desc = term.get("description", "").strip()
-                    if desc:
-                        key = (term["x1"], term["x2"], term["op"])
-                        term_lookup[key] = desc
+                    if term.get("description", "").strip():
+                        term_lookup[(term["x1"], term["x2"], term["op"])] = term["description"].strip()
             else:
                 el_nmb = self.combo_element.currentData()
                 for group in json_data.get("interactions", []):
                     if group.get("element_original_number") == el_nmb:
                         for term in group.get("interactions", []):
-                            desc = term.get("description", "").strip()
-                            if desc:
-                                key = (term["x1"], term["x2"], term["op"])
-                                term_lookup[key] = desc
+                            if term.get("description", "").strip():
+                                term_lookup[(term["x1"], term["x2"], term["op"])] = term["description"].strip()
                         break
 
+            # Читаем 5 старых членов из базы
             term_specs = [
                 (f"{op_prefix}01_01", f"{op_prefix}02_01", f"{op_type}01"),
                 (f"{op_prefix}01_02", f"{op_prefix}02_02", f"{op_type}02"),
@@ -457,143 +373,132 @@ class RegressionPage(QWidget):
             ]
 
             found_terms = []
-            for i, (x1_key, x2_key, op_key) in enumerate(term_specs, start=1):
-                x1 = pr_set_row.get(x1_key, 0)
-                x2 = pr_set_row.get(x2_key, 0)
-                op = pr_set_row.get(op_key, 0)
-
-                desc = term_lookup.get((x1, x2, op), "-")
-                found_terms.append(desc)
+            for x1_key, x2_key, op_key in term_specs:
+                x1 = el_set_row.get(x1_key, 0)
+                x2 = el_set_row.get(x2_key, 0)
+                op = el_set_row.get(op_key, 0)
+                found_terms.append(term_lookup.get((x1, x2, op), "-"))
 
             for i, combo in enumerate(self.combo_equation_terms):
                 combo.blockSignals(True)
                 if i < len(found_terms) and found_terms[i] != "-":
-                    for idx in range(combo.count()):
-                        if combo.itemText(idx) == found_terms[i]:
-                            combo.setCurrentIndex(idx)
-                            break
+                    idx = combo.findText(found_terms[i])
+                    combo.setCurrentIndex(idx if idx >= 0 else 0)
                 else:
                     combo.setCurrentIndex(0)
                 combo.blockSignals(False)
 
-            print(f"✅ Уравнение загружено: {found_terms}")
-
         except Exception as e:
-            import traceback
-            print("❌ Ошибка в _apply_initial_equation:")
-            traceback.print_exc()
+            print(f"Ошибка _apply_initial_equation: {e}")
 
     def _update_data_table_from_buffer(self):
-        """Заполняет data_table из self.raw_buffer (базовые колонки)"""
         self.data_table.setRowCount(0)
-        if not self.raw_buffer:
-            return
+        if not self.raw_buffer: return
 
         self.data_table.setRowCount(len(self.raw_buffer))
+        el_nmb = self.combo_element.currentData()
+
         for row_idx, rec in enumerate(self.raw_buffer):
             self.data_table.setItem(row_idx, 0, QTableWidgetItem(str(rec.get("pr_nmb", ""))))
             self.data_table.setItem(row_idx, 1, QTableWidgetItem(str(rec.get("meas_dt", ""))))
+            c_chem = rec.get(f"c_chem_{el_nmb:02d}", "")
+            self.data_table.setItem(row_idx, 12, QTableWidgetItem(str(c_chem)))
 
-            el_nmb = self.combo_element.currentData()
-            c_chem = rec.get(f"c_chem_0{el_nmb}", "")
-            self.data_table.setItem(row_idx, 7, QTableWidgetItem(str(c_chem)))
-
-            # Колонки C_расч, ΔC, δC оставляем пустыми до регрессии
-            self.data_table.setItem(row_idx, 8, QTableWidgetItem(""))  # C_расч
-            self.data_table.setItem(row_idx, 9, QTableWidgetItem(""))  # ΔC
-            self.data_table.setItem(row_idx, 10, QTableWidgetItem(""))  # δC
+            # C_расч, ΔC, δC
+            self.data_table.setItem(row_idx, 13, QTableWidgetItem(""))
+            self.data_table.setItem(row_idx, 14, QTableWidgetItem(""))
+            self.data_table.setItem(row_idx, 15, QTableWidgetItem(""))
 
     def perform_regression(self):
-        """Выполняет регрессию (LINEST) → обновляет все таблицы и график"""
         if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
             return
 
         try:
-            # 1. Собираем матрицу признаков X и вектор y
-            X_matrix, y_vector = self._build_regression_data()
+            # 1. Умная сборка: Исключаем пустые колонки
+            X_active, y_vector, active_indices = self._build_regression_data()
+            if X_active is None: return
 
-            if X_matrix is None or y_vector is None:
-                return
+            # 2. Выполняем регрессию только по активным столбцам
+            coeffs_active, stats, std_errs, t_stats, p_vals_active = self._calculate_regression(X_active, y_vector)
 
-            # 2. Выполняем регрессию
-            coefficients, statistics, standard_errors, t_stats, p_values = self._calculate_regression(X_matrix, y_vector)
+            # 3. Разворачиваем коэффициенты обратно в массив из 11 элементов
+            full_coeffs = np.zeros(11)
+            full_p_vals = np.ones(11)
 
-            # 3. Обновляем таблицы
-            self._update_coefficients_table(coefficients, p_values)
-            self._update_statistics_table(statistics, y_vector)
+            full_coeffs[0] = coeffs_active[0]
+            full_p_vals[0] = p_vals_active[0]
 
-            # 4. Применяем уравнение для расчета C_расч
+            for i, original_index in enumerate(active_indices):
+                full_coeffs[original_index] = coeffs_active[i + 1]
+                full_p_vals[original_index] = p_vals_active[i + 1]
+
+            # 4. Обновляем UI
+            self._update_coefficients_table(full_coeffs, full_p_vals)
+            self._update_statistics_table(stats, y_vector)
             self.apply_current_equation()
-
-            # 5. Строим график
             self._update_plot(y_vector)
 
         except Exception as e:
-            import traceback
-            print("❌ Ошибка в perform_regression():")
-            traceback.print_exc()
+            print(f"Ошибка в perform_regression: {e}")
 
     def _build_regression_data(self):
-        """Строит матрицу признаков X и вектор целевых значений y"""
         try:
             n_samples = len(self.raw_buffer)
-            if n_samples == 0:
-                return None, None
+            if n_samples == 0: return None, None, None
 
-            # Вектор y (C_хим)
             el_nmb = self.combo_element.currentData()
-            y_vector = np.array([rec.get(f"c_chem_0{el_nmb}", 0.0) for rec in self.raw_buffer])
+            y_vector = np.array([rec.get(f"c_chem_{el_nmb:02d}", 0.0) for rec in self.raw_buffer])
 
-            # Матрица X: [1, X1, X2, X3, X4, X5]
-            X_matrix = np.ones((n_samples, 6))  # 6 колонок: A0 + A1..A5
+            # Собираем только выбранные признаки
+            features = []
+            active_indices = []
 
-            # Заполняем признаки X1..X5
             for i, combo in enumerate(self.combo_equation_terms):
                 term_desc = combo.currentText().strip()
-                if term_desc and term_desc != "":
-                    feature_values = self._compute_feature(term_desc, self.current_meas_type, el_nmb)
-                    X_matrix[:, i+1] = feature_values  # i+1 потому что первый столбец - единицы для A0
+                if term_desc and term_desc != "-":
+                    feat_vals = self._compute_feature(term_desc, self.current_meas_type, el_nmb)
+                    features.append(feat_vals)
+                    active_indices.append(i + 1)  # A1 это индекс 1
 
-            return X_matrix, y_vector
+            n_features = len(features) + 1
+            X_matrix = np.ones((n_samples, n_features))
+            for col_idx, feat_vals in enumerate(features):
+                X_matrix[:, col_idx + 1] = feat_vals
+
+            return X_matrix, y_vector, active_indices
 
         except Exception as e:
-            print(f"❌ Ошибка в _build_regression_data: {e}")
-            return None, None
+            print(f"Ошибка в _build_regression_data: {e}")
+            return None, None, None
 
     def _calculate_regression(self, X, y):
-        """Выполняет линейную регрессию и возвращает коэффициенты, статистику и значимость"""
         try:
             n_samples, n_features = X.shape
+            # Защита от деления на ноль, если признаков больше чем данных
+            dof = n_samples - np.linalg.matrix_rank(X)
+            if dof <= 0: dof = 1
 
-            # Решаем систему (X.T * X)^-1 * X.T * y
             coefficients = np.linalg.lstsq(X, y, rcond=None)[0]
-
-            # Предсказанные значения
             y_pred = X @ coefficients
             residuals = y - y_pred
 
-            # Среднеквадратичная ошибка
-            mse = np.sum(residuals**2) / (n_samples - n_features)
+            mse = np.sum(residuals ** 2) / dof
             rmse = np.sqrt(mse)
 
-            # R²
-            ss_res = np.sum(residuals**2)
-            ss_tot = np.sum((y - np.mean(y))**2)
-            r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            r_squared = 1 - (np.sum(residuals ** 2) / ss_tot) if ss_tot != 0 else 0
 
-            # Стандартные ошибки коэффициентов
             try:
-                XTX_inv = np.linalg.inv(X.T @ X)
-                standard_errors = np.sqrt(np.diag(XTX_inv) * mse)
+                # Используем pinv для абсолютной защиты от сингулярных матриц
+                XTX_pinv = np.linalg.pinv(X.T @ X)
+                standard_errors = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
 
-                # t-статистики
-                t_stats = coefficients / standard_errors
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    t_stats = np.where(standard_errors != 0, coefficients / standard_errors, 0)
 
-                # p-values (двусторонний тест)
                 from scipy import stats
-                p_values = 2 * (1 - stats.t.cdf(np.abs(t_stats), n_samples - n_features))
-            except:
-                # Если матрица вырождена, используем нули
+                p_values = 2 * (1 - stats.t.cdf(np.abs(t_stats), dof))
+            except Exception:
                 standard_errors = np.zeros(n_features)
                 t_stats = np.zeros(n_features)
                 p_values = np.ones(n_features)
@@ -610,50 +515,42 @@ class RegressionPage(QWidget):
             return coefficients, statistics, standard_errors, t_stats, p_values
 
         except Exception as e:
-            print(f"❌ Ошибка в _calculate_regression: {e}")
-            return np.zeros(6), {}, np.zeros(6), np.zeros(6), np.ones(6)
+            print(f"Ошибка в _calculate_regression: {e}")
+            return np.zeros(X.shape[1]), {}, np.zeros(X.shape[1]), np.zeros(X.shape[1]), np.ones(X.shape[1])
 
     def _update_coefficients_table(self, coefficients, p_values):
-        """Обновляет столбец 'Множитель' в таблице коэффициентов"""
-        # A0 не имеет множителя (константа)
+        # A0
         a0_item = self.coeff_table.item(0, 1)
-        if a0_item:
-            a0_item.setText("-")  # или можно оставить пустым
+        if a0_item: a0_item.setText("-")
 
-        # A1..A5 - множители из комбобоксов
-        for i in range(1, 6):  # A1..A5
-            combo = self.combo_equation_terms[i-1]
+        # A1..A10
+        for i in range(1, 11):
+            combo = self.combo_equation_terms[i - 1]
             term_desc = combo.currentText().strip()
             multiplier_item = self.coeff_table.item(i, 1)
-
             if multiplier_item:
-                if term_desc and term_desc != "":
-                    multiplier_item.setText(term_desc)
-                else:
-                    multiplier_item.setText("-")
+                multiplier_item.setText(term_desc if term_desc else "-")
 
-        """Обновляет таблицу коэффициентов со значимостью"""
+        # Значения и значимость
         for i, (coeff, p_value) in enumerate(zip(coefficients, p_values)):
-            # Значение коэффициента
             value_item = self.coeff_table.item(i, 2)
-            if value_item:
-                value_item.setText(f"{coeff:.6g}")
+            if value_item: value_item.setText(f"{coeff:.6g}")
 
-            # Значимость (p-value)
             significance_item = self.coeff_table.item(i, 3)
             if significance_item:
-                significance_item.setText(f"{p_value:.4f}")
-
-                # Подсветка значимых коэффициентов
-                if p_value < 0.05:
-                    significance_item.setBackground(Qt.GlobalColor.green)
-                elif p_value < 0.1:
-                    significance_item.setBackground(Qt.GlobalColor.yellow)
-                else:
+                if coeff == 0.0 and i > 0 and self.combo_equation_terms[i - 1].currentText().strip() == "":
+                    significance_item.setText("-")
                     significance_item.setBackground(Qt.GlobalColor.white)
+                else:
+                    significance_item.setText(f"{p_value:.4f}")
+                    if p_value < 0.05:
+                        significance_item.setBackground(Qt.GlobalColor.green)
+                    elif p_value < 0.1:
+                        significance_item.setBackground(Qt.GlobalColor.yellow)
+                    else:
+                        significance_item.setBackground(Qt.GlobalColor.white)
 
     def _update_statistics_table(self, statistics, y_vector=None):
-        """Обновляет таблицу статистики"""
         stats_mapping = [
             (0, statistics.get('rmse', 0)),
             (1, statistics.get('relative_rmse', 0)),
@@ -665,39 +562,29 @@ class RegressionPage(QWidget):
 
         for row, value in stats_mapping:
             item = self.stats_table.item(row, 1)
-            if item:
-                item.setText(f"{value:.6g}")
+            if item: item.setText(f"{value:.6g}")
 
     def _update_plot(self, y_vector):
-        """Обновляет график зависимости C_хим от C_расч"""
         try:
             self.ax.clear()
-
-            # Собираем C_хим и C_расч из таблицы
-            c_chem_values = []
-            c_calc_values = []
+            c_chem_values, c_calc_values = [], []
 
             for row in range(self.data_table.rowCount()):
-                chem_item = self.data_table.item(row, 7)
-                calc_item = self.data_table.item(row, 8)
+                chem_item = self.data_table.item(row, 12)
+                calc_item = self.data_table.item(row, 13)
 
                 if chem_item and calc_item and chem_item.text() and calc_item.text():
                     try:
-                        c_chem = float(chem_item.text())
-                        c_calc = float(calc_item.text())
-                        c_chem_values.append(c_chem)
-                        c_calc_values.append(c_calc)
+                        c_chem_values.append(float(chem_item.text()))
+                        c_calc_values.append(float(calc_item.text()))
                     except ValueError:
-                        continue
+                        pass
 
             if c_chem_values and c_calc_values:
                 self.ax.scatter(c_chem_values, c_calc_values, alpha=0.6, label='Данные')
-
-                # Линия идеальной корреляции
                 min_val = min(min(c_chem_values), min(c_calc_values))
                 max_val = max(max(c_chem_values), max(c_calc_values))
-                self.ax.plot([min_val, max_val], [min_val, max_val], 'r--', label='Идеальная корреляция')
-
+                self.ax.plot([min_val, max_val], [min_val, max_val], 'r--', label='Идеал')
                 self.ax.set_xlabel("C_хим")
                 self.ax.set_ylabel("C_расч")
                 self.ax.set_title("График зависимости C_хим от C_расч")
@@ -705,65 +592,45 @@ class RegressionPage(QWidget):
                 self.ax.grid(True, alpha=0.3)
 
             self.canvas.draw()
-
         except Exception as e:
-            print(f"❌ Ошибка в _update_plot: {e}")
+            print(f"Ошибка в _update_plot: {e}")
 
     def apply_current_equation(self):
-        """Рассчитывает C_расч, ΔC, δC по текущим коэффициентам и выбранным членам"""
         try:
-            if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
-                return
+            if not hasattr(self, 'raw_buffer') or not self.raw_buffer: return
 
-            # Читаем текущие коэффициенты из coeff_table
             coeffs = []
-            for i in range(6):
+            for i in range(11):
                 item = self.coeff_table.item(i, 2)
                 try:
-                    val = float(item.text()) if item and item.text() else 0.0
+                    coeffs.append(float(item.text()) if item and item.text() else 0.0)
                 except:
-                    val = 0.0
-                coeffs.append(val)
+                    coeffs.append(0.0)
 
-            A0, A1, A2, A3, A4, A5 = coeffs
-
-            # Вычисляем признаки для всех членов уравнения
             el_nmb = self.combo_element.currentData()
             features = []
-            for combo in self.combo_equation_terms:
+            for i, combo in enumerate(self.combo_equation_terms):
                 desc = combo.currentText().strip()
                 feat_vals = self._compute_feature(desc, self.current_meas_type, el_nmb)
                 features.append(feat_vals)
-                self._fill_feature_column(len(features)-1, feat_vals)
+                self._fill_feature_column(i, feat_vals)
 
-            # Рассчитываем C_расч для каждой строки
             for row_idx in range(len(self.raw_buffer)):
-                c_chem = self.raw_buffer[row_idx].get(f"c_chem_0{el_nmb}", 0.0)
+                c_chem = self.raw_buffer[row_idx].get(f"c_chem_{el_nmb:02d}", 0.0)
+                X_row = [1.0] + [features[i][row_idx] for i in range(10)]
 
-                # Собираем X-вектор: [1, X1, X2, X3, X4, X5]
-                X_row = [1.0] + [features[i][row_idx] for i in range(5)]
-
-                # C_расч = A0*X0 + A1*X1 + ... + A5*X5
-                c_calc = sum(coeffs[i] * X_row[i] for i in range(6))
-
-                # ΔC, δC
+                c_calc = sum(coeffs[i] * X_row[i] for i in range(11))
                 dC = c_calc - c_chem
                 ddc = abs(dC) / c_chem if c_chem != 0 else 0.0
 
-                # Обновляем таблицу
-                self.data_table.setItem(row_idx, 8, QTableWidgetItem(f"{c_calc:.6g}"))
-                self.data_table.setItem(row_idx, 9, QTableWidgetItem(f"{dC:.6g}"))
-                self.data_table.setItem(row_idx, 10, QTableWidgetItem(f"{ddc:.6g}"))
-
-            print(f"✅ Расчёт завершён: {len(self.raw_buffer)} строк")
+                self.data_table.setItem(row_idx, 13, QTableWidgetItem(f"{c_calc:.6g}"))
+                self.data_table.setItem(row_idx, 14, QTableWidgetItem(f"{dC:.6g}"))
+                self.data_table.setItem(row_idx, 15, QTableWidgetItem(f"{ddc:.6g}"))
 
         except Exception as e:
-            import traceback
-            print("❌ Ошибка в apply_current_equation():")
-            traceback.print_exc()
+            print(f"Ошибка в apply_current_equation(): {e}")
 
     def _compute_feature(self, feature_desc: str, meas_type: int, el_nmb: int) -> list:
-        """Вычисляет один признак для всего self.raw_buffer"""
         if not feature_desc or feature_desc == "-":
             return [0.0] * len(self.raw_buffer)
 
@@ -793,11 +660,9 @@ class RegressionPage(QWidget):
                             x1, x2, op = term["x1"], term["x2"], term["op"]
                             found = True
                             break
-                    if found:
-                        break
+                    if found: break
 
-        if not found:
-            return [0.0] * len(self.raw_buffer)
+        if not found: return [0.0] * len(self.raw_buffer)
 
         result = []
         for rec in self.raw_buffer:
@@ -831,18 +696,110 @@ class RegressionPage(QWidget):
                     res = 0.0
 
                 result.append(res)
-            except Exception as e:
+            except Exception:
                 result.append(0.0)
 
         return result
 
     def _fill_feature_column(self, col_index: int, values: list):
-        """Заполняет колонки признаков в data_table"""
-        if 0 <= col_index <= 4:
+        if 0 <= col_index <= 9:
             for row_idx, val in enumerate(values):
                 self.data_table.setItem(row_idx, 2 + col_index, QTableWidgetItem(f"{val:.6g}"))
 
     def save_equation(self):
-        """Сохранение уравнения - заглушка"""
-        print("Сохранение уравнения...")
-        QMessageBox.information(self, "Info", "Сохранение уравнения будет реализовано позже")
+        try:
+            if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
+                QMessageBox.warning(self, "Внимание", "Нет данных для сохранения. Сначала загрузите выборку.")
+                return
+
+            sample_path = get_config_path() / "sample" / "s_regress.json"
+            with open(sample_path, "r", encoding="utf-8") as f:
+                sample_config = json.load(f)
+
+            pr_nmb = sample_config[0].get("product_id")
+            el_nmb = self.combo_element.currentData()
+            meas_type = self.current_meas_type
+
+            coeffs = []
+            for i in range(11):
+                item = self.coeff_table.item(i, 2)
+                try:
+                    coeffs.append(float(item.text().replace(',', '.')) if item and item.text() else 0.0)
+                except:
+                    coeffs.append(0.0)
+
+            terms = []
+            json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
+            json_path = get_config_path() / json_file
+
+            with open(json_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+            for combo in self.combo_equation_terms:
+                desc = combo.currentText().strip()
+                x1, x2, op = 0, 0, 0
+                if desc and desc != "-":
+                    if meas_type == 0:
+                        for term in json_data.get("interactions", []):
+                            if term.get("description") == desc:
+                                x1, x2, op = term["x1"], term["x2"], term["op"]
+                                break
+                    else:
+                        for group in json_data.get("interactions", []):
+                            if group.get("element_original_number") == el_nmb:
+                                for term in group.get("interactions", []):
+                                    if term.get("description") == desc:
+                                        x1, x2, op = term["x1"], term["x2"], term["op"]
+                                        break
+                                break
+                terms.append((x1, x2, op))
+
+            prefix_k = "k_i_alin" if meas_type == 0 else "k_c_alin"
+            prefix_op = "i" if meas_type == 0 else "c"
+
+            update_fields = [
+                f"{prefix_k}00 = ?",
+                f"{prefix_k}01 = ?", f"operand_{prefix_op}_01_01 = ?", f"operand_{prefix_op}_02_01 = ?",
+                f"operator_{prefix_op}_01 = ?",
+                f"{prefix_k}02 = ?", f"operand_{prefix_op}_01_02 = ?", f"operand_{prefix_op}_02_02 = ?",
+                f"operator_{prefix_op}_02 = ?",
+                f"{prefix_k}03 = ?", f"operand_{prefix_op}_01_03 = ?", f"operand_{prefix_op}_02_03 = ?",
+                f"operator_{prefix_op}_03 = ?",
+                f"{prefix_k}04 = ?", f"operand_{prefix_op}_01_04 = ?", f"operand_{prefix_op}_02_04 = ?",
+                f"operator_{prefix_op}_04 = ?",
+                f"{prefix_k}05 = ?", f"operand_{prefix_op}_01_05 = ?", f"operand_{prefix_op}_02_05 = ?",
+                f"operator_{prefix_op}_05 = ?"
+            ]
+
+            params = [
+                coeffs[0],
+                coeffs[1], terms[0][0], terms[0][1], terms[0][2],
+                coeffs[2], terms[1][0], terms[1][1], terms[1][2],
+                coeffs[3], terms[2][0], terms[2][1], terms[2][2],
+                coeffs[4], terms[3][0], terms[3][1], terms[3][2],
+                coeffs[5], terms[4][0], terms[4][1], terms[4][2],
+                pr_nmb, el_nmb
+            ]
+
+            query = f"""
+                UPDATE el_set
+                SET {', '.join(update_fields)}
+                WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = 1
+            """
+
+            self.db.execute(query, params)
+
+            # Проверяем, есть ли заполненные члены A6-A10
+            unsupported_used = any(coeffs[i] != 0.0 or terms[i - 1][2] != 0 for i in range(6, 11))
+
+            if unsupported_used:
+                QMessageBox.warning(self, "Внимание",
+                                    "Уравнение сохранено частично.\n\n"
+                                    "База данных успешно приняла члены A0 — A5.\n"
+                                    "Для сохранения A6 — A10 необходимо доработать столбцы в таблице el_set.")
+            else:
+                QMessageBox.information(self, "Успех", "Уравнение и коэффициенты успешно сохранены в базу данных!")
+
+        except Exception as e:
+            print("Ошибка при сохранении уравнения:")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить уравнение:\n{e}")

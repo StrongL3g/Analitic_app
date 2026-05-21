@@ -24,6 +24,11 @@ from config import DB_CONFIG, refresh_app_settings
 
 app = QApplication(sys.argv)
 
+# --- ИНТЕГРАЦИЯ СТИЛЕЙ ТЕМЫ ---
+from utils.theme_manager import apply_application_theme
+apply_application_theme(app)
+# ------------------------------
+
 # Импорты страниц (только классы, без создания экземпляров)
 from database.db import Database
 from views.dashboard import DashboardPage
@@ -107,7 +112,7 @@ class MainWindow(QMainWindow):
 
         data_item = self.create_menu_item("Управление данными", "data")
         data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
-        #data_item.addChild(self.create_menu_item("Регрессия", "regression"))
+        data_item.addChild(self.create_menu_item("Регрессия", "regression"))
         #data_item.addChild(self.create_menu_item("Корректировка", "correction"))
         #data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
         #data_item.addChild(self.create_menu_item("Нормативы", "standards"))

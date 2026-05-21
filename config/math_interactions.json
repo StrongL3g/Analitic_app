@@ -37,12 +37,12 @@
         {
             "original_number": 1,
             "adjusted_number": 0,
-            "name": "Ni"
+            "name": "Cu"
         },
         {
             "original_number": 2,
             "adjusted_number": 1,
-            "name": "Cu"
+            "name": "Md"
         },
         {
             "original_number": 3,
@@ -52,27 +52,12 @@
         {
             "original_number": 4,
             "adjusted_number": 3,
-            "name": "Co"
-        },
-        {
-            "original_number": 5,
-            "adjusted_number": 4,
-            "name": "S"
-        },
-        {
-            "original_number": 6,
-            "adjusted_number": 5,
             "name": "ТФ"
-        },
-        {
-            "original_number": 7,
-            "adjusted_number": 6,
-            "name": "P"
         }
     ],
     "interactions": [
         {
-            "element_name": "Ni",
+            "element_name": "Cu",
             "element_original_number": 1,
             "element_adjusted_number": 0,
             "interactions": [
@@ -83,7 +68,7 @@
                     "op": 0
                 },
                 {
-                    "description": "Cu",
+                    "description": "Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 1
@@ -95,391 +80,85 @@
                     "op": 1
                 },
                 {
-                    "description": "Co",
+                    "description": "ТФ",
                     "x1": 3,
                     "x2": 0,
                     "op": 1
                 },
                 {
-                    "description": "S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Cu * Fe",
+                    "description": "Md * Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "Cu * Co",
+                    "description": "Md * ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "Cu * S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Cu",
+                    "description": "Fe * Md",
                     "x1": 2,
                     "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * S",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 2
                 },
                 {
                     "description": "Fe * ТФ",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Co * S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Co * ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Co * P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "S * Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "S * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "S * Co",
-                    "x1": 4,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "S * ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "S * P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Cu",
-                    "x1": 5,
+                    "description": "ТФ * Md",
+                    "x1": 3,
                     "x2": 1,
                     "op": 2
                 },
                 {
                     "description": "ТФ * Fe",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "ТФ * Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "P * Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "P * Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "P * S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "P * ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu / Fe",
+                    "description": "Md / Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "Cu / Co",
+                    "description": "Md / ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "Cu / S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Cu",
+                    "description": "Fe / Md",
                     "x1": 2,
                     "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / S",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 3
                 },
                 {
                     "description": "Fe / ТФ",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Co / S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Co / ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Co / P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "S / Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "S / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "S / Co",
-                    "x1": 4,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "S / ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "S / P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Cu",
-                    "x1": 5,
+                    "description": "ТФ / Md",
+                    "x1": 3,
                     "x2": 1,
                     "op": 3
                 },
                 {
                     "description": "ТФ / Fe",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "ТФ / Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "P / Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "P / Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "P / S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "P / ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 4
@@ -491,31 +170,13 @@
                     "op": 4
                 },
                 {
-                    "description": "Co ^ 2",
+                    "description": "ТФ ^ 2",
                     "x1": 3,
                     "x2": 0,
                     "op": 4
                 },
                 {
-                    "description": "S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Cu",
+                    "description": "1 / Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 5
@@ -527,211 +188,49 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Co",
+                    "description": "1 / ТФ",
                     "x1": 3,
                     "x2": 0,
                     "op": 5
                 },
                 {
-                    "description": "1 / S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Cu / Fe ^ 2",
+                    "description": "Md / Fe ^ 2",
                     "x1": 1,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "Cu / Co ^ 2",
+                    "description": "Md / ТФ ^ 2",
                     "x1": 1,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "Cu / S ^ 2",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / P ^ 2",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Cu ^ 2",
+                    "description": "Fe / Md ^ 2",
                     "x1": 2,
                     "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Co ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / S ^ 2",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 6
                 },
                 {
                     "description": "Fe / ТФ ^ 2",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / P ^ 2",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Co / S ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Co / ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Co / P ^ 2",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "S / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "S / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "S / Co ^ 2",
-                    "x1": 4,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "S / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "S / P ^ 2",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Cu ^ 2",
-                    "x1": 5,
+                    "description": "ТФ / Md ^ 2",
+                    "x1": 3,
                     "x2": 1,
                     "op": 6
                 },
                 {
                     "description": "ТФ / Fe ^ 2",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "ТФ / Co ^ 2",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / S ^ 2",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / P ^ 2",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Cu ^ 2",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "P / Fe ^ 2",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "P / Co ^ 2",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "P / S ^ 2",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "P / ТФ ^ 2",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Cu ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 7
@@ -743,33 +242,15 @@
                     "op": 7
                 },
                 {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
                     "description": "1 / ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 7
                 }
             ]
         },
         {
-            "element_name": "Cu",
+            "element_name": "Md",
             "element_original_number": 2,
             "element_adjusted_number": 1,
             "interactions": [
@@ -780,7 +261,7 @@
                     "op": 0
                 },
                 {
-                    "description": "Ni",
+                    "description": "Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 1
@@ -792,391 +273,85 @@
                     "op": 1
                 },
                 {
-                    "description": "Co",
+                    "description": "ТФ",
                     "x1": 3,
                     "x2": 0,
                     "op": 1
                 },
                 {
-                    "description": "S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Fe",
+                    "description": "Cu * Fe",
                     "x1": 0,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "Ni * Co",
+                    "description": "Cu * ТФ",
                     "x1": 0,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "Ni * S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
+                    "description": "Fe * Cu",
                     "x1": 2,
                     "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * S",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 2
                 },
                 {
                     "description": "Fe * ТФ",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Co * S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Co * ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Co * P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "S * Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "S * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "S * Co",
-                    "x1": 4,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "S * ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "S * P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 5,
+                    "description": "ТФ * Cu",
+                    "x1": 3,
                     "x2": 0,
                     "op": 2
                 },
                 {
                     "description": "ТФ * Fe",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "ТФ * Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "P * Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "P * Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "P * S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "P * ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Fe",
+                    "description": "Cu / Fe",
                     "x1": 0,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "Ni / Co",
+                    "description": "Cu / ТФ",
                     "x1": 0,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "Ni / S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
+                    "description": "Fe / Cu",
                     "x1": 2,
                     "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / S",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 3
                 },
                 {
                     "description": "Fe / ТФ",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Co / S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Co / ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Co / P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "S / Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "S / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "S / Co",
-                    "x1": 4,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "S / ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "S / P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 5,
+                    "description": "ТФ / Cu",
+                    "x1": 3,
                     "x2": 0,
                     "op": 3
                 },
                 {
                     "description": "ТФ / Fe",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "ТФ / Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "P / Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "P / Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "P / S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "P / ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
+                    "description": "Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 4
@@ -1188,31 +363,13 @@
                     "op": 4
                 },
                 {
-                    "description": "Co ^ 2",
+                    "description": "ТФ ^ 2",
                     "x1": 3,
                     "x2": 0,
                     "op": 4
                 },
                 {
-                    "description": "S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
+                    "description": "1 / Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 5
@@ -1224,211 +381,49 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Co",
+                    "description": "1 / ТФ",
                     "x1": 3,
                     "x2": 0,
                     "op": 5
                 },
                 {
-                    "description": "1 / S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Fe ^ 2",
+                    "description": "Cu / Fe ^ 2",
                     "x1": 0,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "Ni / Co ^ 2",
+                    "description": "Cu / ТФ ^ 2",
                     "x1": 0,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "Ni / S ^ 2",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / P ^ 2",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
+                    "description": "Fe / Cu ^ 2",
                     "x1": 2,
                     "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Co ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / S ^ 2",
-                    "x1": 2,
-                    "x2": 4,
                     "op": 6
                 },
                 {
                     "description": "Fe / ТФ ^ 2",
                     "x1": 2,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / P ^ 2",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Co / S ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Co / ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Co / P ^ 2",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "S / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "S / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "S / Co ^ 2",
-                    "x1": 4,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "S / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "S / P ^ 2",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 5,
+                    "description": "ТФ / Cu ^ 2",
+                    "x1": 3,
                     "x2": 0,
                     "op": 6
                 },
                 {
                     "description": "ТФ / Fe ^ 2",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "ТФ / Co ^ 2",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / S ^ 2",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / P ^ 2",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Ni ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "P / Fe ^ 2",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "P / Co ^ 2",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "P / S ^ 2",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "P / ТФ ^ 2",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 7
@@ -1440,26 +435,8 @@
                     "op": 7
                 },
                 {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
                     "description": "1 / ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 7
                 }
@@ -1477,693 +454,189 @@
                     "op": 0
                 },
                 {
-                    "description": "Ni",
+                    "description": "Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 1
                 },
                 {
-                    "description": "Cu",
+                    "description": "Md",
                     "x1": 1,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "S",
-                    "x1": 4,
                     "x2": 0,
                     "op": 1
                 },
                 {
                     "description": "ТФ",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 0,
                     "op": 1
                 },
                 {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Cu",
+                    "description": "Cu * Md",
                     "x1": 0,
                     "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * S",
-                    "x1": 1,
-                    "x2": 4,
                     "op": 2
                 },
                 {
                     "description": "Cu * ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Co * S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Co * ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Co * P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "S * Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "S * Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "S * Co",
-                    "x1": 4,
+                    "x1": 0,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "S * ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "S * P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 5,
+                    "description": "Md * Cu",
+                    "x1": 1,
                     "x2": 0,
+                    "op": 2
+                },
+                {
+                    "description": "Md * ТФ",
+                    "x1": 1,
+                    "x2": 3,
                     "op": 2
                 },
                 {
                     "description": "ТФ * Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Ni",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 2
                 },
                 {
-                    "description": "P * Cu",
-                    "x1": 6,
+                    "description": "ТФ * Md",
+                    "x1": 3,
                     "x2": 1,
                     "op": 2
                 },
                 {
-                    "description": "P * Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "P * S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "P * ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Cu",
+                    "description": "Cu / Md",
                     "x1": 0,
                     "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / S",
-                    "x1": 1,
-                    "x2": 4,
                     "op": 3
                 },
                 {
                     "description": "Cu / ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Co / S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Co / ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Co / P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "S / Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "S / Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "S / Co",
-                    "x1": 4,
+                    "x1": 0,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "S / ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "S / P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 5,
+                    "description": "Md / Cu",
+                    "x1": 1,
                     "x2": 0,
+                    "op": 3
+                },
+                {
+                    "description": "Md / ТФ",
+                    "x1": 1,
+                    "x2": 3,
                     "op": 3
                 },
                 {
                     "description": "ТФ / Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Ni",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 3
                 },
                 {
-                    "description": "P / Cu",
-                    "x1": 6,
+                    "description": "ТФ / Md",
+                    "x1": 3,
                     "x2": 1,
                     "op": 3
                 },
                 {
-                    "description": "P / Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "P / S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "P / ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
+                    "description": "Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 4
                 },
                 {
-                    "description": "Cu ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "S ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 4
                 },
                 {
                     "description": "ТФ ^ 2",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 0,
                     "op": 4
                 },
                 {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
+                    "description": "1 / Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 5
                 },
                 {
-                    "description": "1 / Cu",
+                    "description": "1 / Md",
                     "x1": 1,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / S",
-                    "x1": 4,
                     "x2": 0,
                     "op": 5
                 },
                 {
                     "description": "1 / ТФ",
-                    "x1": 5,
+                    "x1": 3,
                     "x2": 0,
                     "op": 5
                 },
                 {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
+                    "description": "Cu / Md ^ 2",
                     "x1": 0,
                     "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Co ^ 2",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / S ^ 2",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / P ^ 2",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Co ^ 2",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / S ^ 2",
-                    "x1": 1,
-                    "x2": 4,
                     "op": 6
                 },
                 {
                     "description": "Cu / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / P ^ 2",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Co / S ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Co / ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Co / P ^ 2",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "S / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "S / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "S / Co ^ 2",
-                    "x1": 4,
+                    "x1": 0,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "S / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "S / P ^ 2",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 5,
+                    "description": "Md / Cu ^ 2",
+                    "x1": 1,
                     "x2": 0,
+                    "op": 6
+                },
+                {
+                    "description": "Md / ТФ ^ 2",
+                    "x1": 1,
+                    "x2": 3,
                     "op": 6
                 },
                 {
                     "description": "ТФ / Cu ^ 2",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Co ^ 2",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / S ^ 2",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / P ^ 2",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Ni ^ 2",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 6
                 },
                 {
-                    "description": "P / Cu ^ 2",
-                    "x1": 6,
+                    "description": "ТФ / Md ^ 2",
+                    "x1": 3,
                     "x2": 1,
                     "op": 6
                 },
                 {
-                    "description": "P / Co ^ 2",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "P / S ^ 2",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "P / ТФ ^ 2",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 7
                 },
                 {
-                    "description": "1 / Cu ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 7
                 },
                 {
                     "description": "1 / ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
+                    "x1": 3,
                     "x2": 0,
                     "op": 7
                 }
             ]
         },
         {
-            "element_name": "Co",
+            "element_name": "ТФ",
             "element_original_number": 4,
             "element_adjusted_number": 3,
             "interactions": [
@@ -2174,13 +647,13 @@
                     "op": 0
                 },
                 {
-                    "description": "Ni",
+                    "description": "Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 1
                 },
                 {
-                    "description": "Cu",
+                    "description": "Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 1
@@ -2192,391 +665,85 @@
                     "op": 1
                 },
                 {
-                    "description": "S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Cu",
+                    "description": "Cu * Md",
                     "x1": 0,
                     "x2": 1,
                     "op": 2
                 },
                 {
-                    "description": "Ni * Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
                     "description": "Cu * Fe",
-                    "x1": 1,
+                    "x1": 0,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "Cu * S",
+                    "description": "Md * Cu",
                     "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
-                    "x1": 2,
                     "x2": 0,
+                    "op": 2
+                },
+                {
+                    "description": "Md * Fe",
+                    "x1": 1,
+                    "x2": 2,
                     "op": 2
                 },
                 {
                     "description": "Fe * Cu",
                     "x1": 2,
-                    "x2": 1,
+                    "x2": 0,
                     "op": 2
                 },
                 {
-                    "description": "Fe * S",
+                    "description": "Fe * Md",
                     "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "S * Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "S * Cu",
-                    "x1": 4,
                     "x2": 1,
                     "op": 2
                 },
                 {
-                    "description": "S * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "S * ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "S * P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "P * Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "P * Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "P * S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "P * ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Cu",
+                    "description": "Cu / Md",
                     "x1": 0,
                     "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 1,
-                    "x2": 0,
                     "op": 3
                 },
                 {
                     "description": "Cu / Fe",
-                    "x1": 1,
+                    "x1": 0,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "Cu / S",
+                    "description": "Md / Cu",
                     "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
-                    "x1": 2,
                     "x2": 0,
+                    "op": 3
+                },
+                {
+                    "description": "Md / Fe",
+                    "x1": 1,
+                    "x2": 2,
                     "op": 3
                 },
                 {
                     "description": "Fe / Cu",
                     "x1": 2,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / S",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "S / Ni",
-                    "x1": 4,
                     "x2": 0,
                     "op": 3
                 },
                 {
-                    "description": "S / Cu",
-                    "x1": 4,
+                    "description": "Fe / Md",
+                    "x1": 2,
                     "x2": 1,
                     "op": 3
                 },
                 {
-                    "description": "S / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "S / ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "S / P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "P / Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "P / Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "P / S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "P / ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
+                    "description": "Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 4
                 },
                 {
-                    "description": "Cu ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 4
@@ -2588,31 +755,13 @@
                     "op": 4
                 },
                 {
-                    "description": "S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
+                    "description": "1 / Cu",
                     "x1": 0,
                     "x2": 0,
                     "op": 5
                 },
                 {
-                    "description": "1 / Cu",
+                    "description": "1 / Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 5
@@ -2624,211 +773,49 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
+                    "description": "Cu / Md ^ 2",
                     "x1": 0,
                     "x2": 1,
                     "op": 6
                 },
                 {
-                    "description": "Ni / Fe ^ 2",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / S ^ 2",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / P ^ 2",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
                     "description": "Cu / Fe ^ 2",
-                    "x1": 1,
+                    "x1": 0,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "Cu / S ^ 2",
+                    "description": "Md / Cu ^ 2",
                     "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / P ^ 2",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
-                    "x1": 2,
                     "x2": 0,
+                    "op": 6
+                },
+                {
+                    "description": "Md / Fe ^ 2",
+                    "x1": 1,
+                    "x2": 2,
                     "op": 6
                 },
                 {
                     "description": "Fe / Cu ^ 2",
                     "x1": 2,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / S ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / ТФ ^ 2",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / P ^ 2",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "S / Ni ^ 2",
-                    "x1": 4,
                     "x2": 0,
                     "op": 6
                 },
                 {
-                    "description": "S / Cu ^ 2",
-                    "x1": 4,
+                    "description": "Fe / Md ^ 2",
+                    "x1": 2,
                     "x2": 1,
                     "op": 6
                 },
                 {
-                    "description": "S / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "S / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "S / P ^ 2",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Cu ^ 2",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Fe ^ 2",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / S ^ 2",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / P ^ 2",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Ni ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "P / Cu ^ 2",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "P / Fe ^ 2",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "P / S ^ 2",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "P / ТФ ^ 2",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Cu ^ 2",
                     "x1": 0,
                     "x2": 0,
                     "op": 7
                 },
                 {
-                    "description": "1 / Cu ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 7
@@ -2836,2115 +823,6 @@
                 {
                     "description": "1 / Fe ^ 2",
                     "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 7
-                }
-            ]
-        },
-        {
-            "element_name": "S",
-            "element_original_number": 5,
-            "element_adjusted_number": 4,
-            "interactions": [
-                {
-                    "description": "",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 0
-                },
-                {
-                    "description": "Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Co * ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Co * P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "P * Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "P * Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "P * Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "P * ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Co / ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Co / P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / P",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "P / Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "P / Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "P / Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "P / ТФ",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Fe ^ 2",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Co ^ 2",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / P ^ 2",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Fe ^ 2",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Co ^ 2",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / P ^ 2",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Cu ^ 2",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Co ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / ТФ ^ 2",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / P ^ 2",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Co / ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Co / P ^ 2",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Cu ^ 2",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Fe ^ 2",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Co ^ 2",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / P ^ 2",
-                    "x1": 5,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Ni ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "P / Cu ^ 2",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "P / Fe ^ 2",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "P / Co ^ 2",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "P / ТФ ^ 2",
-                    "x1": 6,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 7
-                }
-            ]
-        },
-        {
-            "element_name": "ТФ",
-            "element_original_number": 6,
-            "element_adjusted_number": 5,
-            "interactions": [
-                {
-                    "description": "",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 0
-                },
-                {
-                    "description": "Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * S",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Co * S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Co * P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "S * Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "S * Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "S * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "S * Co",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "S * P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 2
-                },
-                {
-                    "description": "P * Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "P * Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "P * Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "P * Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "P * S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / P",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / P",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / S",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / P",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Co / S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Co / P",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "S / Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "S / Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "S / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "S / Co",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "S / P",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 3
-                },
-                {
-                    "description": "P / Ni",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "P / Cu",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "P / Fe",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "P / Co",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "P / S",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / P",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Fe ^ 2",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Co ^ 2",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / S ^ 2",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / P ^ 2",
-                    "x1": 0,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Fe ^ 2",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Co ^ 2",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / S ^ 2",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / P ^ 2",
-                    "x1": 1,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Cu ^ 2",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Co ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / S ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / P ^ 2",
-                    "x1": 2,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Co / S ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Co / P ^ 2",
-                    "x1": 3,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "S / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "S / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "S / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "S / Co ^ 2",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "S / P ^ 2",
-                    "x1": 4,
-                    "x2": 6,
-                    "op": 6
-                },
-                {
-                    "description": "P / Ni ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "P / Cu ^ 2",
-                    "x1": 6,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "P / Fe ^ 2",
-                    "x1": 6,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "P / Co ^ 2",
-                    "x1": 6,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "P / S ^ 2",
-                    "x1": 6,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / P ^ 2",
-                    "x1": 6,
-                    "x2": 0,
-                    "op": 7
-                }
-            ]
-        },
-        {
-            "element_name": "P",
-            "element_original_number": 7,
-            "element_adjusted_number": 6,
-            "interactions": [
-                {
-                    "description": "",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 0
-                },
-                {
-                    "description": "Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 1
-                },
-                {
-                    "description": "Ni * Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni * ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Cu * ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * S",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Fe * ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "Co * Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "Co * S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Co * ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "S * Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "S * Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "S * Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "S * Co",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "S * ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 2
-                },
-                {
-                    "description": "ТФ * S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 2
-                },
-                {
-                    "description": "Ni / Cu",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Fe",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / Co",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / S",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni / ТФ",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Ni",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Fe",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / Co",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / S",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Cu / ТФ",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Ni",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Cu",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / Co",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / S",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Fe / ТФ",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Ni",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Cu",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "Co / Fe",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "Co / S",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Co / ТФ",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "S / Ni",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "S / Cu",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "S / Fe",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "S / Co",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "S / ТФ",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Ni",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Cu",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Fe",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / Co",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 3
-                },
-                {
-                    "description": "ТФ / S",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 3
-                },
-                {
-                    "description": "Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "ТФ ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 4
-                },
-                {
-                    "description": "1 / Ni",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Cu",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Fe",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / Co",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / S",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "1 / ТФ",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 5
-                },
-                {
-                    "description": "Ni / Cu ^ 2",
-                    "x1": 0,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Fe ^ 2",
-                    "x1": 0,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / Co ^ 2",
-                    "x1": 0,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / S ^ 2",
-                    "x1": 0,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Ni / ТФ ^ 2",
-                    "x1": 0,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Ni ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Fe ^ 2",
-                    "x1": 1,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / Co ^ 2",
-                    "x1": 1,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / S ^ 2",
-                    "x1": 1,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Cu / ТФ ^ 2",
-                    "x1": 1,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Ni ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Cu ^ 2",
-                    "x1": 2,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / Co ^ 2",
-                    "x1": 2,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / S ^ 2",
-                    "x1": 2,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Fe / ТФ ^ 2",
-                    "x1": 2,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Ni ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Cu ^ 2",
-                    "x1": 3,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "Co / Fe ^ 2",
-                    "x1": 3,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "Co / S ^ 2",
-                    "x1": 3,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "Co / ТФ ^ 2",
-                    "x1": 3,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "S / Ni ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "S / Cu ^ 2",
-                    "x1": 4,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "S / Fe ^ 2",
-                    "x1": 4,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "S / Co ^ 2",
-                    "x1": 4,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "S / ТФ ^ 2",
-                    "x1": 4,
-                    "x2": 5,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Ni ^ 2",
-                    "x1": 5,
-                    "x2": 0,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Cu ^ 2",
-                    "x1": 5,
-                    "x2": 1,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Fe ^ 2",
-                    "x1": 5,
-                    "x2": 2,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / Co ^ 2",
-                    "x1": 5,
-                    "x2": 3,
-                    "op": 6
-                },
-                {
-                    "description": "ТФ / S ^ 2",
-                    "x1": 5,
-                    "x2": 4,
-                    "op": 6
-                },
-                {
-                    "description": "1 / Ni ^ 2",
-                    "x1": 0,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Cu ^ 2",
-                    "x1": 1,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Fe ^ 2",
-                    "x1": 2,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / Co ^ 2",
-                    "x1": 3,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / S ^ 2",
-                    "x1": 4,
-                    "x2": 0,
-                    "op": 7
-                },
-                {
-                    "description": "1 / ТФ ^ 2",
-                    "x1": 5,
                     "x2": 0,
                     "op": 7
                 }

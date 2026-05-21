@@ -1,10 +1,14 @@
 {
   "DB_TYPE": "mssql",
-  "DB_HOST": "192.168.222.34",
+  "DB_HOST": "192.168.222.30",
   "DB_PORT": "1433",
   "DB_NAME": "acdb_test",
   "DB_USER": "lastadmin",
   "DB_PASSWORD": "Dwd#RX9R",
   "DB_SERVER": "192.168.222.30",
-  "DB_DRIVER": "ODBC Driver 18 for SQL Server"
+  "DB_DRIVER": "ODBC Driver 18 for SQL Server",
+  "THEME": "Светлая",
+  "CUSTOM_BG": "#aaffff",
+  "CUSTOM_TEXT": "#000000",
+  "CUSTOM_ACCENT": "#ffffff"
 }
