@@ -10,7 +10,7 @@ import json
 import re
 from database.db import Database
 from pathlib import Path
-from config import AC_COUNT, PR_COUNT, DB_CONFIG
+from config import PR_COUNT, refresh_app_settings
 from utils.path_manager import get_config_path
 
 class EquationsPage(QWidget):
@@ -31,16 +31,13 @@ class EquationsPage(QWidget):
         #  Методы экземпляра
         self.init_ui()            # Создание интерфейса
         self.setup_connections()  # Настройка обработчиков событий
+
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
         self.setMinimumWidth(1200)
         self.setMinimumHeight(800)
-
-        # Используем переменные из config
-        ac_count = AC_COUNT
-        pr_count = PR_COUNT
 
         title = QLabel("Ввод уравнений связи")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -63,8 +60,6 @@ class EquationsPage(QWidget):
         product_label.setFixedHeight(20)
 
         self.product_combo = QComboBox()
-        products = [f"Продукт {i}" for i in range(1, pr_count + 1)]
-        self.product_combo.addItems(products)
         self.product_combo.setFixedSize(150, 30)
 
         product_layout.addWidget(product_label)
@@ -142,6 +137,26 @@ class EquationsPage(QWidget):
 
         main_layout.addWidget(self.edit_widget)
         self.edit_widget.setVisible(False)
+
+        self.refresh_product_list()
+
+    def _get_all_products(self) -> list:
+        """Динамически получает список уникальных продуктов из БД"""
+        try:
+            # Получаем все уникальные номера продуктов из базы
+            rows = self.db.fetch_all("SELECT DISTINCT pr_nmb FROM cfg01 ORDER BY pr_nmb")
+            return [row['pr_nmb'] for row in rows]
+        except Exception as e:
+            print(f"Ошибка при получении списка продуктов: {e}")
+            return []
+
+    def refresh_product_list(self):
+        """Заполняет комбобокс продуктами из базы"""
+        self.product_combo.clear()
+        products = self._get_all_products()
+        for pr_nmb in products:
+            self.product_combo.addItem(f"Продукт {pr_nmb}", pr_nmb)
+
     def setup_connections(self):
         """Настройка соединений сигналов и слотов"""
         self.product_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
@@ -1375,6 +1390,8 @@ class EquationsPage(QWidget):
     def showEvent(self, event):
         """Обработчик события показа виджета - скрывает редактор и обновляет конфигурации"""
         super().showEvent(event)
+
+        self.refresh_product_list()
 
         # Скрываем окно редактирования
         self.edit_widget.setVisible(False)
