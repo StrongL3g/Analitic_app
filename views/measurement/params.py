@@ -1,21 +1,17 @@
 # views/products/params.py
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QHBoxLayout, QComboBox
+    QPushButton, QLabel, QHBoxLayout, QMessageBox, QHeaderView
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from database.db import Database
-from config import AC_COUNT
 
 
 class ParamsPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.table = None
-        self.record_id = None
-        self.ac_selector = None
-        self.current_ac_nmb = 1
         self.init_ui()
 
     def init_ui(self):
@@ -23,22 +19,10 @@ class ParamsPage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        title = QLabel("Параметры измерения")
+        title = QLabel("Параметры измерения продуктов")
         title.setStyleSheet("font-size: 18px; font-weight: bold; color: #333;")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
-
-        # --- Выбор прибора ---
-        selector_layout = QHBoxLayout()
-        selector_layout.addWidget(QLabel("Прибор:"))
-
-        self.ac_selector = QComboBox()
-        for i in range(1, AC_COUNT + 1):
-            self.ac_selector.addItem(f"Прибор {i}", i)
-        self.ac_selector.currentIndexChanged.connect(self.on_ac_changed)
-        selector_layout.addWidget(self.ac_selector)
-        selector_layout.addStretch()
-        layout.addLayout(selector_layout)
 
         # --- Кнопки ---
         btn_layout = QHBoxLayout()
@@ -50,156 +34,105 @@ class ParamsPage(QWidget):
 
         save_btn = QPushButton("Сохранить изменения")
         save_btn.clicked.connect(self.save_data)
-        save_btn.setFixedWidth(120)
+        save_btn.setFixedWidth(180)
 
         btn_layout.addWidget(refresh_btn)
         btn_layout.addWidget(save_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # --- Таблица с параметрами ---
+        # --- Таблица: PR_SET ---
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setRowCount(9)
+        self.table.setHorizontalHeaderLabels(["№", "Продукт", "Ток (I, мкА)", "Напряжение (U, кВ)", "Время (сек)"])
 
-        # УБИРАЕМ ЗАГОЛОВКИ СТРОК
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         self.table.verticalHeader().setVisible(False)
-
-        headers = ["№", "I, мкА", "U, кВ", "Время, сек", "Кратность"]
-        self.table.setHorizontalHeaderLabels(headers)
-
+        self.table.verticalHeader().setDefaultSectionSize(30)
         layout.addWidget(self.table)
 
         self.setLayout(layout)
         self.load_data()
 
-    def on_ac_changed(self, index):
-        self.current_ac_nmb = self.ac_selector.currentData()
-        self.load_data()
-
     def load_data(self):
-        query = """
-        SELECT id,
-               current_00, current_01, current_02, current_03, current_04,
-               current_05, current_06, current_07, current_08,
-               voltage_00, voltage_01, voltage_02, voltage_03, voltage_04,
-               voltage_05, voltage_06, voltage_07, voltage_08,
-               time_00, time_01, time_02, time_03, time_04,
-               time_05, time_06, time_07, time_08
-        FROM SET04
-        WHERE ac_nmb = ?
-        """
+        def format_val(val):
+            if val is None: return ""
+            return str(int(val)) if val == int(val) else str(val)
 
         try:
-            data = self.db.fetch_all(query, [self.current_ac_nmb])
-            if not data:
-                print(f"Нет данных в SET04 для прибора {self.current_ac_nmb}")
-                return
+            query = """
+            SELECT p.id, p.pr_nmb, p.[current], p.[voltage], p.[time], c.pr_name
+            FROM pr_set p
+            LEFT JOIN cfg02 c ON p.pr_nmb = c.pr_nmb
+            ORDER BY p.pr_nmb
+            """
+            data = self.db.fetch_all(query)
+            self.table.setRowCount(len(data))
 
-            row_data = data[0]
-            self.record_id = row_data.get("id")
+            for i, row in enumerate(data):
+                # Номер продукта
+                item_nmb = QTableWidgetItem(str(row["pr_nmb"]))
+                item_nmb.setFlags(item_nmb.flags() & ~Qt.ItemIsEditable)
+                item_nmb.setData(Qt.UserRole, {"id": row["id"], "pr_nmb": row["pr_nmb"]})
+                item_nmb.setBackground(QColor(240, 240, 240))
+                item_nmb.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(i, 0, item_nmb)
 
-            self.table.setRowCount(9)
+                # Название продукта
+                item_name = QTableWidgetItem(str(row.get("pr_name") or ""))
+                item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
+                item_name.setBackground(QColor(240, 240, 240))
+                self.table.setItem(i, 1, item_name)
 
-            for row in range(9):
-                # Номер строки
-                item = QTableWidgetItem(str(row))
-                item.setTextAlignment(Qt.AlignCenter)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                self.table.setItem(row, 0, item)
-
-                # Ток (I, мкА)
-                current_field = f"current_{row:02d}"
-                value = row_data.get(current_field)
-                item = QTableWidgetItem(str(value) if value is not None else "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, 1, item)
-
-                # Напряжение (U, кВ)
-                voltage_field = f"voltage_{row:02d}"
-                value = row_data.get(voltage_field)
-                item = QTableWidgetItem(str(value) if value is not None else "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, 2, item)
-
-                # Время (сек)
-                time_field = f"time_{row:02d}"
-                value = row_data.get(time_field)
-                item = QTableWidgetItem(str(value) if value is not None else "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, 3, item)
-
-                # Кратность
-                if row == 0:
-                    item = QTableWidgetItem("1")
-                else:
-                    item = QTableWidgetItem("4")
-                item.setTextAlignment(Qt.AlignCenter)
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                self.table.setItem(row, 4, item)
-
-            self.table.resizeColumnsToContents()
-
-        except Exception as e:
-            print(f"Ошибка при загрузке параметров измерения: {e}")
-
-    def save_data(self):
-        if not self.record_id:
-            print("Нет ID записи для обновления")
-            return
-
-        try:
-            fields = []
-            params = []
-
-            for row in range(9):
                 # Ток
-                current_field = f"current_{row:02d}"
-                item = self.table.item(row, 1)
-                if item:
-                    value = item.text().strip()
-                    fields.append(current_field)
-                    params.append(value if value else None)
+                item_c = QTableWidgetItem(format_val(row["current"]))
+                item_c.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(i, 2, item_c)
 
                 # Напряжение
-                voltage_field = f"voltage_{row:02d}"
-                item = self.table.item(row, 2)
-                if item:
-                    value = item.text().strip()
-                    fields.append(voltage_field)
-                    params.append(value if value else None)
+                item_v = QTableWidgetItem(format_val(row["voltage"]))
+                item_v.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(i, 3, item_v)
 
                 # Время
-                time_field = f"time_{row:02d}"
-                item = self.table.item(row, 3)
-                if item:
-                    value = item.text().strip()
-                    fields.append(time_field)
-                    params.append(value if value else None)
-
-            if not fields:
-                print("Нет данных для обновления")
-                return
-
-            set_parts = []
-            query_params = []
-
-            for field, value in zip(fields, params):
-                if value is None:
-                    set_parts.append(f"{field} = NULL")
-                else:
-                    set_parts.append(f"{field} = ?")
-                    query_params.append(value)
-
-            query = f"""
-            UPDATE SET04
-            SET {', '.join(set_parts)}
-            WHERE id = ? AND ac_nmb = ?
-            """
-            query_params.extend([self.record_id, self.current_ac_nmb])
-
-            self.db.execute(query, query_params)
-            print(f"Данные успешно сохранены для прибора {self.current_ac_nmb}")
+                item_t = QTableWidgetItem(format_val(row["time"]))
+                item_t.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(i, 4, item_t)
 
         except Exception as e:
-            print(f"Ошибка при сохранении параметров измерения: {e}")
+            print(f"Ошибка загрузки pr_set: {e}")
+
+    def save_data(self):
+        updated = 0
+        try:
+            for i in range(self.table.rowCount()):
+                item_nmb = self.table.item(i, 0)
+                if not item_nmb: continue
+                meta = item_nmb.data(Qt.UserRole)
+                if not meta: continue
+
+                pr_id = meta["id"]
+
+                current = self.table.item(i, 2).text().strip()
+                voltage = self.table.item(i, 3).text().strip()
+                time_val = self.table.item(i, 4).text().strip()
+
+                params = [
+                    float(current.replace(',', '.')) if current else None,
+                    float(voltage.replace(',', '.')) if voltage else None,
+                    float(time_val.replace(',', '.')) if time_val else None,
+                    pr_id
+                ]
+                self.db.execute("UPDATE pr_set SET [current]=?, [voltage]=?, [time]=? WHERE id=?", params)
+                updated += 1
+
+            if updated > 0:
+                QMessageBox.information(self, "Успех", "Параметры продуктов успешно сохранены!")
+                self.load_data()
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения параметров: {e}")

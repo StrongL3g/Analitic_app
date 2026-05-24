@@ -42,7 +42,7 @@
         {
             "original_number": 2,
             "adjusted_number": 1,
-            "name": "Ni"
+            "name": "Md"
         },
         {
             "original_number": 3,
@@ -68,7 +68,7 @@
                     "op": 0
                 },
                 {
-                    "description": "Ni",
+                    "description": "Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 1
@@ -86,19 +86,19 @@
                     "op": 1
                 },
                 {
-                    "description": "Ni * Fe",
+                    "description": "Md * Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 2
                 },
                 {
-                    "description": "Ni * ТФ",
+                    "description": "Md * ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 2
                 },
                 {
-                    "description": "Fe * Ni",
+                    "description": "Fe * Md",
                     "x1": 2,
                     "x2": 1,
                     "op": 2
@@ -110,7 +110,7 @@
                     "op": 2
                 },
                 {
-                    "description": "ТФ * Ni",
+                    "description": "ТФ * Md",
                     "x1": 3,
                     "x2": 1,
                     "op": 2
@@ -122,19 +122,19 @@
                     "op": 2
                 },
                 {
-                    "description": "Ni / Fe",
+                    "description": "Md / Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 3
                 },
                 {
-                    "description": "Ni / ТФ",
+                    "description": "Md / ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 3
                 },
                 {
-                    "description": "Fe / Ni",
+                    "description": "Fe / Md",
                     "x1": 2,
                     "x2": 1,
                     "op": 3
@@ -146,7 +146,7 @@
                     "op": 3
                 },
                 {
-                    "description": "ТФ / Ni",
+                    "description": "ТФ / Md",
                     "x1": 3,
                     "x2": 1,
                     "op": 3
@@ -158,7 +158,7 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 4
@@ -176,7 +176,7 @@
                     "op": 4
                 },
                 {
-                    "description": "1 / Ni",
+                    "description": "1 / Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 5
@@ -194,19 +194,19 @@
                     "op": 5
                 },
                 {
-                    "description": "Ni / Fe ^ 2",
+                    "description": "Md / Fe ^ 2",
                     "x1": 1,
                     "x2": 2,
                     "op": 6
                 },
                 {
-                    "description": "Ni / ТФ ^ 2",
+                    "description": "Md / ТФ ^ 2",
                     "x1": 1,
                     "x2": 3,
                     "op": 6
                 },
                 {
-                    "description": "Fe / Ni ^ 2",
+                    "description": "Fe / Md ^ 2",
                     "x1": 2,
                     "x2": 1,
                     "op": 6
@@ -218,7 +218,7 @@
                     "op": 6
                 },
                 {
-                    "description": "ТФ / Ni ^ 2",
+                    "description": "ТФ / Md ^ 2",
                     "x1": 3,
                     "x2": 1,
                     "op": 6
@@ -230,7 +230,7 @@
                     "op": 6
                 },
                 {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 7
@@ -250,7 +250,7 @@
             ]
         },
         {
-            "element_name": "Ni",
+            "element_name": "Md",
             "element_original_number": 2,
             "element_adjusted_number": 1,
             "interactions": [
@@ -460,7 +460,7 @@
                     "op": 1
                 },
                 {
-                    "description": "Ni",
+                    "description": "Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 1
@@ -472,7 +472,7 @@
                     "op": 1
                 },
                 {
-                    "description": "Cu * Ni",
+                    "description": "Cu * Md",
                     "x1": 0,
                     "x2": 1,
                     "op": 2
@@ -484,13 +484,13 @@
                     "op": 2
                 },
                 {
-                    "description": "Ni * Cu",
+                    "description": "Md * Cu",
                     "x1": 1,
                     "x2": 0,
                     "op": 2
                 },
                 {
-                    "description": "Ni * ТФ",
+                    "description": "Md * ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 2
@@ -502,13 +502,13 @@
                     "op": 2
                 },
                 {
-                    "description": "ТФ * Ni",
+                    "description": "ТФ * Md",
                     "x1": 3,
                     "x2": 1,
                     "op": 2
                 },
                 {
-                    "description": "Cu / Ni",
+                    "description": "Cu / Md",
                     "x1": 0,
                     "x2": 1,
                     "op": 3
@@ -520,13 +520,13 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni / Cu",
+                    "description": "Md / Cu",
                     "x1": 1,
                     "x2": 0,
                     "op": 3
                 },
                 {
-                    "description": "Ni / ТФ",
+                    "description": "Md / ТФ",
                     "x1": 1,
                     "x2": 3,
                     "op": 3
@@ -538,7 +538,7 @@
                     "op": 3
                 },
                 {
-                    "description": "ТФ / Ni",
+                    "description": "ТФ / Md",
                     "x1": 3,
                     "x2": 1,
                     "op": 3
@@ -550,7 +550,7 @@
                     "op": 4
                 },
                 {
-                    "description": "Ni ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 4
@@ -568,7 +568,7 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ni",
+                    "description": "1 / Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 5
@@ -580,7 +580,7 @@
                     "op": 5
                 },
                 {
-                    "description": "Cu / Ni ^ 2",
+                    "description": "Cu / Md ^ 2",
                     "x1": 0,
                     "x2": 1,
                     "op": 6
@@ -592,13 +592,13 @@
                     "op": 6
                 },
                 {
-                    "description": "Ni / Cu ^ 2",
+                    "description": "Md / Cu ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 6
                 },
                 {
-                    "description": "Ni / ТФ ^ 2",
+                    "description": "Md / ТФ ^ 2",
                     "x1": 1,
                     "x2": 3,
                     "op": 6
@@ -610,7 +610,7 @@
                     "op": 6
                 },
                 {
-                    "description": "ТФ / Ni ^ 2",
+                    "description": "ТФ / Md ^ 2",
                     "x1": 3,
                     "x2": 1,
                     "op": 6
@@ -622,7 +622,7 @@
                     "op": 7
                 },
                 {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 7
@@ -653,7 +653,7 @@
                     "op": 1
                 },
                 {
-                    "description": "Ni",
+                    "description": "Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 1
@@ -665,7 +665,7 @@
                     "op": 1
                 },
                 {
-                    "description": "Cu * Ni",
+                    "description": "Cu * Md",
                     "x1": 0,
                     "x2": 1,
                     "op": 2
@@ -677,13 +677,13 @@
                     "op": 2
                 },
                 {
-                    "description": "Ni * Cu",
+                    "description": "Md * Cu",
                     "x1": 1,
                     "x2": 0,
                     "op": 2
                 },
                 {
-                    "description": "Ni * Fe",
+                    "description": "Md * Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 2
@@ -695,13 +695,13 @@
                     "op": 2
                 },
                 {
-                    "description": "Fe * Ni",
+                    "description": "Fe * Md",
                     "x1": 2,
                     "x2": 1,
                     "op": 2
                 },
                 {
-                    "description": "Cu / Ni",
+                    "description": "Cu / Md",
                     "x1": 0,
                     "x2": 1,
                     "op": 3
@@ -713,13 +713,13 @@
                     "op": 3
                 },
                 {
-                    "description": "Ni / Cu",
+                    "description": "Md / Cu",
                     "x1": 1,
                     "x2": 0,
                     "op": 3
                 },
                 {
-                    "description": "Ni / Fe",
+                    "description": "Md / Fe",
                     "x1": 1,
                     "x2": 2,
                     "op": 3
@@ -731,7 +731,7 @@
                     "op": 3
                 },
                 {
-                    "description": "Fe / Ni",
+                    "description": "Fe / Md",
                     "x1": 2,
                     "x2": 1,
                     "op": 3
@@ -743,7 +743,7 @@
                     "op": 4
                 },
                 {
-                    "description": "Ni ^ 2",
+                    "description": "Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 4
@@ -761,7 +761,7 @@
                     "op": 5
                 },
                 {
-                    "description": "1 / Ni",
+                    "description": "1 / Md",
                     "x1": 1,
                     "x2": 0,
                     "op": 5
@@ -773,7 +773,7 @@
                     "op": 5
                 },
                 {
-                    "description": "Cu / Ni ^ 2",
+                    "description": "Cu / Md ^ 2",
                     "x1": 0,
                     "x2": 1,
                     "op": 6
@@ -785,13 +785,13 @@
                     "op": 6
                 },
                 {
-                    "description": "Ni / Cu ^ 2",
+                    "description": "Md / Cu ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 6
                 },
                 {
-                    "description": "Ni / Fe ^ 2",
+                    "description": "Md / Fe ^ 2",
                     "x1": 1,
                     "x2": 2,
                     "op": 6
@@ -803,7 +803,7 @@
                     "op": 6
                 },
                 {
-                    "description": "Fe / Ni ^ 2",
+                    "description": "Fe / Md ^ 2",
                     "x1": 2,
                     "x2": 1,
                     "op": 6
@@ -815,7 +815,7 @@
                     "op": 7
                 },
                 {
-                    "description": "1 / Ni ^ 2",
+                    "description": "1 / Md ^ 2",
                     "x1": 1,
                     "x2": 0,
                     "op": 7

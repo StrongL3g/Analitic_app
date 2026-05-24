@@ -10,7 +10,7 @@ import json
 import re
 from database.db import Database
 from pathlib import Path
-from config import AC_COUNT, PR_COUNT, DB_CONFIG
+from config import PR_COUNT, refresh_app_settings
 from utils.path_manager import get_config_path
 
 class EquationsPage(QWidget):
@@ -31,16 +31,13 @@ class EquationsPage(QWidget):
         #  Методы экземпляра
         self.init_ui()            # Создание интерфейса
         self.setup_connections()  # Настройка обработчиков событий
+
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
         self.setMinimumWidth(1200)
         self.setMinimumHeight(800)
-
-        # Используем переменные из config
-        ac_count = AC_COUNT
-        pr_count = PR_COUNT
 
         title = QLabel("Ввод уравнений связи")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -63,8 +60,6 @@ class EquationsPage(QWidget):
         product_label.setFixedHeight(20)
 
         self.product_combo = QComboBox()
-        products = [f"Продукт {i}" for i in range(1, pr_count + 1)]
-        self.product_combo.addItems(products)
         self.product_combo.setFixedSize(150, 30)
 
         product_layout.addWidget(product_label)
@@ -96,7 +91,7 @@ class EquationsPage(QWidget):
         self.table_widget.setHorizontalHeaderLabels(["Коэффициенты корректировки", "Уравнения расчета концентраций"])
         self.table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table_widget.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table_widget.setAlternatingRowColors(True)
+        #self.table_widget.setAlternatingRowColors(True)
         self.table_widget.setSelectionBehavior(QTableWidget.SelectRows)
 
         # Добавляем разделитель
@@ -142,13 +137,33 @@ class EquationsPage(QWidget):
 
         main_layout.addWidget(self.edit_widget)
         self.edit_widget.setVisible(False)
+
+        self.refresh_product_list()
+
+    def _get_all_products(self) -> list:
+        """Динамически получает список уникальных продуктов из БД"""
+        try:
+            # Получаем все уникальные номера продуктов из базы
+            rows = self.db.fetch_all("SELECT DISTINCT pr_nmb FROM cfg01 ORDER BY pr_nmb")
+            return [row['pr_nmb'] for row in rows]
+        except Exception as e:
+            print(f"Ошибка при получении списка продуктов: {e}")
+            return []
+
+    def refresh_product_list(self):
+        """Заполняет комбобокс продуктами из базы"""
+        self.product_combo.clear()
+        products = self._get_all_products()
+        for pr_nmb in products:
+            self.product_combo.addItem(f"Продукт {pr_nmb}", pr_nmb)
+
     def setup_connections(self):
         """Настройка соединений сигналов и слотов"""
         self.product_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
         self.model_combo.currentIndexChanged.connect(self.on_product_or_model_changed)
         self.apply_to_btn.clicked.connect(self.show_apply_to_dialog)
         self.table_widget.cellClicked.connect(self.on_table_cell_clicked)
-        self.save_btn.clicked.connect(self.save_equation_changes)
+        self.save_btn.clicked.connect(lambda: self.save_equation_changes())
         self.cancel_btn.clicked.connect(self.cancel_editing)
         self.clear_btn.clicked.connect(self.clear_equation)
         self.regression_radio.toggled.connect(self.on_measurement_type_changed)
@@ -454,7 +469,7 @@ class EquationsPage(QWidget):
         self.intensity_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.intensity_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
-        self.intensity_table.setAlternatingRowColors(True)
+        #self.intensity_table.setAlternatingRowColors(True)
         self.intensity_table.setRowCount(20)  # 20 линий
 
         container_layout.addWidget(self.intensity_table)
@@ -672,56 +687,46 @@ class EquationsPage(QWidget):
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
     def load_equations(self):
-        """Загружает уравнения из базы данных только для сконфигурированных элементов"""
+        """Загружает уравнения из базы данных, объединяя el_set и mdl_set"""
         try:
             product_nmb = self.product_combo.currentIndex() + 1
             model_nmb = self.model_combo.currentIndex() + 1
 
-            # Получаем номера сконфигурированных элементов
             configured_numbers = self._get_configured_element_numbers()
 
             if not configured_numbers:
                 self.table_widget.setRowCount(0)
-                QMessageBox.information(self, "Информация", "Нет сконфигурированных элементов.")
                 return
 
-            # Формируем условие WHERE для выборки только сконфигурированных элементов
             placeholders = ','.join(['?' for _ in configured_numbers])
+            # Используем JOIN для получения данных из обеих таблиц
             query = f"""
-            SELECT * FROM pr_set 
-            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb IN ({placeholders})
-            ORDER BY el_nmb
+            SELECT e.*, m.water_crit, m.empty_crit, m.w_sq_nmb, m.e_sq_nmb, m.w_operator, m.e_operator
+            FROM el_set e
+            JOIN mdl_set m ON e.pr_nmb = m.pr_nmb AND e.mdl_nmb = m.mdl_nmb
+            WHERE e.pr_nmb = ? AND e.mdl_nmb = ? AND e.el_nmb IN ({placeholders})
+            ORDER BY e.el_nmb
             """
-
             params = [product_nmb, model_nmb] + configured_numbers
             results = self.db.fetch_all(query, params)
 
             if not results:
                 self.table_widget.setRowCount(0)
-                QMessageBox.information(self, "Информация", "Данные для выбранного продукта и модели не найдены.")
                 return
 
             self.table_widget.setRowCount(len(results))
-
             for row_idx, row in enumerate(results):
-                el_nmb = row.get('el_nmb', 0)
-                element_name = self._get_element_name(el_nmb)
-
                 equation = self._build_equation(row)
                 correction_coeffs = self._build_correction_coeffs(row)
 
-                # Колонка с коэффициентами корректировки
                 coeff_item = QTableWidgetItem(correction_coeffs)
                 coeff_item.setTextAlignment(Qt.AlignCenter)
                 self.table_widget.setItem(row_idx, 0, coeff_item)
 
-                # Колонка с уравнениями
                 equation_item = QTableWidgetItem(equation)
-                equation_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
                 self.table_widget.setItem(row_idx, 1, equation_item)
 
-                # Сохраняем исходные данные для редактирования
-                self.table_widget.item(row_idx, 0).setData(Qt.UserRole, row)
+                # Сохраняем строку для редактирования
                 self.table_widget.item(row_idx, 1).setData(Qt.UserRole, row)
 
         except Exception as e:
@@ -911,398 +916,93 @@ class EquationsPage(QWidget):
                 return
         combo.setCurrentIndex(0)  # Устанавливаем значение по умолчанию
 
-    def save_equation_changes(self, product_numbers: list[int] | None = None,
-                              model_numbers: list[int] | None = None,
-                              apply_mode: str = "all"):
-        """
-        Сохраняет изменения уравнения в базу.
+    def _get_params_from_ui(self):
+        """Собирает все текущие данные из полей ввода в список"""
+        meas_type = 0 if self.regression_radio.isChecked() else 1
 
-        Args:
-            product_numbers: Список номеров продуктов для массового применения
-            model_numbers: Список номеров моделей для массового применения
-            apply_mode: Режим применения:
-                - "all": применить всё (тип + коэффициенты + члены + критерии)
-                - "coeffs_only": только коэффициенты и члены уравнения
-                - "type_only": только тип расчета
-        """
-        # Сначала сбрасываем подсветку всех полей
+        # Базовые параметры
+        params = [
+            meas_type,
+            self._safe_float_convert(self.c_min_edit.text()),
+            self._safe_float_convert(self.c_max_edit.text()),
+            self._safe_float_convert(self.k0_edit.text()),
+            self._safe_float_convert(self.k1_edit.text())
+        ]
+
+        # Члены A0-A5
+        for i in range(6):
+            member = self.equation_members[i]
+            params.append(self._safe_float_convert(member.coeff_edit.text()))
+            if i > 0 and member.interaction_combo:
+                data = member.interaction_combo.itemData(member.interaction_combo.currentIndex())
+                params.extend([data.get('x1', 0), data.get('x2', 0), data.get('op', 0)])
+            elif i > 0:
+                params.extend([0, 0, 0])
+
+        return params, meas_type
+
+    def save_equation_changes(self, product_numbers=None, model_numbers=None, apply_mode="all"):
         self._reset_all_field_highlights()
-
         try:
-            # Определяем режим сохранения
-            is_mass_save = (product_numbers is not None and model_numbers is not None)
+            # ИСПРАВЛЕНИЕ: если аргументы не переданы (вызов обычной кнопки),
+            # берем значения из текущих данных
+            if product_numbers is None:
+                product_numbers = [self.current_equation_data.get('pr_nmb')]
+            if model_numbers is None:
+                model_numbers = [self.current_equation_data.get('mdl_nmb')]
 
-            if not is_mass_save and (self.current_editing_row is None or not self.current_equation_data):
-                QMessageBox.warning(self, "Ошибка", "Нет активного уравнения для сохранения.")
-                return
+            # Если вдруг пришли не списки, принудительно делаем их списками
+            if not isinstance(product_numbers, list): product_numbers = [product_numbers]
+            if not isinstance(model_numbers, list): model_numbers = [model_numbers]
 
-            # ПРОВЕРЯЕМ ВСЕ ПОЛЯ ПЕРЕД СОХРАНЕНИЕМ
-            validation_errors, error_fields = self._validate_all_numeric_fields()
-            if validation_errors:
-                error_message = "Обнаружены ошибки ввода:\n\n" + "\n".join(validation_errors)
-                self._highlight_error_fields(error_fields)
-                QMessageBox.critical(self, "Ошибки ввода данных", error_message)
-                return
+            params, meas_type = self._get_params_from_ui()
+            p = 'i' if meas_type == 0 else 'c'
 
-            # Собираем данные из полей редактора
-            meas_type = 0 if self.regression_radio.isChecked() else 1
-            el_nmb = self.current_equation_data.get('el_nmb', 0)
+            for pr_nmb in product_numbers:
+                for mdl_nmb in model_numbers:
+                    # 1. Обновление el_set
+                    if apply_mode in ["all", "coeffs_only"]:
+                        el_sql = f"""UPDATE el_set SET 
+                            meas_type = ?, c_min = ?, c_max = ?,
+                            k_{p}_klin00 = ?, k_{p}_klin01 = ?, k_{p}_alin00 = ?,
+                            k_{p}_alin01 = ?, operand_{p}_01_01 = ?, operand_{p}_02_01 = ?, operator_{p}_01 = ?,
+                            k_{p}_alin02 = ?, operand_{p}_01_02 = ?, operand_{p}_02_02 = ?, operator_{p}_02 = ?,
+                            k_{p}_alin03 = ?, operand_{p}_01_03 = ?, operand_{p}_02_03 = ?, operator_{p}_03 = ?,
+                            k_{p}_alin04 = ?, operand_{p}_01_04 = ?, operand_{p}_02_04 = ?, operator_{p}_04 = ?,
+                            k_{p}_alin05 = ?, operand_{p}_01_05 = ?, operand_{p}_02_05 = ?, operator_{p}_05 = ?
+                            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?"""
+                        self.db.execute(el_sql, params + [pr_nmb, mdl_nmb, self.current_equation_data.get('el_nmb')])
+                    elif apply_mode == "type_only":
+                        self.db.execute(
+                            "UPDATE el_set SET meas_type = ? WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?",
+                            [meas_type, pr_nmb, mdl_nmb, self.current_equation_data.get('el_nmb')])
 
-            # Определяем, что обновлять в зависимости от режима
-            update_criteria_and_type = (apply_mode == "all")
-            update_coeffs_only = (apply_mode == "coeffs_only")
-            update_type_only = (apply_mode == "type_only")
+                    # 2. Обновление mdl_set
+                    if apply_mode == "all":
+                        mdl_sql = """UPDATE mdl_set SET 
+                            water_crit = ?, empty_crit = ?, w_sq_nmb = ?, e_sq_nmb = ?, 
+                            w_operator = ?, e_operator = ? 
+                            WHERE pr_nmb = ? AND mdl_nmb = ?"""
+                        self.db.execute(mdl_sql, [
+                            self._safe_float_convert(self.water_crit_edit.text()),
+                            self._safe_float_convert(self.empty_crit_edit.text()),
+                            self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
+                            self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
+                            1 if self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()) else 0,
+                            1 if self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()) else 0,
+                            pr_nmb, mdl_nmb
+                        ])
 
-            # Подготавливаем данные для обновления
-            update_data = {
-                'meas_type': meas_type,
-                'el_nmb': el_nmb,
-            }
-
-            # ОБНОВЛЯЕМ КРИТЕРИИ И ДИАПАЗОНЫ (только в режиме "all")
-            if update_criteria_and_type:
-                w_operator_value = bool(self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()))
-                e_operator_value = bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()))
-
-                update_data.update({
-                    'water_crit': self._safe_float_convert(self.water_crit_edit.text(), "Критерий Вода"),
-                    'w_sq_nmb': self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
-                    'w_operator': w_operator_value,
-                    'empty_crit': self._safe_float_convert(self.empty_crit_edit.text(), "Критерий Пусто"),
-                    'e_sq_nmb': self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                    'e_operator': e_operator_value,
-                    'c_min': self._safe_float_convert(self.c_min_edit.text(), "C мин"),
-                    'c_max': self._safe_float_convert(self.c_max_edit.text(), "C макс")
-                })
-
-            # ОБНОВЛЯЕМ КОЭФФИЦИЕНТЫ КОРРЕКТИРОВКИ И ЧЛЕНЫ УРАВНЕНИЯ
-            # (во всех режимах кроме "type_only")
-            if not update_type_only:
-                # Коэффициенты корректировки и члены уравнения
-                for i in range(6):
-                    member_widget = self.equation_members[i]
-                    coeff_value = self._safe_float_convert(member_widget.coeff_edit.text(), f"A{i}")
-
-                    if meas_type == 0:  # РЕГРЕССИЯ
-                        # Сохраняем коэффициенты для регрессии
-                        if i == 0:  # k0, k1
-                            update_data['k_i_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
-                            update_data['k_i_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
-
-                        update_data[f'k_i_alin{i:02d}'] = coeff_value
-                        if i > 0 and member_widget.interaction_combo:
-                            interaction_data = member_widget.interaction_combo.itemData(
-                                member_widget.interaction_combo.currentIndex())
-                            if interaction_data:
-                                update_data[f'operand_i_01_{i:02d}'] = interaction_data.get('x1', 0)
-                                update_data[f'operand_i_02_{i:02d}'] = interaction_data.get('x2', 0)
-                                update_data[f'operator_i_{i:02d}'] = interaction_data.get('op', 0)
-                    else:  # КОРРЕЛЯЦИЯ
-                        # Сохраняем коэффициенты для корреляции
-                        if i == 0:  # k0, k1
-                            update_data['k_c_klin00'] = self._safe_float_convert(self.k0_edit.text(), "k0")
-                            update_data['k_c_klin01'] = self._safe_float_convert(self.k1_edit.text(), "k1")
-
-                        update_data[f'k_c_alin{i:02d}'] = coeff_value
-                        if i > 0 and member_widget.interaction_combo:
-                            interaction_data = member_widget.interaction_combo.itemData(
-                                member_widget.interaction_combo.currentIndex())
-                            if interaction_data:
-                                update_data[f'operand_c_01_{i:02d}'] = interaction_data.get('x1', 0)
-                                update_data[f'operand_c_02_{i:02d}'] = interaction_data.get('x2', 0)
-                                update_data[f'operator_c_{i:02d}'] = interaction_data.get('op', 0)
-
-            # ФОРМИРУЕМ SQL ЗАПРОС В ЗАВИСИМОСТИ ОТ РЕЖИМА И ТИПА УРАВНЕНИЯ
-            if is_mass_save:
-                # РЕЖИМ МАССОВОГО ПРИМЕНЕНИЯ
-                if not product_numbers or not model_numbers:
-                    QMessageBox.warning(self, "Ошибка", "Списки продуктов и моделей не могут быть пустыми.")
-                    return
-
-                # Формируем SQL в зависимости от типа уравнения и режима
-                if update_type_only:
-                    # Только тип расчета
-                    base_fields = "meas_type = ?"
-                    base_params = [update_data['meas_type']]
-                elif update_coeffs_only:
-                    # Только коэффициенты и члены уравнения
-                    if meas_type == 0:  # РЕГРЕССИЯ
-                        base_fields = """
-                        k_i_klin00 = ?, k_i_klin01 = ?,
-                        k_i_alin00 = ?,
-                        k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
-                        k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
-                        k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
-                        k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
-                        k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
-                        """
-                        base_params = [
-                            update_data['k_i_klin00'], update_data['k_i_klin01'],
-                            update_data['k_i_alin00'],
-                            update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
-                            update_data['operator_i_01'],
-                            update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
-                            update_data['operator_i_02'],
-                            update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
-                            update_data['operator_i_03'],
-                            update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
-                            update_data['operator_i_04'],
-                            update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
-                            update_data['operator_i_05']
-                        ]
-                    else:  # КОРРЕЛЯЦИЯ
-                        base_fields = """
-                        k_c_klin00 = ?, k_c_klin01 = ?,
-                        k_c_alin00 = ?,
-                        k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
-                        k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
-                        k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
-                        k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
-                        k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
-                        """
-                        base_params = [
-                            update_data['k_c_klin00'], update_data['k_c_klin01'],
-                            update_data['k_c_alin00'],
-                            update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
-                            update_data['operator_c_01'],
-                            update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
-                            update_data['operator_c_02'],
-                            update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
-                            update_data['operator_c_03'],
-                            update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
-                            update_data['operator_c_04'],
-                            update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
-                            update_data['operator_c_05']
-                        ]
-                else:
-                    # ВСЁ (all) - тип + коэффициенты + критерии
-                    #base_fields = """
-                    #meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
-                    #e_operator = ?, c_min = ?, c_max = ?,
-                    #"""
-                    base_fields = """
-                         meas_type = ?, c_min = ?, c_max = ?,
-                    """
-
-                    if meas_type == 0:  # РЕГРЕССИЯ
-                        base_fields += """
-                        k_i_klin00 = ?, k_i_klin01 = ?,
-                        k_i_alin00 = ?,
-                        k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
-                        k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
-                        k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
-                        k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
-                        k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
-                        """
-                        base_params = [
-                            update_data['meas_type'],
-                            #update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                            #update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                            update_data['c_min'], update_data['c_max'],
-                            update_data['k_i_klin00'], update_data['k_i_klin01'],
-                            update_data['k_i_alin00'],
-                            update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
-                            update_data['operator_i_01'],
-                            update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
-                            update_data['operator_i_02'],
-                            update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
-                            update_data['operator_i_03'],
-                            update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
-                            update_data['operator_i_04'],
-                            update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
-                            update_data['operator_i_05']
-                        ]
-                    else:  # КОРРЕЛЯЦИЯ
-                        base_fields += """
-                        k_c_klin00 = ?, k_c_klin01 = ?,
-                        k_c_alin00 = ?,
-                        k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
-                        k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
-                        k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
-                        k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
-                        k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
-                        """
-                        base_params = [
-                            update_data['meas_type'],
-                            #update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                            #update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                            update_data['c_min'], update_data['c_max'],
-                            update_data['k_c_klin00'], update_data['k_c_klin01'],
-                            update_data['k_c_alin00'],
-                            update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
-                            update_data['operator_c_01'],
-                            update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
-                            update_data['operator_c_02'],
-                            update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
-                            update_data['operator_c_03'],
-                            update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
-                            update_data['operator_c_04'],
-                            update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
-                            update_data['operator_c_05']
-                        ]
-
-                # Создаем плейсхолдеры для IN условий
-                product_placeholders = ','.join(['?' for _ in product_numbers])
-                model_placeholders = ','.join(['?' for _ in model_numbers])
-
-                # Подготавливаем параметры
-                params = base_params.copy()
-                params.extend(product_numbers)
-                params.extend(model_numbers)
-                params.append(el_nmb)
-
-                query = f"""
-                UPDATE pr_set SET
-                {base_fields}
-                WHERE pr_nmb IN ({product_placeholders}) AND mdl_nmb IN ({model_placeholders}) AND el_nmb = ?
-                """
-
-                # Выполняем обновление
-                self.db.execute(query, params)
-
-                # Уведомление об успехе
-                mode_descriptions = {
-                    "all": "Тип расчета, коэффициенты и члены уравнения",
-                    "coeffs_only": "Коэффициенты и члены уравнения",
-                    "type_only": "Тип расчета"
-                }
-
-                QMessageBox.information(self, "Успех",
-                                        f"{mode_descriptions[apply_mode]} успешно применены "
-                                        f"для продуктов {', '.join(map(str, product_numbers))} "
-                                        f"и моделей {', '.join(map(str, model_numbers))}!")
-
-                # ОБНОВЛЯЕМ ТАБЛИЦУ после массового сохранения
-                self.load_equations()
-
-            else:
-                # ОБЫЧНОЕ СОХРАНЕНИЕ
-                pr_nmb = self.current_equation_data.get('pr_nmb', 0)
-                mdl_nmb = self.current_equation_data.get('mdl_nmb', 0)
-
-                # Формируем запрос для обычного сохранения в зависимости от типа уравнения
-                if meas_type == 0:  # РЕГРЕССИЯ
-                    base_fields = """
-                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
-                    e_operator = ?, c_min = ?, c_max = ?,
-                    k_i_klin00 = ?, k_i_klin01 = ?,
-                    k_i_alin00 = ?,
-                    k_i_alin01 = ?, operand_i_01_01 = ?, operand_i_02_01 = ?, operator_i_01 = ?,
-                    k_i_alin02 = ?, operand_i_01_02 = ?, operand_i_02_02 = ?, operator_i_02 = ?,
-                    k_i_alin03 = ?, operand_i_01_03 = ?, operand_i_02_03 = ?, operator_i_03 = ?,
-                    k_i_alin04 = ?, operand_i_01_04 = ?, operand_i_02_04 = ?, operator_i_04 = ?,
-                    k_i_alin05 = ?, operand_i_01_05 = ?, operand_i_02_05 = ?, operator_i_05 = ?
-                    """
-                    base_params = [
-                        update_data['meas_type'],
-                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                        update_data['c_min'], update_data['c_max'],
-                        update_data['k_i_klin00'], update_data['k_i_klin01'],
-                        update_data['k_i_alin00'],
-                        update_data['k_i_alin01'], update_data['operand_i_01_01'], update_data['operand_i_02_01'],
-                        update_data['operator_i_01'],
-                        update_data['k_i_alin02'], update_data['operand_i_01_02'], update_data['operand_i_02_02'],
-                        update_data['operator_i_02'],
-                        update_data['k_i_alin03'], update_data['operand_i_01_03'], update_data['operand_i_02_03'],
-                        update_data['operator_i_03'],
-                        update_data['k_i_alin04'], update_data['operand_i_01_04'], update_data['operand_i_02_04'],
-                        update_data['operator_i_04'],
-                        update_data['k_i_alin05'], update_data['operand_i_01_05'], update_data['operand_i_02_05'],
-                        update_data['operator_i_05']
-                    ]
-                else:  # КОРРЕЛЯЦИЯ
-                    base_fields = """
-                    meas_type = ?, water_crit = ?, w_sq_nmb = ?, w_operator = ?, empty_crit = ?, e_sq_nmb = ?,
-                    e_operator = ?, c_min = ?, c_max = ?,
-                    k_c_klin00 = ?, k_c_klin01 = ?,
-                    k_c_alin00 = ?,
-                    k_c_alin01 = ?, operand_c_01_01 = ?, operand_c_02_01 = ?, operator_c_01 = ?,
-                    k_c_alin02 = ?, operand_c_01_02 = ?, operand_c_02_02 = ?, operator_c_02 = ?,
-                    k_c_alin03 = ?, operand_c_01_03 = ?, operand_c_02_03 = ?, operator_c_03 = ?,
-                    k_c_alin04 = ?, operand_c_01_04 = ?, operand_c_02_04 = ?, operator_c_04 = ?,
-                    k_c_alin05 = ?, operand_c_01_05 = ?, operand_c_02_05 = ?, operator_c_05 = ?
-                    """
-                    base_params = [
-                        update_data['meas_type'],
-                        update_data['water_crit'], update_data['w_sq_nmb'], update_data['w_operator'],
-                        update_data['empty_crit'], update_data['e_sq_nmb'], update_data['e_operator'],
-                        update_data['c_min'], update_data['c_max'],
-                        update_data['k_c_klin00'], update_data['k_c_klin01'],
-                        update_data['k_c_alin00'],
-                        update_data['k_c_alin01'], update_data['operand_c_01_01'], update_data['operand_c_02_01'],
-                        update_data['operator_c_01'],
-                        update_data['k_c_alin02'], update_data['operand_c_01_02'], update_data['operand_c_02_02'],
-                        update_data['operator_c_02'],
-                        update_data['k_c_alin03'], update_data['operand_c_01_03'], update_data['operand_c_02_03'],
-                        update_data['operator_c_03'],
-                        update_data['k_c_alin04'], update_data['operand_c_01_04'], update_data['operand_c_02_04'],
-                        update_data['operator_c_04'],
-                        update_data['k_c_alin05'], update_data['operand_c_01_05'], update_data['operand_c_02_05'],
-                        update_data['operator_c_05']
-                    ]
-
-                # Добавляем параметры WHERE
-                params = base_params + [pr_nmb, mdl_nmb, el_nmb]
-
-                query = f"""
-                UPDATE pr_set SET
-                {base_fields}
-                WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
-                """
-
-                # Выполняем загрузку в базу
-                self.db.execute(query, params)
-
-                # Считываем общие критерии
-                water_crit = self._safe_float_convert(self.water_crit_edit.text(), "Критерий Вода")
-                empty_crit = self._safe_float_convert(self.empty_crit_edit.text(), "Критерий Пусто")
-                w_sq_nmb = self.w_element_combo.itemData(self.w_element_combo.currentIndex())
-                e_sq_nmb = self.e_element_combo.itemData(self.e_element_combo.currentIndex())
-                w_operator = self.w_operator_combo.itemData(self.w_operator_combo.currentIndex())
-                e_operator = self.e_operator_combo.itemData(self.e_operator_combo.currentIndex())
-
-                # Запрос для массового обновления критериев в рамках одной модели
-                criteria_query = """
-                        UPDATE pr_set 
-                        SET water_crit = ?, w_sq_nmb = ?, w_operator = ?, 
-                            empty_crit = ?, e_sq_nmb = ?, e_operator = ?
-                        WHERE pr_nmb = ? AND mdl_nmb = ?
-                        """
-
-                is_mass_save = product_numbers is not None and model_numbers is not None
-
-                if not is_mass_save:
-
-                    # Б. Обновляем критерии для ВСЕХ элементов текущей модели
-                    pr_nmb = self.product_combo.currentIndex() + 1
-                    mdl_nmb = self.model_combo.currentIndex() + 1
-
-                    self.db.execute(criteria_query, [
-                        water_crit, w_sq_nmb, w_operator,
-                        empty_crit, e_sq_nmb, e_operator,
-                        pr_nmb, mdl_nmb
-                    ])
-
-
-                # Сохраняем границы интенсивности
-                self.save_intensity_data()
-
-                # ОБНОВЛЯЕМ ДАННЫЕ ПОСЛЕ СОХРАНЕНИЯ
-                self.refresh_current_equation_data(pr_nmb, mdl_nmb, el_nmb)
-
-                # Обновляем таблицу
-                self.load_equations()
-
-                QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
-
-        except ValueError as e:
-            QMessageBox.critical(self, "Ошибка ввода данных", str(e))
-            return
+            self.save_intensity_data()
+            self.refresh_current_equation_data(self.current_equation_data.get('pr_nmb'),
+                                               self.current_equation_data.get('mdl_nmb'),
+                                               self.current_equation_data.get('el_nmb'))
+            self.load_equations()
+            QMessageBox.information(self, "Успех", "Данные успешно сохранены!")
 
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка сохранения", f"Ошибка сохранения/применения уравнения: {str(e)}")
-            return
+            # Для отладки можно добавить print(e), если ошибка повторится
+            QMessageBox.critical(self, "Ошибка сохранения", str(e))
 
     def save_intensity_data(self):
         """Сохраняет данные границ интенсивности"""
@@ -1372,15 +1072,15 @@ class EquationsPage(QWidget):
             raise
 
     def refresh_current_equation_data(self, pr_nmb, mdl_nmb, el_nmb):
-        """Обновляет текущие данные уравнения из базы после сохранения"""
+        """Обновляет текущие данные из базы после сохранения"""
         try:
             query = """
-            SELECT * FROM pr_set 
-            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?
+            SELECT e.*, m.water_crit, m.empty_crit, m.w_sq_nmb, m.e_sq_nmb, m.w_operator, m.e_operator
+            FROM el_set e
+            JOIN mdl_set m ON e.pr_nmb = m.pr_nmb AND e.mdl_nmb = m.mdl_nmb
+            WHERE e.pr_nmb = ? AND e.mdl_nmb = ? AND e.el_nmb = ?
             """
-            params = [pr_nmb, mdl_nmb, el_nmb]
-            result = self.db.fetch_one(query, params)
-
+            result = self.db.fetch_one(query, [pr_nmb, mdl_nmb, el_nmb])
             if result:
                 self.current_equation_data = result.copy()
         except Exception as e:
@@ -1690,6 +1390,8 @@ class EquationsPage(QWidget):
     def showEvent(self, event):
         """Обработчик события показа виджета - скрывает редактор и обновляет конфигурации"""
         super().showEvent(event)
+
+        self.refresh_product_list()
 
         # Скрываем окно редактирования
         self.edit_widget.setVisible(False)

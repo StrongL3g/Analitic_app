@@ -1,11 +1,18 @@
+# config.py
 import os
 import json
 from pathlib import Path
 from typing import Dict, Any
 
-# Функция для загрузки настроек приложения
+# --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (для импорта в другие файлы) ---
+# Устанавливаем значения по умолчанию, чтобы программа не падала при импортах
+AC_COUNT = 1
+PR_COUNT = 8
+
+
+# --- РАБОТА С ЛОКАЛЬНЫМ ФАЙЛОМ НАСТРОЕК (config.json) ---
 def load_app_config():
-    """Загружает настройки приложения из config.json"""
+    """Загружает настройки подключения к БД из config.json"""
     try:
         from utils.path_manager import get_config_path
 
@@ -17,150 +24,126 @@ def load_app_config():
         else:
             # Если файла нет, создаем с настройками по умолчанию
             default_config = {
-                # Переносим все настройки в config.json
                 "DB_TYPE": "postgres",
                 "DB_HOST": "ip",
-                "DB_PORT": "port", # postgres - 5432 \ mssql - 1433
+                "DB_PORT": "port",  # postgres - 5432 \ mssql - 1433
                 "DB_NAME": "name",
                 "DB_USER": "user",
                 "DB_PASSWORD": "password",
-                "DB_SERVER": "server", 
-                "DB_DRIVER": "ODBC Driver 18 for SQL Server",
-                "PR_COUNT": 8,
-                "AC_COUNT": 1
+                "DB_SERVER": "server",
+                "DB_DRIVER": "ODBC Driver 18 for SQL Server"
             }
             save_app_config(default_config)
             return default_config
 
     except Exception as e:
         print(f"Ошибка загрузки config.json: {e}")
-        return {"AC_COUNT": 1, "PR_COUNT": 8}
+        return {}
 
-# Функция для получения значения переменной (read-only) - СОХРАНЯЕМ ОРИГИНАЛЬНУЮ ЛОГИКУ
+
+def save_app_config(config: Dict[str, Any]):
+    """Сохраняет настройки приложения в config.json"""
+    try:
+        from utils.path_manager import get_config_path
+        config_file = get_config_path() / "config.json"
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Ошибка сохранения config.json: {e}")
+
+
 def get_config(key, default=None):
-    # config.json
     app_conf = load_app_config()
     return app_conf.get(key, default)
 
-# Остальные функции остаются БЕЗ ИЗМЕНЕНИЙ
+
 def set_config(key, value):
-    """Сохраняет настройки в config.json вместо .env"""
+    """Сохраняет или обновляет конкретную настройку в config.json"""
     try:
         from utils.path_manager import get_config_path
-
-        # Загружаем текущий config
         config_file = get_config_path() / "config.json"
+
         if config_file.exists():
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
         else:
             config = {}
 
-        # Обновляем значение
         config[key] = value
 
-        # Сохраняем обратно
         config_file.parent.mkdir(parents=True, exist_ok=True)
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
 
-        print(f"Настройка {key} сохранена в config.json")
-
     except Exception as e:
         print(f"Ошибка сохранения настройки {key}: {e}")
+
 
 def unset_config(key):
     """Удаляет настройку из config.json"""
     try:
         from utils.path_manager import get_config_path
-
         config_file = get_config_path() / "config.json"
+
         if config_file.exists():
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
 
             if key in config:
                 del config[key]
-
                 with open(config_file, 'w', encoding='utf-8') as f:
                     json.dump(config, f, ensure_ascii=False, indent=2)
-
-                print(f"Настройка {key} удалена из config.json")
 
     except Exception as e:
         print(f"Ошибка удаления настройки {key}: {e}")
 
-# Тип базы данных (mssql/postgres)
-DB_TYPE = get_config("DB_TYPE", "mssql").lower()
 
-# Конфигурация для разных БД
-def get_db_config():
-    db_type = get_config("DB_TYPE", "mssql").lower()
+# --- ИНИЦИАЛИЗАЦИЯ ПОДКЛЮЧЕНИЯ К БД ---
+_temp_conf = load_app_config()
+db_type = _temp_conf.get("DB_TYPE", "mssql").lower()
 
-    if db_type == "postgres":
-        return {
-            "host": get_config("DB_HOST"),
-            "port": get_config("DB_PORT", "5432"),
-            "database": get_config("DB_NAME"),
-            "user": get_config("DB_USER"),
-            "password": get_config("DB_PASSWORD"),
-            "db_type": "postgres"
-        }
-    else:  # MSSQL по умолчанию
-        return {
-            "server": get_config("DB_SERVER"),
-            "port": get_config("DB_PORT", "1433"),
-            "database": get_config("DB_NAME"),
-            "user": get_config("DB_USER"),
-            "password": get_config("DB_PASSWORD"),
-            "driver": get_config("DB_DRIVER", "ODBC Driver 17 for SQL Server"),
-            "db_type": "mssql"
-        }
+if db_type == "postgres":
+    DB_CONFIG = {
+        "host": _temp_conf.get("DB_HOST"),
+        "port": _temp_conf.get("DB_PORT", "5432"),
+        "database": _temp_conf.get("DB_NAME"),
+        "user": _temp_conf.get("DB_USER"),
+        "password": _temp_conf.get("DB_PASSWORD"),
+        "db_type": "postgres"
+    }
+else:  # MSSQL
+    DB_CONFIG = {
+        "server": _temp_conf.get("DB_SERVER"),
+        "port": _temp_conf.get("DB_PORT", "1433"),
+        "database": _temp_conf.get("DB_NAME"),
+        "user": _temp_conf.get("DB_USER"),
+        "password": _temp_conf.get("DB_PASSWORD"),
+        "driver": _temp_conf.get("DB_DRIVER", "ODBC Driver 18 for SQL Server"),
+        "db_type": "mssql"
+    }
 
-# Получаем конфигурацию БД
-DB_CONFIG = get_db_config()
-
-# Функция для получения конфигурации из базы данных
-def get_db_settings():
-    """Получает AC_COUNT и PR_COUNT из базы данных"""
+def refresh_app_settings():
+    """
+    Обновляет глобальные переменные AC_COUNT и PR_COUNT,
+    подсчитывая количество записей в новых таблицах-справочниках.
+    """
+    global AC_COUNT, PR_COUNT
     try:
-        # Импортируем здесь, чтобы избежать циклической зависимости
         from database.db import Database
         db = Database(DB_CONFIG)
 
-        query = "SELECT ac_nmb, pr_nmb FROM SET00"
-        result = db.fetch_one(query)
+        # Считаем количество приборов
+        res_ac = db.fetch_one("SELECT COUNT(*) as cnt FROM cfg00")
+        AC_COUNT = res_ac['cnt'] if res_ac else 1
 
-        if result:
-            return {
-                "AC_COUNT": result.get('ac_nmb', 1),
-                "PR_COUNT": result.get('pr_nmb', 1)
-            }
-        else:
-            print("Предупреждение: Не найдены данные в таблице SET00")
-            return {"AC_COUNT": 1, "PR_COUNT": 1}
+        # Считаем количество продуктов
+        res_pr = db.fetch_one("SELECT COUNT(*) as cnt FROM cfg02")
+        PR_COUNT = res_pr['cnt'] if res_pr else 1
+
+        print(f"Настройки загружены из справочников: AC={AC_COUNT}, PR={PR_COUNT}")
 
     except Exception as e:
-        print(f"Ошибка при получении конфигурации из БД: {e}")
-        return {"AC_COUNT": 1, "PR_COUNT": 1}
-
-def save_app_config(config: Dict[str, Any]):
-    """Сохраняет настройки приложения в config.json"""
-    try:
-        from utils.path_manager import get_config_path
-
-        config_file = get_config_path() / "config.json"
-        config_file.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config, f, ensure_ascii=False, indent=2)
-
-    except Exception as e:
-        print(f"Ошибка сохранения config.json: {e}")
-
-# Загружаем настройки приложения
-app_config = load_app_config()
-
-# Количество приборов и принтеров (теперь из config.json)
-AC_COUNT = app_config.get("AC_COUNT", 1)
-PR_COUNT = app_config.get("PR_COUNT", 8)
+        print(f"Ошибка получения конфигурации из справочников (используем константы): {e}")
+        AC_COUNT = 1
+        PR_COUNT = 8
