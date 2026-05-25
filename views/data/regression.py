@@ -5,7 +5,8 @@ import numpy as np
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
-    QComboBox, QGroupBox, QSplitter, QMessageBox
+    QComboBox, QGroupBox, QSplitter, QMessageBox,
+    QDialog, QDialogButtonBox, QLineEdit, QFormLayout
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt
@@ -810,10 +811,24 @@ class RegressionPage(QWidget):
             with open(sample_path, "r", encoding="utf-8") as f:
                 sample_config = json.load(f)
 
-            pr_nmb = sample_config[0].get("product_id")
+            # Берем текущий продукт как значение по умолчанию для диалога
+            default_pr_nmb = sample_config[0].get("product_id", 1)
             el_nmb = self.combo_element.currentData()
             meas_type = self.current_meas_type
 
+            # --- ВЫЗОВ ДИАЛОГА ---
+            dialog = SaveEquationDialog(default_pr=default_pr_nmb, default_mdl="1", parent=self)
+            if not dialog.exec():
+                return  # Пользователь нажал "Отмена"
+
+            try:
+                target_products, target_models = dialog.get_data()
+            except ValueError as e:
+                QMessageBox.warning(self, "Ошибка ввода", str(e))
+                return
+            # ---------------------
+
+            # Собираем коэффициенты
             coeffs = []
             for i in range(11):
                 item = self.coeff_table.item(i, 2)
@@ -822,6 +837,7 @@ class RegressionPage(QWidget):
                 except:
                     coeffs.append(0.0)
 
+            # Собираем операнды и операторы
             terms = []
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
             json_path = get_config_path() / json_file
@@ -865,26 +881,94 @@ class RegressionPage(QWidget):
                 f"operator_{prefix_op}_05 = ?"
             ]
 
-            params = [
-                coeffs[0],
-                coeffs[1], terms[0][0], terms[0][1], terms[0][2],
-                coeffs[2], terms[1][0], terms[1][1], terms[1][2],
-                coeffs[3], terms[2][0], terms[2][1], terms[2][2],
-                coeffs[4], terms[3][0], terms[3][1], terms[3][2],
-                coeffs[5], terms[4][0], terms[4][1], terms[4][2],
-                pr_nmb, el_nmb
-            ]
+            # --- СОХРАНЕНИЕ В ЦИКЛЕ ---
+            for pr_nmb in target_products:
+                for mdl_nmb in target_models:
+                    params = [
+                        coeffs[0],
+                        coeffs[1], terms[0][0], terms[0][1], terms[0][2],
+                        coeffs[2], terms[1][0], terms[1][1], terms[1][2],
+                        coeffs[3], terms[2][0], terms[2][1], terms[2][2],
+                        coeffs[4], terms[3][0], terms[3][1], terms[3][2],
+                        coeffs[5], terms[4][0], terms[4][1], terms[4][2],
+                        pr_nmb, el_nmb, mdl_nmb # <- Теперь mdl_nmb передается динамически
+                    ]
 
-            query = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = 1"
-            self.db.execute(query, params)
+                    # Записываем в базу (mdl_nmb = ? вместо жесткой 1)
+                    query = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?"
+                    self.db.execute(query, params)
+            # --------------------------
 
             unsupported_used = any(coeffs[i] != 0.0 or terms[i - 1][2] != 0 for i in range(6, 11))
             if unsupported_used:
                 QMessageBox.warning(self, "Внимание",
-                                    "Уравнение сохранено частично.\nБаза данных успешно приняла члены A0 — A5.\nДля A6 — A10 необходимо доработать таблицу el_set.")
+                                    f"Уравнение сохранено частично для {len(target_products)} продуктов и {len(target_models)} моделей.\n"
+                                    "База данных успешно приняла члены A0 — A5.\n"
+                                    "Для A6 — A10 необходимо доработать таблицу el_set.")
             else:
-                QMessageBox.information(self, "Успех", "Уравнение и коэффициенты успешно сохранены в базу данных!")
+                QMessageBox.information(self, "Успех",
+                                      f"Уравнение успешно сохранено!\n"
+                                      f"Обновлено продуктов: {len(target_products)}\n"
+                                      f"Обновлено моделей: {len(target_models)}")
 
         except Exception as e:
             print("Ошибка при сохранении уравнения:")
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить уравнение:\n{e}")
+
+
+class SaveEquationDialog(QDialog):
+    """Диалоговое окно для выбора продуктов и моделей при сохранении уравнения"""
+
+    def __init__(self, default_pr="1", default_mdl="1", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Сохранение уравнения")
+        self.setModal(True)
+        self.resize(350, 150)
+
+        layout = QVBoxLayout(self)
+        form_layout = QFormLayout()
+
+        self.products_edit = QLineEdit(str(default_pr))
+        self.products_edit.setPlaceholderText("Например: 1, 2, 4-6")
+
+        self.models_edit = QLineEdit(str(default_mdl))
+        self.models_edit.setPlaceholderText("Например: 1, 2")
+
+        form_layout.addRow("Продукты:", self.products_edit)
+        form_layout.addRow("Модели:", self.models_edit)
+        layout.addLayout(form_layout)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.button(QDialogButtonBox.Ok).setText("Сохранить")
+        self.button_box.button(QDialogButtonBox.Cancel).setText("Отмена")
+        layout.addWidget(self.button_box)
+
+    def get_data(self):
+        """Парсит введенный текст и возвращает списки уникальных номеров"""
+        try:
+            def parse_numbers(text):
+                numbers = set()
+                parts = text.replace(' ', '').split(',')
+                for part in parts:
+                    if not part: continue
+                    if '-' in part:
+                        start, end = map(int, part.split('-'))
+                        if start > end: start, end = end, start  # Защита от "5-3"
+                        numbers.update(range(start, end + 1))
+                    else:
+                        numbers.add(int(part))
+                return sorted(list(numbers))
+
+            pr_list = parse_numbers(self.products_edit.text())
+            mdl_list = parse_numbers(self.models_edit.text())
+
+            if not pr_list or not mdl_list:
+                raise ValueError("Поля продуктов и моделей не могут быть пустыми.")
+
+            return pr_list, mdl_list
+
+        except Exception:
+            raise ValueError(
+                "Некорректный формат ввода.\nИспользуйте только числа, запятые и тире (например: 1, 3, 5-8).")
