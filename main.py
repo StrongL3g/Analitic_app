@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         data_item = self.create_menu_item("Управление данными", "data")
         data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
         data_item.addChild(self.create_menu_item("Регрессия", "regression"))
-        #data_item.addChild(self.create_menu_item("Корректировка", "correction"))
+        data_item.addChild(self.create_menu_item("Корректировка", "correction"))
         #data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
         #data_item.addChild(self.create_menu_item("Нормативы", "standards"))
         #data_item.addChild(self.create_menu_item("Отчет", "report"))
@@ -175,9 +175,9 @@ class MainWindow(QMainWindow):
         # Страницы, требующие подключения к БД
         self.db_pages = {
             "lines", "ranges", "background", "params",
-            "elements", "criteria", "composition", "regression", "settings",
+            "elements", "criteria", "composition", "regression", "correction", "settings",
             "equations", "models", "standards", "report", "cfg_main", "cfg_ac",
-            "cfg_pr", "cfg_sp", #"ac"
+            "cfg_pr", "cfg_sp",  # "ac"
         }
 
         # Страницы, требующие проброса Alarm Manager
