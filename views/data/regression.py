@@ -17,6 +17,34 @@ from views.data.sample_dialog import SampleDialog
 from utils.path_manager import get_config_path
 
 
+# === НАДЕЖНЫЙ КЛАСС ДЛЯ ЧИСЛОВОЙ СОРТИРОВКИ ===
+class NumericItem(QTableWidgetItem):
+    def __lt__(self, other):
+        def to_float(text):
+            if not text:
+                return None
+            t = text.strip().replace(',', '.')
+            if not t or t == "-":
+                return None
+            if t.endswith('%'):
+                t = t[:-1]
+            try:
+                return float(t)
+            except ValueError:
+                return None
+
+        v1 = to_float(self.text())
+        v2 = to_float(other.text())
+
+        if v1 is not None and v2 is not None:
+            return v1 < v2
+        if v1 is None and v2 is not None:
+            return True
+        if v1 is not None and v2 is None:
+            return False
+        return super().__lt__(other)
+
+
 class RegressionPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
@@ -103,7 +131,6 @@ class RegressionPage(QWidget):
         self.fig, self.ax = plt.subplots(figsize=(5, 4))
         self.canvas = FigureCanvas(self.fig)
 
-        # ДОБАВЛЕНО: Обработчик клика по графику
         self.canvas.mpl_connect('button_press_event', self.on_plot_double_click)
 
         right_top_layout.addWidget(self.canvas)
@@ -148,9 +175,8 @@ class RegressionPage(QWidget):
             "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
             "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"
         ])
-        # ДОБАВЛЕНО: Обработчик двойного клика по таблице
         self.data_table.cellDoubleClicked.connect(self.on_table_double_click)
-        self.data_table.horizontalHeader().sectionDoubleClicked.connect(self.sort_data_table)
+        self.data_table.setSortingEnabled(True)
         bottom_layout.addWidget(self.data_table)
 
         bottom_widget.setLayout(bottom_layout)
@@ -162,19 +188,23 @@ class RegressionPage(QWidget):
 
         self.ini_load_elements()
 
-    # ================== НОВЫЙ БЛОК: ИСКЛЮЧЕНИЕ СТРОК ==================
     def on_table_double_click(self, row, col):
-        self.toggle_row_state(row)
+        pr_item = self.data_table.item(row, 0)
+        dt_item = self.data_table.item(row, 1)
+        if not pr_item or not dt_item: return
+
+        for i, rec in enumerate(self.raw_buffer):
+            if str(rec.get("pr_nmb", "")) == pr_item.text() and rec.get("meas_dt", "") == dt_item.text():
+                self.toggle_row_state(i)
+                break
 
     def on_plot_double_click(self, event):
-        # Реагируем только на двойной клик левой кнопкой внутри осей графика
         if not event.dblclick or event.inaxes != self.ax:
             return
 
         x, y = event.xdata, event.ydata
         if x is None or y is None: return
 
-        # Ищем ближайшую точку с учетом масштаба осей
         min_dist = float('inf')
         closest_idx = -1
 
@@ -189,38 +219,29 @@ class RegressionPage(QWidget):
 
         for i, rec in enumerate(self.raw_buffer):
             cx = rec.get(chem_col, 0)
-            cy = rec.get('c_calc', None)  # Берем рассчитанное значение
+            cy = rec.get('c_calc', None)
             if cx and cy is not None:
-                # Нормализованное расстояние (чтобы X и Y вносили равный вклад)
                 dist = ((cx - x) / x_range) ** 2 + ((cy - y) / y_range) ** 2
                 if dist < min_dist:
                     min_dist = dist
                     closest_idx = i
 
-        # Погрешность клика (примерно 0.2% от площади экрана)
         if closest_idx != -1 and min_dist < 0.002:
             self.toggle_row_state(closest_idx)
 
     def toggle_row_state(self, idx):
         if idx < 0 or idx >= len(self.raw_buffer): return
 
-        # Меняем флаг активности на противоположный
         current_state = self.raw_buffer[idx].get('is_active', True)
         self.raw_buffer[idx]['is_active'] = not current_state
-
-        # Сортируем: сначала активные (True), затем исключенные (False), внутри групп - по дате
         self.raw_buffer.sort(key=lambda item: (not item.get('is_active', True), item.get('meas_dt', '')))
 
-        # Важно: обновляем вектор C_хим, так как порядок строк изменился!
         el_nmb = self.combo_element.currentData()
         chem_col = f"c_chem_{el_nmb:02d}"
         self.y_vector_raw = np.array([rec.get(chem_col, 0.0) for rec in self.raw_buffer])
 
-        # Перестраиваем интерфейс и пересчитываем регрессию
         self._update_data_table_from_buffer()
         self.perform_regression()
-
-    # ==================================================================
 
     def sort_data_table(self, logical_index):
         self.data_table.sortItems(logical_index, Qt.DescendingOrder)
@@ -235,8 +256,6 @@ class RegressionPage(QWidget):
                 self.combo_element.clear()
                 for elem in valid_elements:
                     self.combo_element.addItem(elem["name"], elem["number"])
-            else:
-                self.combo_element.addItems(["Cu", "Ni", "Fe", "ТФ"])
         except Exception as e:
             print(f"Ошибка загрузки элементов: {e}")
 
@@ -249,14 +268,12 @@ class RegressionPage(QWidget):
         try:
             sample_path = get_config_path() / "sample" / "s_regress.json"
             if not os.path.exists(sample_path):
-                QMessageBox.warning(self, "Ошибка", "Файл выборки не найден.")
                 return
 
             with open(sample_path, "r", encoding="utf-8") as f:
                 sample_config = json.load(f)
 
             if not sample_config:
-                QMessageBox.warning(self, "Ошибка", "Выборка пуста.")
                 return
 
             pr_nmb = sample_config[0].get("product_id")
@@ -350,7 +367,6 @@ class RegressionPage(QWidget):
 
             try:
                 rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
-                # Инициализируем флаг активности для всех новых строк
                 for r in rows: r['is_active'] = True
                 all_rows.extend(rows)
             except Exception as e:
@@ -411,8 +427,14 @@ class RegressionPage(QWidget):
             print(f"Ошибка _apply_initial_equation: {e}")
 
     def _update_data_table_from_buffer(self):
+        self.data_table.blockSignals(True)
+        self.data_table.setSortingEnabled(False)
         self.data_table.setRowCount(0)
-        if not self.raw_buffer: return
+
+        if not self.raw_buffer:
+            self.data_table.blockSignals(False)
+            self.data_table.setSortingEnabled(True)
+            return
 
         self.data_table.setRowCount(len(self.raw_buffer))
         el_nmb = self.combo_element.currentData()
@@ -420,27 +442,34 @@ class RegressionPage(QWidget):
 
         for row_idx, rec in enumerate(self.raw_buffer):
             is_active = rec.get('is_active', True)
-            bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")  # Белый или Красный
+            bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
 
-            def set_item(col, val):
+            def set_text_item(col, val):
                 item = QTableWidgetItem(str(val))
                 item.setBackground(bg_color)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.data_table.setItem(row_idx, col, item)
 
-            set_item(0, rec.get("pr_nmb", ""))
-            set_item(1, rec.get("meas_dt", ""))
+            def set_num_item(col, val_str):
+                item = NumericItem(val_str)
+                item.setBackground(bg_color)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.data_table.setItem(row_idx, col, item)
 
-            # Форматируем С_хим строго до 3 знаков после запятой
+            set_text_item(0, rec.get("pr_nmb", ""))
+            set_text_item(1, rec.get("meas_dt", ""))
+
             c_chem_raw = rec.get(chem_col, "")
             try:
                 c_chem_str = f"{float(c_chem_raw):.3f}" if c_chem_raw != "" else ""
             except ValueError:
                 c_chem_str = str(c_chem_raw)
 
-            set_item(12, c_chem_str)
+            set_num_item(12, c_chem_str)
+            for col in (13, 14, 15): set_num_item(col, "")
 
-            # Предзаполняем пустые клетки расчетных значений цветом
-            for col in (13, 14, 15): set_item(col, "")
+        self.data_table.blockSignals(False)
+        self.data_table.setSortingEnabled(True)
 
     def perform_regression(self):
         if not hasattr(self, 'raw_buffer') or not self.raw_buffer: return
@@ -448,24 +477,23 @@ class RegressionPage(QWidget):
         try:
             X_active, y_vector, active_indices = self._build_regression_data()
             if X_active is None or X_active.shape[0] < X_active.shape[1]:
-                # Даже если не смогли посчитать регрессию, перекрасим график
                 self.apply_current_equation(fallback_zeros=True)
                 self._update_plot(self.y_vector_raw)
                 return
 
-            coeffs_active, stats, std_errs, t_stats_active, p_vals_active = self._calculate_regression(X_active, y_vector)
+            coeffs_active, stats, std_errs, t_stats_active, p_vals_active = self._calculate_regression(X_active,
+                                                                                                       y_vector)
 
             full_coeffs = np.zeros(11)
-            full_t_stats = np.zeros(11)  # Теперь собираем t-статистику вместо p-values
+            full_t_stats = np.zeros(11)
 
             full_coeffs[0] = coeffs_active[0]
-            full_t_stats[0] = np.abs(t_stats_active[0])  # Берем по модулю, как в функции Abs() в VBA
+            full_t_stats[0] = np.abs(t_stats_active[0])
 
             for i, original_index in enumerate(active_indices):
                 full_coeffs[original_index] = coeffs_active[i + 1]
                 full_t_stats[original_index] = np.abs(t_stats_active[i + 1])
 
-            # Передаем t_stats в таблицу
             self._update_coefficients_table(full_coeffs, full_t_stats)
             self.apply_current_equation()
             self._update_statistics_table(stats, y_vector)
@@ -476,7 +504,6 @@ class RegressionPage(QWidget):
 
     def _build_regression_data(self):
         try:
-            # Маска: строка активна и C_хим != 0
             active_mask = np.array([rec.get('is_active', True) for rec in self.raw_buffer])
             valid_mask = (self.y_vector_raw != 0) & active_mask
             y_vector = self.y_vector_raw[valid_mask]
@@ -535,11 +562,9 @@ class RegressionPage(QWidget):
             return np.zeros(X.shape[1]), {}, np.zeros(X.shape[1]), np.zeros(X.shape[1]), np.ones(X.shape[1])
 
     def _update_coefficients_table(self, coefficients, t_stats):
-        # A0
         a0_item = self.coeff_table.item(0, 1)
         if a0_item: a0_item.setText("-")
 
-        # A1..A10
         for i in range(1, 11):
             combo = self.combo_equation_terms[i - 1]
             term_desc = combo.currentText().strip()
@@ -551,8 +576,7 @@ class RegressionPage(QWidget):
             if header_item:
                 header_item.setToolTip(term_desc if term_desc else f"A{i} (не выбран)")
 
-        # Значения и значимость (по t-статистике, как в Excel)
-        from PySide6.QtGui import QColor  # Убедись, что QColor импортирован в начале файла, если его нет
+        from PySide6.QtGui import QColor
 
         for i, (coeff, t_stat) in enumerate(zip(coefficients, t_stats)):
             value_item = self.coeff_table.item(i, 2)
@@ -560,29 +584,26 @@ class RegressionPage(QWidget):
 
             significance_item = self.coeff_table.item(i, 3)
             if significance_item:
-                # Если член уравнения не выбран
                 if coeff == 0.0 and i > 0 and self.combo_equation_terms[i - 1].currentText().strip() == "":
                     significance_item.setText("-")
                     significance_item.setBackground(Qt.GlobalColor.white)
                 else:
-                    # Выводим значимость с 2 знаками после запятой
                     significance_item.setText(f"{t_stat:.2f}")
-
-                    # Логика условного форматирования из твоего VBA (>=3, 1-3, <1)
                     if t_stat >= 3.0:
-                        significance_item.setBackground(Qt.GlobalColor.white)  # Отлично
+                        significance_item.setBackground(Qt.GlobalColor.white)
                     elif t_stat >= 1.0:
-                        significance_item.setBackground(QColor("#FFE4B5"))  # Оранжевый/Moccasin (Средне)
+                        significance_item.setBackground(QColor("#FFE4B5"))
                     else:
-                        significance_item.setBackground(QColor("#FFCCCC"))  # Красный (Плохо/Незначимо)
+                        significance_item.setBackground(QColor("#FFCCCC"))
 
     def _update_statistics_table(self, statistics=None, y_vector=None):
         if statistics is None: statistics = {}
         c_chem, c_calc, dc = [], [], []
 
         for row in range(self.data_table.rowCount()):
-            # Исключаем красные строки из статистики!
-            if not self.raw_buffer[row].get('is_active', True):
+            # Проверяем UI строки, чтобы не брать красные
+            chem_item = self.data_table.item(row, 12)
+            if chem_item and chem_item.background().color().name() == "#ffcccc":
                 continue
 
             try:
@@ -617,14 +638,13 @@ class RegressionPage(QWidget):
         sum_y2 = np.sum((y - np.mean(y)) ** 2)
         arrParam[6] = ((sum_xy ** 2) / sum_x2) / sum_y2 if (sum_x2 != 0 and sum_y2 != 0) else 0
 
-        # === НОВОЕ ФОРМАТИРОВАНИЕ ===
         formats = [
-            f"{arrParam[1]:.4f}",  # СКО σ - 4 знака
-            f"{arrParam[2] * 100:.2f}%",  # Отн. СКО - в %, 2 знака
-            f"{arrParam[3]:.2f}",  # Смин - 2 знака
-            f"{arrParam[4]:.2f}",  # Смакс - 2 знака
-            f"{arrParam[5]:.2f}",  # Ссред - 2 знака
-            f"{arrParam[6]:.2f}"  # R² - 2 знака
+            f"{arrParam[1]:.4f}",
+            f"{arrParam[2] * 100:.2f}%",
+            f"{arrParam[3]:.2f}",
+            f"{arrParam[4]:.2f}",
+            f"{arrParam[5]:.2f}",
+            f"{arrParam[6]:.2f}"
         ]
 
         for row, formatted_val in enumerate(formats):
@@ -645,8 +665,7 @@ class RegressionPage(QWidget):
                     try:
                         cv = float(chem_item.text())
                         ca = float(calc_item.text())
-                        # Распределяем точки на активные и исключенные
-                        if self.raw_buffer[row].get('is_active', True):
+                        if chem_item.background().color().name() != "#ffcccc":
                             c_chem_act.append(cv)
                             c_calc_act.append(ca)
                         else:
@@ -655,14 +674,12 @@ class RegressionPage(QWidget):
                     except ValueError:
                         pass
 
-            # Рисуем активные (синие)
             if c_chem_act and c_calc_act:
                 self.ax.scatter(c_chem_act, c_calc_act, alpha=0.6, color='tab:blue', label='Участвуют')
                 min_val = min(min(c_chem_act), min(c_calc_act))
                 max_val = max(max(c_chem_act), max(c_calc_act))
                 self.ax.plot([min_val, max_val], [min_val, max_val], 'r--', label='Идеал', alpha=0.7)
 
-            # Рисуем исключенные (красные крестики)
             if c_chem_exc and c_calc_exc:
                 self.ax.scatter(c_chem_exc, c_calc_exc, alpha=0.8, color='tab:red', marker='x', label='Исключены')
 
@@ -694,6 +711,9 @@ class RegressionPage(QWidget):
 
             el_nmb = self.combo_element.currentData()
             features = []
+
+            self.data_table.setSortingEnabled(False)
+
             for i, combo in enumerate(self.combo_equation_terms):
                 desc = combo.currentText().strip()
                 feat_vals = self._compute_feature(desc, self.current_meas_type, el_nmb)
@@ -705,8 +725,6 @@ class RegressionPage(QWidget):
                 X_row = [1.0] + [features[i][row_idx] for i in range(10)]
 
                 c_calc = sum(coeffs[i] * X_row[i] for i in range(11))
-
-                # Сохраняем расчет для кликов по графику!
                 self.raw_buffer[row_idx]['c_calc'] = c_calc
 
                 dC = c_calc - c_chem
@@ -716,14 +734,23 @@ class RegressionPage(QWidget):
                 bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
 
                 def set_calc_item(col, val_str):
-                    item = QTableWidgetItem(val_str)
+                    item = NumericItem(val_str)
                     item.setBackground(bg_color)
-                    self.data_table.setItem(row_idx, col, item)
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    pr_val = str(self.raw_buffer[row_idx].get("pr_nmb", ""))
+                    dt_val = self.raw_buffer[row_idx].get("meas_dt", "")
 
-                # C_расч и dC до 3 знаков, а ddc переводим в проценты (* 100) и ставим % (оставил 2 знака для процентов, это стандартно)
+                    for ui_row in range(self.data_table.rowCount()):
+                        if self.data_table.item(ui_row, 0).text() == pr_val and self.data_table.item(ui_row,
+                                                                                                     1).text() == dt_val:
+                            self.data_table.setItem(ui_row, col, item)
+                            break
+
                 set_calc_item(13, f"{c_calc:.3f}")
                 set_calc_item(14, f"{dC:.3f}")
                 set_calc_item(15, f"{ddc * 100:.2f}%")
+
+            self.data_table.setSortingEnabled(True)
 
         except Exception as e:
             print(f"Ошибка в apply_current_equation(): {e}")
@@ -794,12 +821,18 @@ class RegressionPage(QWidget):
         if 0 <= col_index <= 9:
             for row_idx, val in enumerate(values):
                 is_active = self.raw_buffer[row_idx].get('is_active', True)
-
-                # 3 знака после запятой
-                item = QTableWidgetItem(f"{val:.3f}")
-
+                item = NumericItem(f"{val:.3f}")
                 item.setBackground(QColor("#ffffff") if is_active else QColor("#ffcccc"))
-                self.data_table.setItem(row_idx, 2 + col_index, item)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
+                pr_val = str(self.raw_buffer[row_idx].get("pr_nmb", ""))
+                dt_val = self.raw_buffer[row_idx].get("meas_dt", "")
+
+                for ui_row in range(self.data_table.rowCount()):
+                    if self.data_table.item(ui_row, 0).text() == pr_val and self.data_table.item(ui_row,
+                                                                                                 1).text() == dt_val:
+                        self.data_table.setItem(ui_row, 2 + col_index, item)
+                        break
 
     def save_equation(self):
         try:
@@ -811,24 +844,20 @@ class RegressionPage(QWidget):
             with open(sample_path, "r", encoding="utf-8") as f:
                 sample_config = json.load(f)
 
-            # Берем текущий продукт как значение по умолчанию для диалога
             default_pr_nmb = sample_config[0].get("product_id", 1)
             el_nmb = self.combo_element.currentData()
             meas_type = self.current_meas_type
 
-            # --- ВЫЗОВ ДИАЛОГА ---
             dialog = SaveEquationDialog(default_pr=default_pr_nmb, default_mdl="1", parent=self)
             if not dialog.exec():
-                return  # Пользователь нажал "Отмена"
+                return
 
             try:
                 target_products, target_models = dialog.get_data()
             except ValueError as e:
                 QMessageBox.warning(self, "Ошибка ввода", str(e))
                 return
-            # ---------------------
 
-            # Собираем коэффициенты
             coeffs = []
             for i in range(11):
                 item = self.coeff_table.item(i, 2)
@@ -837,7 +866,6 @@ class RegressionPage(QWidget):
                 except:
                     coeffs.append(0.0)
 
-            # Собираем операнды и операторы
             terms = []
             json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
             json_path = get_config_path() / json_file
@@ -881,7 +909,6 @@ class RegressionPage(QWidget):
                 f"operator_{prefix_op}_05 = ?"
             ]
 
-            # --- СОХРАНЕНИЕ В ЦИКЛЕ ---
             for pr_nmb in target_products:
                 for mdl_nmb in target_models:
                     params = [
@@ -891,13 +918,10 @@ class RegressionPage(QWidget):
                         coeffs[3], terms[2][0], terms[2][1], terms[2][2],
                         coeffs[4], terms[3][0], terms[3][1], terms[3][2],
                         coeffs[5], terms[4][0], terms[4][1], terms[4][2],
-                        pr_nmb, el_nmb, mdl_nmb # <- Теперь mdl_nmb передается динамически
+                        pr_nmb, el_nmb, mdl_nmb
                     ]
-
-                    # Записываем в базу (mdl_nmb = ? вместо жесткой 1)
                     query = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?"
                     self.db.execute(query, params)
-            # --------------------------
 
             unsupported_used = any(coeffs[i] != 0.0 or terms[i - 1][2] != 0 for i in range(6, 11))
             if unsupported_used:
@@ -907,9 +931,9 @@ class RegressionPage(QWidget):
                                     "Для A6 — A10 необходимо доработать таблицу el_set.")
             else:
                 QMessageBox.information(self, "Успех",
-                                      f"Уравнение успешно сохранено!\n"
-                                      f"Обновлено продуктов: {len(target_products)}\n"
-                                      f"Обновлено моделей: {len(target_models)}")
+                                        f"Уравнение успешно сохранено!\n"
+                                        f"Обновлено продуктов: {len(target_products)}\n"
+                                        f"Обновлено моделей: {len(target_models)}")
 
         except Exception as e:
             print("Ошибка при сохранении уравнения:")
@@ -917,8 +941,6 @@ class RegressionPage(QWidget):
 
 
 class SaveEquationDialog(QDialog):
-    """Диалоговое окно для выбора продуктов и моделей при сохранении уравнения"""
-
     def __init__(self, default_pr="1", default_mdl="1", parent=None):
         super().__init__(parent)
         self.setWindowTitle("Сохранение уравнения")
@@ -946,7 +968,6 @@ class SaveEquationDialog(QDialog):
         layout.addWidget(self.button_box)
 
     def get_data(self):
-        """Парсит введенный текст и возвращает списки уникальных номеров"""
         try:
             def parse_numbers(text):
                 numbers = set()
@@ -955,7 +976,7 @@ class SaveEquationDialog(QDialog):
                     if not part: continue
                     if '-' in part:
                         start, end = map(int, part.split('-'))
-                        if start > end: start, end = end, start  # Защита от "5-3"
+                        if start > end: start, end = end, start
                         numbers.update(range(start, end + 1))
                     else:
                         numbers.add(int(part))
