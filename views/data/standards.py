@@ -1,313 +1,143 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QComboBox, QFrame,
-                               QHBoxLayout, QSplitter, QTableWidget, QTableWidgetItem,
-                               QHeaderView, QMessageBox, QPushButton)
-from PySide6.QtGui import QDoubleValidator
+# views/data/standards.py
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget,
+                               QTableWidgetItem, QHeaderView, QMessageBox, QPushButton, QHBoxLayout)
 from PySide6.QtCore import Qt
-import json
 from database.db import Database
-from pathlib import Path
-from config import PR_COUNT, DB_CONFIG
-from utils.path_manager import get_config_path
+
 
 class StandardsPage(QWidget):
-    """Виджет для отображения и редактирования нормативов"""
-
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.original_data = {}
-        self.elements_config = self._load_elements_config()
-        self.products_config = self._load_products_config()
         self.init_ui()
-        self.setup_connections()
-
-    def _load_config_file(self, filename: str) -> list:
-        """Загружает конфигурационный файл JSON"""
-        config_path = get_config_path() / filename
-
-        if not config_path.exists():
-            print(f"Файл конфигурации не найден: {config_path}")
-            return []
-
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Ошибка загрузки файла {filename}: {e}")
-            return []
-
-    def _load_elements_config(self) -> list:
-        """Загружает конфигурацию элементов"""
-        return self._load_config_file("elements.json")
-
-    def _load_products_config(self) -> list:
-        """Загружает конфигурацию продуктов из базы данных"""
-        try:
-            query = "SELECT pr_nmb, pr_name, pr_desc FROM cfg02 ORDER BY pr_nmb"
-            results = self.db.fetch_all(query)
-            return results if results else []
-        except Exception as e:
-            print(f"Ошибка загрузки конфигурации продуктов: {e}")
-            return []
-
-    def _get_element_name(self, el_nmb: int) -> str:
-        """Получает имя элемента по его номеру"""
-        for element in self.elements_config:
-            if isinstance(element, dict) and element.get('number') == el_nmb:
-                return element.get('name', f"Element_{el_nmb}")
-        return f"Element_{el_nmb}"
-
-    def _get_product_desc(self, pr_nmb: int) -> str:
-        """Получает описание продукта по его номеру"""
-        for product in self.products_config:
-            if product.get('pr_nmb') == pr_nmb:
-                return product.get('pr_desc', f"Продукт {pr_nmb}")
-        return f"Продукт {pr_nmb}"
+        self.refresh_data()
 
     def init_ui(self):
-        """Инициализация пользовательского интерфейса"""
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
-        self.setMinimumWidth(900)
-        self.setMinimumHeight(700)
+        layout = QVBoxLayout(self)
 
-        title = QLabel("Нормативы")
+        title = QLabel("Нормативы по всем продуктам")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         title.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title)
+        layout.addWidget(title)
 
-        # Верхняя панель с комбобоксом выбора продукта и кнопками
-        top_frame = QFrame()
-        top_frame.setFrameStyle(QFrame.StyledPanel)
-        top_layout = QHBoxLayout()
-        top_layout.setSpacing(20)
-        top_layout.setContentsMargins(10, 5, 10, 5)
-        top_frame.setLayout(top_layout)
-
-        # Левая часть: выбор продукта и кнопки
-        left_layout = QVBoxLayout()
-        left_layout.setSpacing(15)  # Увеличили расстояние между элементами
-
-        # Выбор продукта
-        product_layout = QVBoxLayout()
-        product_layout.setSpacing(2)
-        product_label = QLabel("Продукт:")
-        product_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        product_label.setFixedHeight(20)
-
-        self.product_combo = QComboBox()
-        products = [f"Продукт {i}" for i in range(1, PR_COUNT + 1)]
-        self.product_combo.addItems(products)
-        self.product_combo.setFixedSize(130, 25)  # Уменьшили размер комбобокса
-
-        product_layout.addWidget(product_label)
-        product_layout.addWidget(self.product_combo)
-        left_layout.addLayout(product_layout)
-
-        # Кнопки управления (без подписи "Действия")
-        buttons_row_layout = QHBoxLayout()
-        self.save_btn = QPushButton("Сохранить")
-        self.save_btn.setFixedSize(80, 25)  # Уменьшили размер
-        self.refresh_btn = QPushButton("Обновить")
-        self.refresh_btn.setFixedSize(80, 25)  # Уменьшили размер
-
-        buttons_row_layout.addWidget(self.save_btn)
-        buttons_row_layout.addWidget(self.refresh_btn)
-        buttons_row_layout.addStretch()
-
-        left_layout.addLayout(buttons_row_layout)
-        top_layout.addLayout(left_layout)
-
-        top_layout.addStretch()
-        top_frame.setFixedHeight(90)  # Немного уменьшили высоту
-
-        # Область с описанием продукта (с рамкой как у верхней панели)
-        self.product_info_frame = QFrame()
-        # Добавляем рамку как у верхней панели
-        self.product_info_frame.setFrameStyle(QFrame.StyledPanel)
-        self.product_info_frame.setStyleSheet("background-color: #f0f0f0; padding: 10px;")
-        product_info_layout = QVBoxLayout()
-        product_info_layout.setContentsMargins(5, 5, 5, 5)  # Уменьшили отступы
-
-        self.product_desc_label = QLabel()
-        self.product_desc_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #333;")
-
-        product_info_layout.addWidget(self.product_desc_label)
-        self.product_info_frame.setLayout(product_info_layout)
-        self.product_info_frame.setVisible(False)
-
-        main_layout.addWidget(self.product_info_frame)
-
-        # Таблица с нормативами
         self.table_widget = QTableWidget()
-        self.table_widget.setColumnCount(3)
-        self.table_widget.setHorizontalHeaderLabels([
-            "Имя элемента", "ΔC", "Отн. ΔC, %"
-        ])
+        self.table_widget.setColumnCount(5)
+        self.table_widget.setHorizontalHeaderLabels(["№", "Название продукта", "Элемент", "ΔC", "Отн. ΔC, %"])
 
-        # Настройка размеров колонок
-        self.table_widget.setColumnWidth(0, 120)  # Фиксированная ширина для имен элементов
-        self.table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.table_widget.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.table_widget.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        # Настройка ширины столбцов
+        self.table_widget.setColumnWidth(0, 40)  # №
+        self.table_widget.setColumnWidth(1, 200)  # Название
+        self.table_widget.setColumnWidth(2, 100)  # Элемент
+        self.table_widget.setColumnWidth(3, 80)  # ΔC
+        self.table_widget.setColumnWidth(4, 80)  # Отн. ΔC
 
-        # Увеличиваем ширину номеров строк
-        self.table_widget.verticalHeader().setDefaultSectionSize(30)
-        self.table_widget.verticalHeader().setMinimumWidth(50)
+        layout.addWidget(self.table_widget)
 
-        self.table_widget.setAlternatingRowColors(True)
-        self.table_widget.setSelectionBehavior(QTableWidget.SelectRows)
+        # Создаём горизонтальный layout для кнопок
+        button_layout = QHBoxLayout()
 
-        # Разрешаем редактирование только для колонок deltaC
-        self.table_widget.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.EditKeyPressed)
+        refresh_btn = QPushButton("🔄 Обновить")
+        refresh_btn.clicked.connect(self.refresh_data)
+        button_layout.addWidget(refresh_btn)
 
-        # Добавляем разделитель
-        splitter = QSplitter(Qt.Vertical)
-        splitter.setChildrenCollapsible(False)
-        splitter.addWidget(top_frame)
-        splitter.addWidget(self.table_widget)
-        splitter.setSizes([90, 410])  # Подкорректировали размеры
+        save_btn = QPushButton("💾 Сохранить нормативы")
+        save_btn.clicked.connect(self.save_all_changes)
+        button_layout.addWidget(save_btn)
 
-        main_layout.addWidget(splitter)
-
-    def setup_connections(self):
-        """Настройка соединений сигналов и слотов"""
-        self.product_combo.currentIndexChanged.connect(self.on_product_changed)
-        self.save_btn.clicked.connect(self.save_all_changes)
-        self.refresh_btn.clicked.connect(self.refresh_data)
-        self.table_widget.itemChanged.connect(self.on_item_changed)
-
-    def on_product_changed(self, index):
-        """Обработчик изменения продукта"""
-        # Загружаем данные
-        self.load_standards()
+        layout.addLayout(button_layout)
 
     def refresh_data(self):
-        """Обновляет данные"""
-        # Перезагружаем конфигурационные файлы
-        self.elements_config = self._load_elements_config()
-        self.products_config = self._load_products_config()
-
-        # Загружаем данные
-        self.load_standards()
-
-    def load_standards(self):
-        """Загружает нормативы из базы данных"""
-        try:
-            # Отключаем сигнал itemChanged чтобы избежать рекурсии при заполнении
-            self.table_widget.itemChanged.disconnect(self.on_item_changed)
-
-            product_nmb = self.product_combo.currentIndex() + 1
-
-            # Обновляем описание продукта
-            product_desc = self._get_product_desc(product_nmb)
-            self.product_desc_label.setText(product_desc)
-            self.product_info_frame.setVisible(True)
-
-            # Загружаем данные из таблицы set08 с двойной сортировкой
-            query = """
-            SELECT s.id, s.pr_nmb, s.el_nmb, s.delta_c_01, s.delta_c_02 
+        # JOIN для связи нормативов (set08), имен элементов (set05) и продуктов (cfg02)
+        query = """
+            SELECT s.id, s.pr_nmb, p.pr_name, s.el_nmb, e.el_name, s.delta_c_01, s.delta_c_02
             FROM set08 s
-            WHERE s.pr_nmb = ? 
+            JOIN cfg02 p ON s.pr_nmb = p.pr_nmb
+            LEFT JOIN set05 e ON s.el_nmb = e.el_nmb
             ORDER BY s.pr_nmb, s.el_nmb
-            """
-            results = self.db.fetch_all(query, [product_nmb])
+        """
+        data = self.db.fetch_all(query)
 
-            if not results:
-                self.table_widget.setRowCount(0)
-                QMessageBox.information(self, "Информация", "Данные для выбранного продукта не найдены.")
-                return
+        # Блокируем обновление таблицы для производительности
+        self.table_widget.setUpdatesEnabled(False)
+        self.table_widget.setRowCount(0)
 
-            self.table_widget.setRowCount(len(results))
+        # Сначала заполняем все строки данными
+        product_rows = {}  # {pr_nmb: [start_row, count]}
 
-            for row_idx, row in enumerate(results):
-                el_nmb = row.get('el_nmb', 0)
+        for row_data in data:
+            row = self.table_widget.rowCount()
+            self.table_widget.insertRow(row)
 
-                # Имя элемента
-                element_name = self._get_element_name(el_nmb)
-                element_item = QTableWidgetItem(element_name)
-                element_item.setFlags(element_item.flags() & ~Qt.ItemIsEditable)
-                self.table_widget.setItem(row_idx, 0, element_item)
+            # Сохраняем номер продукта в ячейку (временно, потом объединим)
+            pr_nmb_item = QTableWidgetItem(str(row_data['pr_nmb']))
+            pr_nmb_item.setTextAlignment(Qt.AlignCenter)
+            self.table_widget.setItem(row, 0, pr_nmb_item)
 
-                # ΔC (редактируемая)
-                delta_c_item = QTableWidgetItem(str(row.get('delta_c_01', 0)))
-                delta_c_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                delta_c_item.setData(Qt.UserRole, row)
-                self.table_widget.setItem(row_idx, 1, delta_c_item)
+            # Сохраняем название продукта в ячейку
+            pr_name_item = QTableWidgetItem(row_data['pr_name'])
+            self.table_widget.setItem(row, 1, pr_name_item)
 
-                # Отн. ΔC, % (редактируемая)
-                delta_c_percent_item = QTableWidgetItem(str(row.get('delta_c_02', 0)))
-                delta_c_percent_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                delta_c_percent_item.setData(Qt.UserRole, row)
-                self.table_widget.setItem(row_idx, 2, delta_c_percent_item)
+            # Элемент
+            el_name = row_data['el_name'] or f"Эл. {row_data['el_nmb']}"
+            self.table_widget.setItem(row, 2, QTableWidgetItem(el_name))
 
-            # Включаем сигнал обратно
-            self.table_widget.itemChanged.connect(self.on_item_changed)
+            # Значения
+            item_d1 = QTableWidgetItem(str(row_data['delta_c_01']))
+            item_d2 = QTableWidgetItem(str(row_data['delta_c_02']))
+            item_d1.setData(Qt.UserRole, row_data['id'])  # ID для апдейта
 
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки нормативов: {str(e)}")
-            self.table_widget.setRowCount(0)
-            self.table_widget.itemChanged.connect(self.on_item_changed)
+            self.table_widget.setItem(row, 3, item_d1)
+            self.table_widget.setItem(row, 4, item_d2)
 
-    def on_item_changed(self, item):
-        """Обработчик изменения ячейки таблицы"""
-        if item.column() not in [1, 2]:
-            return
+            # Собираем информацию о количестве строк для каждого продукта
+            pr_nmb = row_data['pr_nmb']
+            if pr_nmb not in product_rows:
+                product_rows[pr_nmb] = {'start': row, 'count': 1}
+            else:
+                product_rows[pr_nmb]['count'] += 1
 
-        try:
-            value = item.text()
-            if value:
-                float(value)
-        except ValueError:
-            QMessageBox.warning(self, "Ошибка", "Введите корректное числовое значение")
-            self.table_widget.itemChanged.disconnect(self.on_item_changed)
-            item.setText("0")
-            self.table_widget.itemChanged.connect(self.on_item_changed)
-            return
+        # Теперь объединяем ячейки для номеров и названий продуктов
+        for pr_nmb, info in product_rows.items():
+            start_row = info['start']
+            span_count = info['count']
+
+            if span_count > 1:
+                # Объединяем ячейки в столбце "№" (индекс 0)
+                self.table_widget.setSpan(start_row, 0, span_count, 1)
+
+                # Объединяем ячейки в столбце "Название продукта" (индекс 1)
+                self.table_widget.setSpan(start_row, 1, span_count, 1)
+
+                # Для объединённых ячеек можно настроить выравнивание
+                # Номер продукта выравниваем по центру
+                center_item = self.table_widget.item(start_row, 0)
+                if center_item:
+                    center_item.setTextAlignment(Qt.AlignCenter)
+
+                # Название продукта можно оставить с выравниванием по левому краю
+                name_item = self.table_widget.item(start_row, 1)
+                if name_item:
+                    name_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        # Включаем обновление таблицы обратно
+        self.table_widget.setUpdatesEnabled(True)
+
+        # Показываем сообщение об успешном обновлении (опционально)
+        QMessageBox.information(self, "Обновлено", "Данные успешно обновлены", QMessageBox.Ok)
 
     def save_all_changes(self):
-        """Сохраняет все изменения в базе данных"""
         try:
-            changes_made = False
-
             for row in range(self.table_widget.rowCount()):
-                delta_c_item = self.table_widget.item(row, 1)
-                delta_c_percent_item = self.table_widget.item(row, 2)
+                # Пропускаем объединённые ячейки (у них item может быть None)
+                item_d1 = self.table_widget.item(row, 3)
+                if item_d1 is None:
+                    continue  # Это объединённая ячейка, пропускаем
 
-                if not delta_c_item or not delta_c_percent_item:
-                    continue
+                item_id = item_d1.data(Qt.UserRole)
+                d1 = self.table_widget.item(row, 3).text().replace(',', '.')
+                d2 = self.table_widget.item(row, 4).text().replace(',', '.')
 
-                original_data = delta_c_item.data(Qt.UserRole)
-                if not original_data:
-                    continue
-
-                new_delta_c_01 = float(delta_c_item.text()) if delta_c_item.text() else 0
-                new_delta_c_02 = float(delta_c_percent_item.text()) if delta_c_percent_item.text() else 0
-                old_delta_c_01 = original_data.get('delta_c_01', 0)
-                old_delta_c_02 = original_data.get('delta_c_02', 0)
-
-                if new_delta_c_01 != old_delta_c_01 or new_delta_c_02 != old_delta_c_02:
-                    changes_made = True
-
-                    id_value = original_data.get('id')
-                    query = """
-                    UPDATE set08 SET delta_c_01 = ?, delta_c_02 = ?
-                    WHERE id = ?
-                    """
-                    self.db.execute(query, [new_delta_c_01, new_delta_c_02, id_value])
-
-            if changes_made:
-                QMessageBox.information(self, "Успех", "Изменения успешно сохранены!")
-                self.refresh_data()
-            else:
-                QMessageBox.information(self, "Информация", "Нет изменений для сохранения.")
-
+                self.db.execute("UPDATE set08 SET delta_c_01 = ?, delta_c_02 = ? WHERE id = ?", [d1, d2, item_id])
+            QMessageBox.information(self, "Успех", "Данные сохранены")
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения нормативов: {str(e)}")
-
-    def showEvent(self, event):
-        """Обработчик события показа виджета"""
-        super().showEvent(event)
-        self.elements_config = self._load_elements_config()
-        self.products_config = self._load_products_config()
-        self.load_standards()
+            QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения: {e}")

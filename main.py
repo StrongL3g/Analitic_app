@@ -116,8 +116,8 @@ class MainWindow(QMainWindow):
         data_item.addChild(self.create_menu_item("Регрессия", "regression"))
         data_item.addChild(self.create_menu_item("Корректировка", "correction"))
         data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
-        #data_item.addChild(self.create_menu_item("Нормативы", "standards"))
-        #data_item.addChild(self.create_menu_item("Отчет", "report"))
+        data_item.addChild(self.create_menu_item("Нормативы", "standards"))
+        data_item.addChild(self.create_menu_item("Отчет", "report"))
 
         cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
         cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))

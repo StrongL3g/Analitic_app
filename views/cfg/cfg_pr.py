@@ -63,30 +63,27 @@ class CfgprPage(QWidget):
         Универсально клонирует все настройки из продукта №1 для нового продукта.
         Автоматически подстраивается под любые колонки в таблицах.
         """
-        tables_to_clone = ['pr_set', 'el_set', 'set07', 'mdl_set']
+        # --- ИСПРАВЛЕНИЕ: Добавили set08 в список клонируемых таблиц ---
+        tables_to_clone = ['pr_set', 'el_set', 'set07', 'mdl_set', 'set08']
 
         for table in tables_to_clone:
-            rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE pr_nmb = 1")
+            try:
+                rows = self.db.fetch_all(f"SELECT * FROM {table} WHERE pr_nmb = 1")
 
-            for row in rows:
-                if 'id' in row:
-                    del row['id']
+                for row in rows:
+                    if 'id' in row:
+                        del row['id']
 
-                row['pr_nmb'] = new_pr_nmb
+                    row['pr_nmb'] = new_pr_nmb
 
-                columns = list(row.keys())
+                    columns = list(row.keys())
+                    escaped_columns = [f"[{col}]" for col in columns]
+                    placeholders = ", ".join(["?"] * len(columns))
 
-                # --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-                # Оборачиваем каждое название колонки в квадратные скобки: [column_name]
-                escaped_columns = [f"[{col}]" for col in columns]
-
-                placeholders = ", ".join(["?"] * len(columns))
-
-                # Используем escaped_columns вместо columns для имен полей
-                query = f"INSERT INTO {table} ({', '.join(escaped_columns)}) VALUES ({placeholders})"
-                # -------------------------
-
-                self.db.execute(query, list(row.values()))
+                    query = f"INSERT INTO {table} ({', '.join(escaped_columns)}) VALUES ({placeholders})"
+                    self.db.execute(query, list(row.values()))
+            except Exception as e:
+                print(f"Ошибка при клонировании таблицы {table}: {e}")
 
     def load_data(self):
         """Загрузка данных из таблицы cfg02"""
@@ -195,6 +192,9 @@ class CfgprPage(QWidget):
                 self.db.execute("DELETE FROM set07 WHERE pr_nmb = ?", (pr_nmb,))
                 self.db.execute("DELETE FROM pr_set WHERE pr_nmb = ?", (pr_nmb,))
                 self.db.execute("DELETE FROM mdl_set WHERE pr_nmb = ?", (pr_nmb,))
+
+                # --- ИСПРАВЛЕНИЕ: Удаляем нормативы set08 ---
+                self.db.execute("DELETE FROM set08 WHERE pr_nmb = ?", (pr_nmb,))
 
                 # Удаляем сам продукт
                 self.db.execute("DELETE FROM cfg02 WHERE pr_nmb = ?", (pr_nmb,))
