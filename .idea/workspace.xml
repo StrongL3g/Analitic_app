@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a97f5dbd-4b7a-4c42-ae6e-e39a64e9674c" name="Changes" comment="Новый сборщик с учетом pyodbc pyside">
+      <change afterPath="$PROJECT_DIR$/.idea/Analitic_app.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.spec" beforeDir="false" afterPath="$PROJECT_DIR$/build.spec" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/elements.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/elements.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/lines.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/lines.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/lines_math_interactions.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/lines_math_interactions.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/math_interactions.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/math_interactions.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/range.json" beforeDir="false" afterPath="$PROJECT_DIR$/config/range.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/views/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/views/settings.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="36vctBGYW4yUvnMR8TT1RTy1vbB" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="openDirectoriesWithSingleClick" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.ac.executor&quot;: &quot;Run&quot;,
+    &quot;Python.connection.executor&quot;: &quot;Run&quot;,
+    &quot;Python.import_from_plc.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mapping.executor&quot;: &quot;Run&quot;,
+    &quot;Python.opc_browser.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/astra/Analitic_app/plc&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/plc" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="Analitic_app" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-5a2391486177-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13763.11" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a97f5dbd-4b7a-4c42-ae6e-e39a64e9674c" name="Changes" comment="" />
+      <created>1765890703910</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1765890703910</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Исправлена ошибка при выгрузке интенсивностей, было квадратная скобка">
+      <option name="closed" value="true" />
+      <created>1765893659204</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1765893659205</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Исправлена ошибка при выгрузке интенсивностей, было квадратная скобка">
+      <option name="closed" value="true" />
+      <created>1766038826885</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1766038826885</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Поправлена выгрузка инетнсивностей по линиям для продукта">
+      <option name="closed" value="true" />
+      <created>1766039867336</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1766039867336</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Запрос больше не берет номер модели">
+      <option name="closed" value="true" />
+      <created>1766066181291</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1766066181291</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Обновление всех элементов  в рамках критериев пустоты и воды">
+      <option name="closed" value="true" />
+      <created>1773314819806</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1773314819806</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Обновление всех элементов  в рамках критериев пустоты и воды">
+      <option name="closed" value="true" />
+      <created>1775050818608</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1775050818608</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Закомменчено все обращение к OPC UA и Alarm Manager, а также к экранам АК-21. Пока они остаются в данном приложении.">
+      <option name="closed" value="true" />
+      <created>1775051094945</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1775051094945</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776165649697</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1776165649697</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776167607306</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1776167607306</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776169800940</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1776169800942</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776169916200</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1776169916200</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776170508873</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1776170508873</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776170561315</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1776170561315</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776170757654</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1776170757654</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776170797815</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1776170797815</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Сборщик для линукса">
+      <option name="closed" value="true" />
+      <created>1776171474503</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1776171474503</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Изменил требования для PySide, под АСТРУ нет нужной версии">
+      <option name="closed" value="true" />
+      <created>1776171729837</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1776171729837</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Новый сборщик с учетом pyodbc pyside">
+      <option name="closed" value="true" />
+      <created>1776172288610</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1776172288610</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Исправлена ошибка при выгрузке интенсивностей, было квадратная скобка" />
+    <MESSAGE value="Поправлена выгрузка инетнсивностей по линиям для продукта" />
+    <MESSAGE value="Запрос больше не берет номер модели" />
+    <MESSAGE value="Обновление всех элементов  в рамках критериев пустоты и воды" />
+    <MESSAGE value="Закомменчено все обращение к OPC UA и Alarm Manager, а также к экранам АК-21. Пока они остаются в данном приложении." />
+    <MESSAGE value="Сборщик для линукса" />
+    <MESSAGE value="Изменил требования для PySide, под АСТРУ нет нужной версии" />
+    <MESSAGE value="Новый сборщик с учетом pyodbc pyside" />
+    <option name="LAST_COMMIT_MESSAGE" value="Новый сборщик с учетом pyodbc pyside" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/views/data/composition.py</url>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>1</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

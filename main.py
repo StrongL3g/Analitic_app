@@ -6,8 +6,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt#, QCoreApplication
 
-# Импортируем конфиг БД
+# Импортируем конфиг БД и функцию глобальных настроек
 from config import DB_CONFIG
+from config import get_db_settings
 
 # Импортируем Alarm manager и перечень аварий
 #from services.alarm_manager import AlarmManager

@@ -1,11 +1,11 @@
 [
     {
         "number": 1,
-        "name": "NC"
+        "name": "Ni_Ka"
     },
     {
         "number": 2,
-        "name": "INT"
+        "name": "Cu_Ka"
     },
     {
         "number": 3,
@@ -17,11 +17,11 @@
     },
     {
         "number": 5,
-        "name": "Ni_Ka"
+        "name": "NC"
     },
     {
         "number": 6,
-        "name": "Cu_Ka"
+        "name": "-"
     },
     {
         "number": 7,

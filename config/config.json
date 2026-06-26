@@ -1,11 +1,11 @@
 {
-  "DB_TYPE": "postgres",
-  "DB_HOST": "192.168.222.34",
-  "DB_PORT": "5432",
-  "DB_NAME": "AMMKASAKDB01",
+  "DB_TYPE": "mssql",
+  "DB_HOST": "192.168.102.38",
+  "DB_PORT": "1433",
+  "DB_NAME": "acdb",
   "DB_USER": "lastadmin",
   "DB_PASSWORD": "Dwd#RX9R",
-  "DB_SERVER": "192.168.222.167\\CPA02_EXPRESS",
+  "DB_SERVER": "192.168.102.38",
   "DB_DRIVER": "ODBC Driver 18 for SQL Server",
   "PR_COUNT": 8,
   "AC_COUNT": 1

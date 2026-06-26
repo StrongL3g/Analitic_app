@@ -34,7 +34,7 @@ def load_app_config():
 
     except Exception as e:
         print(f"Ошибка загрузки config.json: {e}")
-        return {"AC_COUNT": 1, "PR_COUNT": 8}
+        return {"AC_COUNT": 0, "PR_COUNT": 0}
 
 # Функция для получения значения переменной (read-only) - СОХРАНЯЕМ ОРИГИНАЛЬНУЮ ЛОГИКУ
 def get_config(key, default=None):
@@ -122,27 +122,31 @@ DB_CONFIG = get_db_config()
 
 # Функция для получения конфигурации из базы данных
 def get_db_settings():
-    """Получает AC_COUNT и PR_COUNT из базы данных"""
+    """Получает AC_COUNT и PR_COUNT из базы данных. Данные по приборам cfg00, продуктам cfg02"""
     try:
         # Импортируем здесь, чтобы избежать циклической зависимости
         from database.db import Database
         db = Database(DB_CONFIG)
 
-        query = "SELECT ac_nmb, pr_nmb FROM SET00"
+        query = """
+        SELECT 
+            (SELECT COUNT(DISTINCT ac_nmb) FROM dbo.CFG00 WHERE ac_nmb IS NOT NULL) as AC_COUNT,
+            (SELECT COUNT(DISTINCT pr_nmb) FROM dbo.CFG02 WHERE pr_nmb IS NOT NULL) as PR_COUNT"""
+
         result = db.fetch_one(query)
 
         if result:
             return {
-                "AC_COUNT": result.get('ac_nmb', 1),
-                "PR_COUNT": result.get('pr_nmb', 1)
+                "AC_COUNT": result.get('AC_COUNT', 1),
+                "PR_COUNT": result.get('PR_COUNT', 1)
             }
         else:
-            print("Предупреждение: Не найдены данные в таблице SET00")
-            return {"AC_COUNT": 1, "PR_COUNT": 1}
+            print("Предупреждение: Не найдены данные в таблицах cfg00 или cfg02")
+            return {"AC_COUNT": 0, "PR_COUNT": 0}
 
     except Exception as e:
         print(f"Ошибка при получении конфигурации из БД: {e}")
-        return {"AC_COUNT": 1, "PR_COUNT": 1}
+        return {"AC_COUNT": 0, "PR_COUNT": 0}
 
 def save_app_config(config: Dict[str, Any]):
     """Сохраняет настройки приложения в config.json"""
