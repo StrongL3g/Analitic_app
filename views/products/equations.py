@@ -143,8 +143,8 @@ class EquationsPage(QWidget):
     def _get_all_products(self) -> list:
         """Динамически получает список уникальных продуктов из БД"""
         try:
-            # Получаем все уникальные номера продуктов из базы
-            rows = self.db.fetch_all("SELECT DISTINCT pr_nmb FROM cfg01 ORDER BY pr_nmb")
+            # ДОБАВЛЕНО: Фильтр WHERE pr_nmb > 0
+            rows = self.db.fetch_all("SELECT DISTINCT pr_nmb FROM cfg01 WHERE pr_nmb > 0 ORDER BY pr_nmb")
             return [row['pr_nmb'] for row in rows]
         except Exception as e:
             print(f"Ошибка при получении списка продуктов: {e}")
@@ -689,8 +689,14 @@ class EquationsPage(QWidget):
     def load_equations(self):
         """Загружает уравнения из базы данных, объединяя el_set и mdl_set"""
         try:
-            product_nmb = self.product_combo.currentIndex() + 1
+            # ИСПРАВЛЕНО: Берем реальный pr_nmb из данных, а не просто прибавляем 1 к индексу
+            product_nmb = self.product_combo.currentData()
             model_nmb = self.model_combo.currentIndex() + 1
+
+            # ЗАЩИТА: Если продукт не выбран или это -1, просто очищаем таблицу и уходим
+            if not product_nmb or product_nmb <= 0:
+                self.table_widget.setRowCount(0)
+                return
 
             configured_numbers = self._get_configured_element_numbers()
 

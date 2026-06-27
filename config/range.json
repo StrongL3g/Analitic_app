@@ -1,27 +1,27 @@
 [
     {
         "number": 1,
-        "name": "INT"
-    },
-    {
-        "number": 2,
-        "name": "Mo_Ka"
-    },
-    {
-        "number": 3,
-        "name": "Cu_Ka"
-    },
-    {
-        "number": 4,
         "name": "Fe_Ka"
     },
     {
+        "number": 2,
+        "name": "Co_Ka"
+    },
+    {
+        "number": 3,
+        "name": "Ni_Ka"
+    },
+    {
+        "number": 4,
+        "name": "NC"
+    },
+    {
         "number": 5,
-        "name": "Zr_Ka"
+        "name": "Cu_Ka"
     },
     {
         "number": 6,
-        "name": "NC"
+        "name": "-"
     },
     {
         "number": 7,

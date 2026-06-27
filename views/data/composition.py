@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from utils.path_manager import get_config_path
 
+
 class TimeEdit15Min(QTimeEdit):
     """Кастомный QTimeEdit с шагом 15 минут"""
 
@@ -258,11 +259,8 @@ class CompositionPage(QWidget):
             dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
             dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
 
-            selected_product = self.product_combo.currentText()
-            try:
-                pr_nmb = int(selected_product.split()[-1])
-            except:
-                QMessageBox.warning(self, "Ошибка", "Неверный формат номера продукта")
+            pr_nmb = self.product_combo.currentData()
+            if not pr_nmb or pr_nmb <= 0:
                 return
 
             num_columns = len(self.intensity_columns)
@@ -293,8 +291,13 @@ class CompositionPage(QWidget):
             params = [dt_from, dt_to, pr_nmb]
 
             conditions = []
+
+            # ИСПРАВЛЕНИЕ: Четкое разделение на ручные (0) и циклические (1)
             if manual_only:
                 conditions.append("meas_type = 0")
+            else:
+                conditions.append("meas_type = 1")
+
             if has_chemistry:
                 conditions.append("1=1")
 
@@ -370,11 +373,8 @@ class CompositionPage(QWidget):
             dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
             dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
 
-            selected_product = self.product_combo.currentText()
-            try:
-                pr_nmb = int(selected_product.split()[-1])
-            except:
-                QMessageBox.warning(self, "Ошибка", "Неверный формат номера продукта")
+            pr_nmb = self.product_combo.currentData()
+            if not pr_nmb or pr_nmb <= 0:
                 return
 
             if self.db.db_type == 'postgres':
@@ -403,8 +403,13 @@ class CompositionPage(QWidget):
             params = [dt_from, dt_to, pr_nmb]
 
             conditions = []
+
+            # ИСПРАВЛЕНИЕ: Четкое разделение на ручные (0) и циклические (1)
             if manual_only:
                 conditions.append("meas_type = 0")
+            else:
+                conditions.append("meas_type = 1")
+
             if has_chemistry:
                 chem_conditions = [f"c_chem_{i:02d} <> 0" for i in range(1, 9)]
                 conditions.append(f"({' OR '.join(chem_conditions)})")
@@ -621,6 +626,18 @@ class CompositionPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении данных: {str(e)}")
 
+    def load_products_list(self):
+        """Загрузка списка продуктов из cfg02"""
+        try:
+            products = self.db.fetch_all("SELECT pr_nmb, pr_name FROM cfg02 WHERE pr_nmb > 0 ORDER BY pr_nmb")
+            self.product_combo.blockSignals(True)
+            self.product_combo.clear()
+            for p in products:
+                self.product_combo.addItem(f"№{p['pr_nmb']}: {p['pr_name']}", p['pr_nmb'])
+            self.product_combo.blockSignals(False)
+        except Exception as e:
+            print(f"Ошибка загрузки списка продуктов: {e}")
+
     def init_ui(self):
         """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
@@ -690,15 +707,19 @@ class CompositionPage(QWidget):
         container.addLayout(dates_layout)
         main_layout.addLayout(container)
 
-        # Выбор продукта
+        # ИСПРАВЛЕНИЕ: Выбор продукта теперь в горизонтальном слое
+        product_layout = QHBoxLayout()
+        product_layout.addWidget(QLabel("Выберите продукт:"))
+
         self.product_combo = QComboBox()
-        products = [f"Продукт {i}" for i in range(1, 9)]
-        self.product_combo.addItems(products)
-        self.product_combo.setFixedWidth(150)
+        self.product_combo.setFixedWidth(200)
+        self.load_products_list()
         self.product_combo.currentIndexChanged.connect(self.force_reload_data)
 
-        main_layout.addWidget(QLabel("Выберите продукт:"))
-        main_layout.addWidget(self.product_combo)
+        product_layout.addWidget(self.product_combo)
+        product_layout.addStretch()  # Теперь эта "пружина" толкает элементы влево, а не вниз
+
+        main_layout.addLayout(product_layout)
 
         # Кнопки
         btn_layout = QHBoxLayout()
@@ -732,3 +753,8 @@ class CompositionPage(QWidget):
         self.time_from.timeChanged.connect(self.validate_dates)
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
+
+    def showEvent(self, event):
+        """Обновляет список продуктов при показе вкладки"""
+        super().showEvent(event)
+        self.load_products_list()

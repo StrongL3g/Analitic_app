@@ -89,7 +89,7 @@ class CfgprPage(QWidget):
         """Загрузка данных из таблицы cfg02"""
         self.table.setRowCount(0)
         try:
-            query = "SELECT pr_nmb, pr_name, pr_desc FROM cfg02 ORDER BY pr_nmb"
+            query = "SELECT pr_nmb, pr_name, pr_desc FROM cfg02 WHERE pr_nmb > 0 ORDER BY pr_nmb"
             rows = self.db.fetch_all(query)
             if not rows:
                 return

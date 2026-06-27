@@ -252,10 +252,15 @@ class CorrectionPage(QWidget):
 
             if not sample_config: return
 
+            # ЗАЩИТА: Получаем продукт из конфига выборки
+            pr_nmb = sample_config[0].get("product_id")
+            if not pr_nmb or pr_nmb <= 0:
+                self.data_table.setRowCount(0)
+                return
+
             el_nmb = self.combo_element.currentData()
             mdl_nmb = self.combo_model.currentIndex() + 1
 
-            pr_nmb = sample_config[0].get("product_id")
             el_set_row = self.db.fetch_one("SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
                                            [pr_nmb, el_nmb, mdl_nmb])
             if el_set_row:
@@ -540,6 +545,11 @@ class CorrectionPage(QWidget):
                 except Exception:
                     pass
 
+            # ЗАЩИТА: Если продукт -1, то сохранять в базу некорректно
+            if default_pr_nmb <= 0:
+                QMessageBox.warning(self, "Ошибка", "Нельзя сохранить корректировку для 'Нет продукта'.")
+                return
+
             dialog = SaveCorrectionDialog(default_pr=default_pr_nmb, default_mdl=mdl_nmb_current, parent=self)
             if not dialog.exec():
                 return
@@ -625,6 +635,9 @@ class SaveCorrectionDialog(QDialog):
                 return sorted(list(numbers))
 
             pr_list = parse_numbers(self.products_edit.text())
+            # ЗАЩИТА:
+            if any(p <= 0 for p in pr_list):
+                raise ValueError("Номера продуктов должны быть положительными (больше 0).")
             mdl_list = parse_numbers(self.models_edit.text())
 
             if not pr_list or not mdl_list:

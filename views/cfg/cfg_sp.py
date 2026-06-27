@@ -52,7 +52,7 @@ class CfgspPage(QWidget):
     def load_data(self):
         self.table.setRowCount(0)
         try:
-            query = "SELECT sp_nmb, sp_name, sp_desc FROM cfg04 ORDER BY sp_nmb"
+            query = "SELECT sp_nmb, sp_name, sp_desc FROM cfg04 WHERE sp_nmb > 0 ORDER BY sp_nmb"
             rows = self.db.fetch_all(query)
             if not rows: return
 

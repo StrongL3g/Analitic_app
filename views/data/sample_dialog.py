@@ -160,19 +160,28 @@ class SampleDialog(QDialog):
             self.datetime_to.setDateTime(now)
 
     def load_products(self):
-        """Загружает список продуктов из базы данных"""
+        """Загружает список продуктов из базы данных, исключая -1"""
         try:
-            from config import PR_COUNT
             self.combo_products.clear()
-            for product_id in range(1, PR_COUNT + 1):
-                product_name = f"Продукт {product_id}"
-                self.combo_products.addItem(f"{product_id} - {product_name}", product_id)
-        except ImportError:
-            self.combo_products.clear()
-            for i in range(1, 6):
-                self.combo_products.addItem(f"{i} - Тестовый продукт {i}", i)
+
+            # Динамическая загрузка из базы
+            products = self.db.fetch_all("SELECT pr_nmb, pr_name FROM cfg02 WHERE pr_nmb > 0 ORDER BY pr_nmb")
+
+            if not products:
+                self.combo_products.addItem("Нет доступных продуктов", 1)
+                return
+
+            for p in products:
+                pr_nmb = p['pr_nmb']
+                pr_name = p['pr_name'] if p['pr_name'] else f"Продукт {pr_nmb}"
+                self.combo_products.addItem(f"№{pr_nmb} - {pr_name}", pr_nmb)
+
         except Exception as e:
             print(f"Ошибка загрузки продуктов: {e}")
+            self.combo_products.clear()
+            # Фолбэк на случай ошибки БД
+            for i in range(1, 6):
+                self.combo_products.addItem(f"№{i} - Ошибка БД {i}", i)
 
     def add_or_update_product(self):
         """Добавляет новую строку или обновляет существующую"""
