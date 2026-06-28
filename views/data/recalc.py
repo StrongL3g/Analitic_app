@@ -286,6 +286,11 @@ class RecalcPage(QWidget):
 
     def load_data(self):
         try:
+            # ИСПРАВЛЕНИЕ 1: Защита комбобокса элементов
+            el_nmb = self.combo_element.currentData()
+            if el_nmb is None:
+                return
+
             sample_path = get_config_path() / "sample" / "s_regress.json"
             if not os.path.exists(sample_path): return
 
@@ -295,7 +300,14 @@ class RecalcPage(QWidget):
             if not sample_config: return
 
             pr_nmb = sample_config[0].get("product_id")
-            el_nmb = self.combo_element.currentData()
+
+            # ИСПРАВЛЕНИЕ 2: Блокировка продукта-заглушки -1
+            if not pr_nmb or pr_nmb <= 0:
+                self.data_table.setRowCount(0)
+                QMessageBox.warning(self, "Внимание",
+                                    "В выборке указан продукт-заглушка. Пожалуйста, измените выборку.")
+                return
+
             mdl_nmb = self.combo_model.currentIndex() + 1
 
             el_set_row = self.db.fetch_one("SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
@@ -411,6 +423,10 @@ class RecalcPage(QWidget):
         all_rows = []
         for cond in sample_config:
             pr_nmb = cond["product_id"]
+
+            # ИСПРАВЛЕНИЕ 3: Блокировка продукта-заглушки -1 в цикле
+            if pr_nmb <= 0: continue
+
             start_dt = f"{cond['date_from']} {cond['time_from']}"
             end_dt = f"{cond['date_to']} {cond['time_to']}"
 

@@ -47,12 +47,13 @@ class StandardsPage(QWidget):
         layout.addLayout(button_layout)
 
     def refresh_data(self):
-        # JOIN для связи нормативов (set08), имен элементов (set05) и продуктов (cfg02)
+        # ИСПРАВЛЕНИЕ: Добавлен фильтр WHERE s.pr_nmb > 0 для исключения продукта -1
         query = """
             SELECT s.id, s.pr_nmb, p.pr_name, s.el_nmb, e.el_name, s.delta_c_01, s.delta_c_02
             FROM set08 s
             JOIN cfg02 p ON s.pr_nmb = p.pr_nmb
             LEFT JOIN set05 e ON s.el_nmb = e.el_nmb
+            WHERE s.pr_nmb > 0
             ORDER BY s.pr_nmb, s.el_nmb
         """
         data = self.db.fetch_all(query)
@@ -122,7 +123,8 @@ class StandardsPage(QWidget):
         # Включаем обновление таблицы обратно
         self.table_widget.setUpdatesEnabled(True)
 
-        # Показываем сообщение об успешном обновлении (опционально)
+        # (Опционально) Если всплывающее окно при каждом открытии вкладки сильно мешает,
+        # эту строчку можно закомментировать.
         QMessageBox.information(self, "Обновлено", "Данные успешно обновлены", QMessageBox.Ok)
 
     def save_all_changes(self):
@@ -134,8 +136,17 @@ class StandardsPage(QWidget):
                     continue  # Это объединённая ячейка, пропускаем
 
                 item_id = item_d1.data(Qt.UserRole)
-                d1 = self.table_widget.item(row, 3).text().replace(',', '.')
-                d2 = self.table_widget.item(row, 4).text().replace(',', '.')
+                d1_text = self.table_widget.item(row, 3).text().replace(',', '.')
+                d2_text = self.table_widget.item(row, 4).text().replace(',', '.')
+
+                # ИСПРАВЛЕНИЕ: Защита от ввода букв или пустых строк
+                try:
+                    d1 = float(d1_text) if d1_text else 0.0
+                    d2 = float(d2_text) if d2_text else 0.0
+                except ValueError:
+                    QMessageBox.warning(self, "Ошибка ввода",
+                                        f"Некорректное значение в строке {row + 1}.\nПожалуйста, введите число (например, 0.5).")
+                    return
 
                 self.db.execute("UPDATE set08 SET delta_c_01 = ?, delta_c_02 = ? WHERE id = ?", [d1, d2, item_id])
             QMessageBox.information(self, "Успех", "Данные сохранены")

@@ -195,12 +195,10 @@ class ReportPage(QWidget):
         self.stats_table.setSelectionMode(QTableWidget.NoSelection)
         self.stats_table.verticalHeader().setVisible(False)
         self.stats_table.horizontalHeader().setVisible(True)
-        # Оставляем скролл включенным (чтобы геометрия колонок совпадала с нижней таблицей), но прячем сам ползунок
         self.stats_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         main_layout.addWidget(self.stats_table)
 
-        # ОТСТУП ВЫСОТОЙ В ОДНУ СТРОКУ
         main_layout.addSpacing(30)
 
         # --- ТАБЛИЦА ДАННЫХ (Нижняя) ---
@@ -218,16 +216,17 @@ class ReportPage(QWidget):
         self.configure_tables()
 
     def load_products_list(self):
-        products = self.db.fetch_all("SELECT pr_nmb, pr_name FROM cfg02 ORDER BY pr_nmb")
+        """Загрузка списка продуктов из базы данных"""
+        # ИСПРАВЛЕНИЕ: фильтр WHERE pr_nmb > 0 исключает продукт -1
+        products = self.db.fetch_all("SELECT pr_nmb, pr_name FROM cfg02 WHERE pr_nmb > 0 ORDER BY pr_nmb")
         self.product_combo.clear()
         for p in products:
-            self.product_combo.addItem(f"{p['pr_nmb']}: {p['pr_name']}", p['pr_nmb'])
+            self.product_combo.addItem(f"№{p['pr_nmb']}: {p['pr_name']}", p['pr_nmb'])
 
     def configure_tables(self):
         elements = self.get_configured_elements()
         col_count = 1 + len(elements) * 4
 
-        # Собираем заголовки
         headers_stats = ["Показатель"]
         headers_data = ["Время цикла"]
         for _ in elements:
@@ -239,18 +238,16 @@ class ReportPage(QWidget):
         self.stats_table.setHorizontalHeaderLabels(headers_stats)
         self.stats_table.setRowCount(5)
 
-        # Высота таблицы: Заголовок + 5 строк по 30px + рамки
         self.stats_table.verticalHeader().setDefaultSectionSize(30)
         self.stats_table.setFixedHeight(30 + 5 * 30 + 2)
 
-        # Строка 0: Объединенные названия элементов
         item_corner = QTableWidgetItem("Элемент:")
         item_corner.setBackground(QColor("#d1d5db"))
         self.stats_table.setItem(0, 0, item_corner)
 
         for i, el in enumerate(elements):
             col_base = 1 + i * 4
-            self.stats_table.setSpan(0, col_base, 1, 4)  # Сливаем 4 ячейки в одну
+            self.stats_table.setSpan(0, col_base, 1, 4)
             item_el = QTableWidgetItem(el)
             item_el.setTextAlignment(Qt.AlignCenter)
             font = item_el.font()
@@ -259,7 +256,6 @@ class ReportPage(QWidget):
             item_el.setBackground(QColor("#d1d5db"))
             self.stats_table.setItem(0, col_base, item_el)
 
-        # Строки 1-4: Названия статистики
         bold_font = QFont()
         bold_font.setBold(True)
         for i, name in enumerate(["Среднее", "СКО", "Норматив", "Вывод"]):
@@ -274,7 +270,6 @@ class ReportPage(QWidget):
         self.data_table.setHorizontalHeaderLabels(headers_data)
         self.data_table.setSortingEnabled(True)
 
-        # Синхронизируем ширину столбцов
         time_width = 140
         element_width = 85
 
@@ -293,7 +288,7 @@ class ReportPage(QWidget):
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
 
-        # === СИНХРОНИЗАЦИЯ ГОРИЗОНТАЛЬНОГО СКРОЛЛА ===
+        # Синхронизация скролла
         self.data_table.horizontalScrollBar().valueChanged.connect(
             lambda val: self.stats_table.horizontalScrollBar().setValue(val)
         )
@@ -341,7 +336,7 @@ class ReportPage(QWidget):
         for i in range(len(keys) - 1):
             if keys[i] <= df <= keys[i + 1]:
                 return f_table[keys[i]] + (f_table[keys[i + 1]] - f_table[keys[i]]) * (df - keys[i]) / (
-                            keys[i + 1] - keys[i])
+                        keys[i + 1] - keys[i])
         return 4.0
 
     # ================== ЛОГИКА РАСЧЕТОВ ==================
@@ -395,6 +390,12 @@ class ReportPage(QWidget):
             dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
             dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
             pr_nmb = self.product_combo.currentData()
+
+            # ИСПРАВЛЕНИЕ: Защита, если продукт не выбран или это заглушка (<=0)
+            if not pr_nmb or pr_nmb <= 0:
+                self.data_table.setRowCount(0)
+                QMessageBox.warning(self, "Ошибка", "Выберите корректный продукт для отчета.")
+                return
 
             active_model, coefficients = self.get_active_model_coefficients(pr_nmb)
             if not coefficients:
@@ -474,8 +475,12 @@ class ReportPage(QWidget):
             self.update_statistics()
 
     def update_statistics(self):
-        elements = self.get_configured_elements()
         pr_nmb = self.product_combo.currentData()
+        # ИСПРАВЛЕНИЕ: Защита перед запросом нормативов
+        if not pr_nmb or pr_nmb <= 0:
+            return
+
+        elements = self.get_configured_elements()
         normatives = self.get_normatives_from_db(pr_nmb) if pr_nmb else {}
 
         n_rows = self.data_table.rowCount()
@@ -508,7 +513,6 @@ class ReportPage(QWidget):
             norm_d1, norm_d2 = normatives.get(el_num, (0.0, 0.0))
 
             if len(calcs) < 5:
-                # Мало данных - прочерки во все строки статистики
                 for r in (1, 2, 4):
                     for c in range(col_base, col_base + 4):
                         it = QTableWidgetItem("-")

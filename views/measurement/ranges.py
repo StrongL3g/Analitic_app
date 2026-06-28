@@ -3,7 +3,7 @@ import json
 import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QHBoxLayout, QComboBox, QMessageBox
+    QPushButton, QLabel, QHBoxLayout, QComboBox, QMessageBox, QHeaderView
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -47,7 +47,7 @@ class RangesPage(QWidget):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # Таблица (теперь фиксированные 4 колонки)
+        # Таблица (колонки будут динамическими в зависимости от кол-ва приборов)
         self.table = QTableWidget()
         self.update_column_headers()
         self.table.setEditTriggers(QTableWidget.DoubleClicked)
@@ -59,10 +59,19 @@ class RangesPage(QWidget):
         self.load_data()
 
     def update_column_headers(self):
-        """Устанавливает фиксированные заголовки столбцов (один Min/Max для всех приборов)"""
-        headers = ["Порядковый №", "Название", "Min", "Max"]
+        """Устанавливает динамические заголовки столбцов для каждого прибора"""
+        headers = ["№", "Название"]
+        for ac in range(1, config.AC_COUNT + 1):
+            headers.extend([f"Min (Пр.{ac})", f"Max (Пр.{ac})"])
+
         self.table.setColumnCount(len(headers))
         self.table.setHorizontalHeaderLabels(headers)
+
+        # Настройка ширины
+        self.table.setColumnWidth(0, 50)
+        self.table.setColumnWidth(1, 150)
+        for i in range(2, len(headers)):
+            self.table.setColumnWidth(i, 90)
 
     def load_lines_names(self):
         try:
@@ -112,7 +121,7 @@ class RangesPage(QWidget):
                     "ln_ch_max": "" if row_data["ln_ch_max"] is None else str(row_data["ln_ch_max"])
                 }
 
-            # Для отрисовки берем данные базового прибора (№1)
+            # Для отрисовки структуры (строк) берем данные базового прибора (№1)
             base_data = self.device_data.get(1, {})
             sorted_base_items = sorted(base_data.items(), key=lambda item: item[1]['sq_nmb'])
 
@@ -150,15 +159,25 @@ class RangesPage(QWidget):
 
                     self.table.setCellWidget(row_pos, 1, combo_name)
 
-                # Колонка 2: Min (берем из базового прибора)
-                item_min = QTableWidgetItem(base_row_data.get("ln_ch_min", ""))
-                item_min.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row_pos, 2, item_min)
+                # Колонки 2+: Min и Max для каждого прибора
+                for ac in range(1, ac_count + 1):
+                    ac_col_base = 2 + (ac - 1) * 2
 
-                # Колонка 3: Max (берем из базового прибора)
-                item_max = QTableWidgetItem(base_row_data.get("ln_ch_max", ""))
-                item_max.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row_pos, 3, item_max)
+                    # Ищем данные конкретного прибора для текущей линии (sq_nmb)
+                    ac_min, ac_max = "", ""
+                    for ac_row_id, ac_data in self.device_data.get(ac, {}).items():
+                        if ac_data["sq_nmb"] == sq_nmb:
+                            ac_min = ac_data["ln_ch_min"]
+                            ac_max = ac_data["ln_ch_max"]
+                            break
+
+                    item_min = QTableWidgetItem(ac_min)
+                    item_min.setTextAlignment(Qt.AlignCenter)
+                    self.table.setItem(row_pos, ac_col_base, item_min)
+
+                    item_max = QTableWidgetItem(ac_max)
+                    item_max.setTextAlignment(Qt.AlignCenter)
+                    self.table.setItem(row_pos, ac_col_base + 1, item_max)
 
             self.export_ranges_to_json()
             self.generate_lines_math_interactions_json()
@@ -178,43 +197,46 @@ class RangesPage(QWidget):
 
             validation_errors = []
 
-            # Валидация общих колонок Min/Max (колонки 2 и 3)
+            # 1. Валидация Min/Max для всех приборов
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
                 if not item_sq_nmb:
                     continue
 
                 sq_nmb = int(item_sq_nmb.text())
-                item_min = self.table.item(row, 2)
-                item_max = self.table.item(row, 3)
 
-                if item_min and item_max:
-                    min_val_str = item_min.text().strip()
-                    max_val_str = item_max.text().strip()
+                line_name = "Неизвестная линия"
+                if sq_nmb == 0:
+                    line_name = "None"
+                else:
+                    combo_name = self.table.cellWidget(row, 1)
+                    if combo_name:
+                        line_name = combo_name.currentText()
 
-                    if min_val_str and max_val_str:
-                        try:
-                            min_val = float(min_val_str.replace(',', '.'))
-                            max_val = float(max_val_str.replace(',', '.'))
-                            if max_val < min_val:
-                                line_name = "Неизвестная линия"
-                                if sq_nmb == 0:
-                                    line_name = "None"
-                                else:
-                                    combo_name = self.table.cellWidget(row, 1)
-                                    if combo_name:
-                                        line_name = combo_name.currentText()
+                for ac in range(1, ac_count + 1):
+                    ac_col_base = 2 + (ac - 1) * 2
+                    item_min = self.table.item(row, ac_col_base)
+                    item_max = self.table.item(row, ac_col_base + 1)
 
-                                validation_errors.append(
-                                    f"Линия '{line_name}': Max ({max_val}) не может быть меньше Min ({min_val})")
-                        except ValueError:
-                            pass
+                    if item_min and item_max:
+                        min_val_str = item_min.text().strip()
+                        max_val_str = item_max.text().strip()
+
+                        if min_val_str and max_val_str:
+                            try:
+                                min_val = float(min_val_str.replace(',', '.'))
+                                max_val = float(max_val_str.replace(',', '.'))
+                                if max_val < min_val:
+                                    validation_errors.append(
+                                        f"Линия '{line_name}' (Пр. {ac}): Max ({max_val}) не может быть меньше Min ({min_val})")
+                            except ValueError:
+                                validation_errors.append(f"Линия '{line_name}' (Пр. {ac}): Некорректный формат числа")
 
             if validation_errors:
                 QMessageBox.warning(self, "Ошибка валидации", "\n".join(validation_errors))
                 return
 
-            # Обновление названий (ln_nmb)
+            # 2. Обновление названий линий (ln_nmb) - синхронизируется для ВСЕХ приборов
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
                 if not item_sq_nmb:
@@ -259,7 +281,7 @@ class RangesPage(QWidget):
                 except Exception as e:
                     print(f"Ошибка синхронизации для sq_nmb={sq_nmb}: {e}")
 
-            # Мульти-обновление Min/Max для ВСЕХ приборов из одних колонок
+            # 3. Индивидуальное обновление Min/Max для КАЖДОГО прибора
             for row in range(self.table.rowCount()):
                 item_sq_nmb = self.table.item(row, 0)
                 if not item_sq_nmb:
@@ -267,16 +289,16 @@ class RangesPage(QWidget):
 
                 sq_nmb = int(item_sq_nmb.text())
 
-                item_min = self.table.item(row, 2)
-                item_max = self.table.item(row, 3)
-
-                new_min = item_min.text().strip() if item_min else ""
-                new_max = item_max.text().strip() if item_max else ""
-
-                # Применяем значения ко всем приборам
                 for ac_nmb in range(1, ac_count + 1):
+                    ac_col_base = 2 + (ac_nmb - 1) * 2
+                    item_min = self.table.item(row, ac_col_base)
+                    item_max = self.table.item(row, ac_col_base + 1)
+
+                    new_min = item_min.text().strip() if item_min else ""
+                    new_max = item_max.text().strip() if item_max else ""
+
                     target_id = None
-                    for row_id, data in self.device_data[ac_nmb].items():
+                    for row_id, data in self.device_data.get(ac_nmb, {}).items():
                         if data["sq_nmb"] == sq_nmb:
                             target_id = row_id
                             break
@@ -313,7 +335,7 @@ class RangesPage(QWidget):
                             print(f"Ошибка Max: {e}")
 
             if updated_count_total > 0:
-                QMessageBox.information(self, "Успех", f"Настройки успешно применены ко всем {ac_count} приборам!")
+                QMessageBox.information(self, "Успех", f"Настройки успешно сохранены!")
                 self.load_data()
                 self.generate_lines_math_interactions_json()
             else:
@@ -323,6 +345,7 @@ class RangesPage(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
 
     def export_ranges_to_json(self):
+        # Экспорт использует только колонку 0 и 1 (имена линий общие для всех приборов)
         try:
             range_data = []
             for row in range(self.table.rowCount()):
