@@ -1,0 +1,14 @@
+{
+  "DB_TYPE": "mssql",
+  "DB_HOST": "ip",
+  "DB_PORT": "port",
+  "DB_NAME": "db_name",
+  "DB_USER": "user",
+  "DB_PASSWORD": "pass",
+  "DB_SERVER": "ip",
+  "DB_DRIVER": "ODBC Driver 18 for SQL Server",
+  "THEME": "Светлая",
+  "CUSTOM_BG": "#aaffff",
+  "CUSTOM_TEXT": "#000000",
+  "CUSTOM_ACCENT": "#ffffff"
+}
