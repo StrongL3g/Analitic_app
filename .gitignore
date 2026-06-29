@@ -16,3 +16,6 @@ logs/
 # Системные файлы
 Thumbs.db
 Desktop.ini
+
+#config
+config/config.json
