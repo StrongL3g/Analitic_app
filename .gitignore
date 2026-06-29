@@ -17,5 +17,6 @@ logs/
 Thumbs.db
 Desktop.ini
 
-#config
+#config/presets
 config/config.json
+config/presets.json
