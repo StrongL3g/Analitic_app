@@ -7,7 +7,7 @@ class LoginDialog(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Авторизация")
-        self.setFixedSize(300, 200)
+        self.setFixedSize(300, 300)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
 
         # Переменная для хранения роли авторизованного пользователя
