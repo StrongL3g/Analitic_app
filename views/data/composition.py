@@ -144,11 +144,11 @@ class CompositionPage(QWidget):
     def configure_table_normal(self):
         """Настройка таблицы в обычном режиме"""
         elements = self.get_configured_elements()
-        column_count = 3 + len(elements) * 3
+        column_count = 4 + len(elements) * 3
         self.table.clear()
         self.table.setColumnCount(column_count)
 
-        headers = ["ID", "Модель", "Время цикла"]
+        headers = ["ID", "Модель", "Время цикла", "Калибр."]
         for element in elements:
             headers.extend([f"С расч ({element})", f"С кор ({element})", f"С хим ({element})"])
         self.table.setHorizontalHeaderLabels(headers)
@@ -161,6 +161,7 @@ class CompositionPage(QWidget):
         id_width = 50
         model_width = QFontMetrics(self.font()).horizontalAdvance("Модель") + 20
         time_width = QFontMetrics(self.font()).horizontalAdvance("Время цикла") + 20
+        calib_width = QFontMetrics(self.font()).horizontalAdvance("Калибр.") + 20
         element_width = max(
             QFontMetrics(self.font()).horizontalAdvance("С расч (XXX)"),
             QFontMetrics(self.font()).horizontalAdvance("С кор (XXX)"),
@@ -170,17 +171,18 @@ class CompositionPage(QWidget):
         self.table.setColumnWidth(0, id_width)
         self.table.setColumnWidth(1, model_width)
         self.table.setColumnWidth(2, time_width)
+        self.table.setColumnWidth(3, calib_width)
 
-        for i in range(3, column_count):
+        for i in range(4, column_count):
             self.table.setColumnWidth(i, element_width)
 
     def configure_table_intensity(self):
         """Настройка таблицы в режиме интенсивностей"""
-        column_count = 3 + len(self.intensity_columns)
+        column_count = 4 + len(self.intensity_columns)
         self.table.clear()
         self.table.setColumnCount(column_count)
 
-        headers = ["ID", "Модель", "Время цикла"] + self.intensity_columns
+        headers = ["ID", "Модель", "Время цикла", "Калибр."] + self.intensity_columns
         self.table.setHorizontalHeaderLabels(headers)
 
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -190,7 +192,8 @@ class CompositionPage(QWidget):
         self.table.setColumnWidth(0, 80)
         self.table.setColumnWidth(1, 120)
         self.table.setColumnWidth(2, 150)
-        for i in range(3, column_count):
+        self.table.setColumnWidth(3, 80)
+        for i in range(4, column_count):
             self.table.setColumnWidth(i, 100)
 
     def toggle_intensity_mode(self):
@@ -255,6 +258,7 @@ class CompositionPage(QWidget):
 
             manual_only = self.check_man.isChecked()
             has_chemistry = self.check_chem.isChecked()
+            only_calib = self.check_calib.isChecked()
 
             dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
             dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
@@ -274,7 +278,7 @@ class CompositionPage(QWidget):
             if self.db.db_type == 'postgres':
                 query = f"""
                 SELECT 
-                    id, mdl_nmb, meas_dt, {select_columns}
+                    id, mdl_nmb, meas_dt, calibrate_sample, {select_columns}
                 FROM pr_meas
                 WHERE meas_dt BETWEEN ? AND ?
                 AND pr_nmb = ? AND active_model = 1
@@ -282,7 +286,7 @@ class CompositionPage(QWidget):
             else:
                 query = f"""
                 SELECT TOP (1000)
-                    id, mdl_nmb, meas_dt, {select_columns}
+                    id, mdl_nmb, meas_dt, calibrate_sample, {select_columns}
                 FROM pr_meas
                 WHERE meas_dt BETWEEN ? AND ?
                 AND pr_nmb = ? AND active_model = 1
@@ -292,7 +296,6 @@ class CompositionPage(QWidget):
 
             conditions = []
 
-            # ИСПРАВЛЕНИЕ: Четкое разделение на ручные (0) и циклические (1)
             if manual_only:
                 conditions.append("meas_type = 0")
             else:
@@ -300,6 +303,9 @@ class CompositionPage(QWidget):
 
             if has_chemistry:
                 conditions.append("1=1")
+
+            if only_calib:
+                conditions.append("calibrate_sample = 1")
 
             if conditions:
                 query += " AND " + " AND ".join(conditions)
@@ -340,12 +346,19 @@ class CompositionPage(QWidget):
                 time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
                 self.table.setItem(row_pos, 2, time_item)
 
+                # Калибровочная проба (только для чтения)
+                calib_val = row.get('calibrate_sample', 0)
+                calib_item = QTableWidgetItem()
+                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Галочка видна, но не кликабельна
+                calib_item.setCheckState(Qt.Checked if calib_val else Qt.Unchecked)
+                self.table.setItem(row_pos, 3, calib_item)
+
                 # Заполнение столбцов интенсивностей
                 for i in range(num_columns):
                     col_name = f"i_00_{i:02d}"
                     val = row.get(col_name)
                     item_text = f"{float(val):.4f}" if val is not None else ""
-                    self.table.setItem(row_pos, 3 + i, QTableWidgetItem(item_text))
+                    self.table.setItem(row_pos, 4 + i, QTableWidgetItem(item_text))
 
             self.table.resizeColumnsToContents()
 
@@ -369,6 +382,7 @@ class CompositionPage(QWidget):
 
             manual_only = self.check_man.isChecked()
             has_chemistry = self.check_chem.isChecked()
+            only_calib = self.check_calib.isChecked()
 
             dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
             dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
@@ -380,7 +394,7 @@ class CompositionPage(QWidget):
             if self.db.db_type == 'postgres':
                 query = """
                 SELECT 
-                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb,
+                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb, calibrate_sample,
                     c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
                     c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
                     c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
@@ -391,7 +405,7 @@ class CompositionPage(QWidget):
             else:
                 query = """
                 SELECT TOP (1000)
-                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb,
+                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb, calibrate_sample,
                     c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
                     c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
                     c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
@@ -404,7 +418,6 @@ class CompositionPage(QWidget):
 
             conditions = []
 
-            # ИСПРАВЛЕНИЕ: Четкое разделение на ручные (0) и циклические (1)
             if manual_only:
                 conditions.append("meas_type = 0")
             else:
@@ -413,6 +426,9 @@ class CompositionPage(QWidget):
             if has_chemistry:
                 chem_conditions = [f"c_chem_{i:02d} <> 0" for i in range(1, 9)]
                 conditions.append(f"({' OR '.join(chem_conditions)})")
+
+            if only_calib:
+                conditions.append("calibrate_sample = 1")
 
             if conditions:
                 query += " AND " + " AND ".join(conditions)
@@ -456,11 +472,18 @@ class CompositionPage(QWidget):
                 time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
                 self.table.setItem(row_pos, 2, time_item)
 
+                # Калибровочная проба (только для чтения)
+                calib_val = row.get('calibrate_sample', 0)
+                calib_item = QTableWidgetItem()
+                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Галочка видна, но не кликабельна
+                calib_item.setCheckState(Qt.Checked if calib_val else Qt.Unchecked)
+                self.table.setItem(row_pos, 3, calib_item)
+
                 for i, element in enumerate(elements, 1):
                     if i > 8:
                         break
 
-                    col_base = 3 + (i - 1) * 3
+                    col_base = 4 + (i - 1) * 3
                     for prefix in ['c_', 'c_cor_', 'c_chem_']:
                         val = row.get(f"{prefix}{i:02d}")
                         item_text = f"{float(val):.4f}" if val is not None else ""
@@ -660,14 +683,20 @@ class CompositionPage(QWidget):
 
         self.check_man = QCheckBox("Ручное измерение")
         self.check_man.stateChanged.connect(self.load_data)
+
         self.check_chem = QCheckBox("Наличие химии")
         self.check_chem.stateChanged.connect(self.load_data)
+
+        self.check_calib = QCheckBox("Только калибровочные")
+        self.check_calib.stateChanged.connect(self.load_data)
+
         self.check_inten = QCheckBox("Интенсивности")
         self.check_inten.setChecked(False)
         self.check_inten.stateChanged.connect(self.toggle_intensity_mode)
 
         checkboxes.addWidget(self.check_man)
         checkboxes.addWidget(self.check_chem)
+        checkboxes.addWidget(self.check_calib)
         checkboxes.addWidget(self.check_inten)
 
         container.addLayout(checkboxes)
@@ -707,7 +736,6 @@ class CompositionPage(QWidget):
         container.addLayout(dates_layout)
         main_layout.addLayout(container)
 
-        # ИСПРАВЛЕНИЕ: Выбор продукта теперь в горизонтальном слое
         product_layout = QHBoxLayout()
         product_layout.addWidget(QLabel("Выберите продукт:"))
 
@@ -717,7 +745,7 @@ class CompositionPage(QWidget):
         self.product_combo.currentIndexChanged.connect(self.force_reload_data)
 
         product_layout.addWidget(self.product_combo)
-        product_layout.addStretch()  # Теперь эта "пружина" толкает элементы влево, а не вниз
+        product_layout.addStretch()  # "пружина" толкает элементы влево
 
         main_layout.addLayout(product_layout)
 

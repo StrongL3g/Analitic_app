@@ -2,35 +2,23 @@
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeWidget, QTreeWidgetItem,
-    QStackedWidget, QWidget, QSplitter
+    QStackedWidget, QWidget, QSplitter, QDialog
 )
-from PySide6.QtCore import Qt#, QCoreApplication
+from PySide6.QtCore import Qt
 
 # Импортируем конфиг БД
 from config import DB_CONFIG, refresh_app_settings
-
-# Импортируем Alarm manager и перечень аварий
-#from services.alarm_manager import AlarmManager
-#from plc.alarms_list import alarms
-
-#Импортируем класс подключения к OPC UA
-#from plc.connection import OPCUAWorker
-
-
-# Настройки масштабирования для HighDPI
-# Эти атрибуты устарели в Qt6, но оставим на всякий случай
-#QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-#QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
 app = QApplication(sys.argv)
 app.setStyle("Fusion")
 
 # --- ИНТЕГРАЦИЯ СТИЛЕЙ ТЕМЫ ---
 from utils.theme_manager import apply_application_theme
+
 apply_application_theme(app)
 # ------------------------------
 
-# Импорты страниц (только классы, без создания экземпляров)
+# Импорты страниц
 from database.db import Database
 from views.dashboard import DashboardPage
 from views.measurement.lines import LinesPage
@@ -50,42 +38,31 @@ from views.data.report import ReportPage
 from views.settings import SettingsPage
 from views.users import UsersPage
 from views.logs import LogsPage
-#from views.ac.ac import ACPage
 from views.cfg.cfg_main import CfgMainPage
 from views.cfg.cfg_ac import CfgacPage
 from views.cfg.cfg_pr import CfgprPage
 from views.cfg.cfg_sp import CfgspPage
 
+# ИМПОРТ ОКНА АВТОРИЗАЦИИ
+from views.login import LoginDialog
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, user_role="Аналитик"):
         super().__init__()
 
         # 1. ОБНОВЛЯЕМ НАСТРОЙКИ ИЗ БД ПЕРЕД СОЗДАНИЕМ ИНТЕРФЕЙСА
         refresh_app_settings()
 
-        self.setWindowTitle("Система анализа спектров")
-        self.setMinimumSize(1200, 800)
-        #self.resize(1920, 1080)
-        self.resize(1200, 800)
+        # Текущая роль пользователя (получаем из окна логина)
+        self.current_role = user_role
 
-        # Текущая роль пользователя
-        self.current_role = "Инженер-программист"
+        self.setWindowTitle(f"Система анализа спектров - [{self.current_role}]")
+        self.setMinimumSize(1200, 800)
+        self.resize(1200, 800)
 
         # Подключение к БД
         self.db = Database(DB_CONFIG)
-
-        # Запускаем в работу AlarmManager
-        #self.alarm_manager = AlarmManager(self.db, alarms)
-
-        # Запускаем OPC UA воркер
-        #self.plc_worker = OPCUAWorker("opc.tcp://192.168.102.7:4840")
-
-        # Связываем OPC и Alarm
-        #self.plc_worker.data_updated.connect(self.alarm_manager.check_data)
-
-        #self.plc_worker.start()
 
         # Основной разделитель
         splitter = QSplitter(Qt.Horizontal)
@@ -119,22 +96,18 @@ class MainWindow(QMainWindow):
         data_item.addChild(self.create_menu_item("Нормативы", "standards"))
         data_item.addChild(self.create_menu_item("Отчет", "report"))
 
-        cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
-        cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))
-        cfg_item.addChild(self.create_menu_item("Продукты", "cfg_pr"))
-        cfg_item.addChild(self.create_menu_item("Пробоотборники", "cfg_sp"))
-
-        #ac_item = self.create_menu_item("АК21", "ac")
-        #ac_item.addChild(self.create_menu_item("Управление", "ac"))
-
         self.tree.addTopLevelItem(measurement_item)
         self.tree.addTopLevelItem(products_item)
         self.tree.addTopLevelItem(data_item)
-        self.tree.addTopLevelItem(cfg_item)
-        #self.tree.addTopLevelItem(ac_item)
 
         # Разделы только для инженера-программиста
         if self.current_role == "Инженер-программист":
+            cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
+            cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))
+            cfg_item.addChild(self.create_menu_item("Продукты", "cfg_pr"))
+            cfg_item.addChild(self.create_menu_item("Пробоотборники", "cfg_sp"))
+            self.tree.addTopLevelItem(cfg_item)
+
             settings_item = self.create_menu_item("Настройки", "settings")
             users_item = self.create_menu_item("Пользователи", "users")
             logs_item = self.create_menu_item("Журнал", "logs")
@@ -169,7 +142,6 @@ class MainWindow(QMainWindow):
             "cfg_ac": CfgacPage,
             "cfg_pr": CfgprPage,
             "cfg_sp": CfgspPage,
-            #"ac": ACPage
         }
 
         # Страницы, требующие подключения к БД
@@ -177,14 +149,8 @@ class MainWindow(QMainWindow):
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "correction", "recalc", "settings",
             "equations", "models", "standards", "report", "cfg_main", "cfg_ac",
-            "cfg_pr", "cfg_sp",  # "ac"
+            "cfg_pr", "cfg_sp",
         }
-
-        # Страницы, требующие проброса Alarm Manager
-        #self.alarm_pages = {"ac"}
-
-        # Страницы, требующие подключения к OPC UA
-        #self.plc_pages = {"ac"}
 
         # Кэш созданных страниц
         self.page_cache = {}
@@ -203,7 +169,6 @@ class MainWindow(QMainWindow):
         self.show_page("dashboard")
 
     def create_menu_item(self, text, key):
-        """Создает элемент меню с заданным текстом и ключом"""
         item = QTreeWidgetItem()
         item.setText(0, text)
         item.setData(0, Qt.UserRole, key)
@@ -224,28 +189,46 @@ class MainWindow(QMainWindow):
             self.page_cache[key] = page
             self.stacked_widget.addWidget(page)
 
-        # --- НОВАЯ ЛОГИКА ---
-        # Если у страницы есть метод refresh, вызываем его перед показом
         if hasattr(page, 'refresh'):
             page.refresh()
-        # --------------------
 
         self.stacked_widget.setCurrentWidget(page)
 
     def on_item_clicked(self, item, column):
-        """Обработчик клика по пункту меню"""
         key = item.data(0, Qt.UserRole)
         if key:
             self.show_page(key)
 
-    def closeEvent(self, event):
-        #self.plc_worker.stop()
-        event.accept()
+    def do_logout(self):
+        """Устанавливает флаг выхода и закрывает окно"""
+        self.wants_logout = True
+        self.close()
 
-# Запуск приложения
+
+# ЗАПУСК ПРИЛОЖЕНИЯ
 if __name__ == "__main__":
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    while True:
+        # 1. Показываем окно логина
+        login_dialog = LoginDialog()
 
+        # 2. Если логин успешен
+        if login_dialog.exec() == QDialog.Accepted:
+            # 3. Запускаем главное окно
+            window = MainWindow(user_role=login_dialog.user_role)
+            window.show()
 
+            # Ждем, пока окно не будет закрыто
+            app.exec()
+
+            # 4. Проверяем причину закрытия
+            if getattr(window, 'wants_logout', False):
+                # Если нажали "Сменить пользователя" -> идем на новый круг цикла (снова логин)
+                continue
+            else:
+                # Если просто закрыли крестиком -> выходим из приложения
+                break
+        else:
+            # Отменили авторизацию (закрыли окно логина) -> выходим
+            break
+
+    sys.exit(0)
