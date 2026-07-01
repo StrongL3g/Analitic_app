@@ -42,6 +42,7 @@ from views.cfg.cfg_main import CfgMainPage
 from views.cfg.cfg_ac import CfgacPage
 from views.cfg.cfg_pr import CfgprPage
 from views.cfg.cfg_sp import CfgspPage
+from views.data.rf_meas import RfMeasPage
 
 # ИМПОРТ ОКНА АВТОРИЗАЦИИ
 from views.login import LoginDialog
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
         products_item.addChild(self.create_menu_item("Активные модели", "models"))
 
         data_item = self.create_menu_item("Управление данными", "data")
+        data_item.addChild(self.create_menu_item("Интенсивности репера", "rf_meas"))  # <--- Добавили меню
         data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
         data_item.addChild(self.create_menu_item("Регрессия", "regression"))
         data_item.addChild(self.create_menu_item("Корректировка", "correction"))
@@ -133,6 +135,7 @@ class MainWindow(QMainWindow):
             "regression": RegressionPage,
             "correction": CorrectionPage,
             "recalc": RecalcPage,
+            "rf_meas": RfMeasPage,
             "standards": StandardsPage,
             "report": ReportPage,
             "settings": SettingsPage,
@@ -149,7 +152,7 @@ class MainWindow(QMainWindow):
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "correction", "recalc", "settings",
             "equations", "models", "standards", "report", "cfg_main", "cfg_ac",
-            "cfg_pr", "cfg_sp",
+            "cfg_pr", "cfg_sp", "rf_meas"
         }
 
         # Кэш созданных страниц

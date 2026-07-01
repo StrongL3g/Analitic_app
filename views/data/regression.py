@@ -6,10 +6,10 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QComboBox, QGroupBox, QSplitter, QMessageBox,
-    QDialog, QDialogButtonBox, QLineEdit, QFormLayout
+    QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget
 )
-from PySide6.QtGui import QColor
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QCursor
+from PySide6.QtCore import Qt, QTimer
 from database.db import Database
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,17 +17,51 @@ from views.data.sample_dialog import SampleDialog
 from utils.path_manager import get_config_path
 
 
-# === НАДЕЖНЫЙ КЛАСС ДЛЯ ЧИСЛОВОЙ СОРТИРОВКИ ===
+def fmt_num(val):
+    """Умное форматирование чисел: для очень маленьких/больших - экспонента, для обычных - float"""
+    if val is None or val == "":
+        return ""
+    try:
+        v = float(val)
+        if v == 0.0:
+            return "0.000"
+        abs_v = abs(v)
+        if abs_v < 0.001 or abs_v >= 100000:
+            return f"{v:.3e}"
+        else:
+            return f"{v:.4f}"
+    except (ValueError, TypeError):
+        return str(val)
+
+
+class SortHelpers:
+    @staticmethod
+    def is_active_sort(self_item, other_item):
+        self_active = self_item.data(Qt.UserRole)
+        other_active = other_item.data(Qt.UserRole)
+
+        if self_active is not None and other_active is not None:
+            if self_active != other_active:
+                table = self_item.tableWidget()
+                if table:
+                    order = table.horizontalHeader().sortIndicatorOrder()
+                    if order == Qt.AscendingOrder:
+                        return self_active
+                    else:
+                        return not self_active
+        return None
+
+
 class NumericItem(QTableWidgetItem):
     def __lt__(self, other):
+        res = SortHelpers.is_active_sort(self, other)
+        if res is not None: return res
+
         def to_float(text):
-            if not text:
-                return None
+            if not text: return None
             t = text.strip().replace(',', '.')
-            if not t or t == "-":
-                return None
-            if t.endswith('%'):
-                t = t[:-1]
+            if not t or t == "-": return None
+            if t.endswith('%'): t = t[:-1]
             try:
                 return float(t)
             except ValueError:
@@ -36,12 +70,16 @@ class NumericItem(QTableWidgetItem):
         v1 = to_float(self.text())
         v2 = to_float(other.text())
 
-        if v1 is not None and v2 is not None:
-            return v1 < v2
-        if v1 is None and v2 is not None:
-            return True
-        if v1 is not None and v2 is None:
-            return False
+        if v1 is not None and v2 is not None: return v1 < v2
+        if v1 is None and v2 is not None: return True
+        if v1 is not None and v2 is None: return False
+        return super().__lt__(other)
+
+
+class TextItem(QTableWidgetItem):
+    def __lt__(self, other):
+        res = SortHelpers.is_active_sort(self, other)
+        if res is not None: return res
         return super().__lt__(other)
 
 
@@ -49,21 +87,16 @@ class RegressionPage(QWidget):
     def __init__(self, db: Database):
         super().__init__()
         self.db = db
-        self.current_sample = []
-        self.current_element = None
         self.current_meas_type = 0
         self.raw_buffer = []
-        self.y_vector_raw = np.array([])
 
         self.init_ui()
 
-        # Подключаем обработчики
         self.combo_element.currentIndexChanged.connect(self.load_data)
         self.combo_meas_type.currentIndexChanged.connect(self.load_data)
         for combo in self.combo_equation_terms:
-            combo.currentIndexChanged.connect(self.perform_regression)
+            combo.currentIndexChanged.connect(self.recalculate_all)
 
-        # Загружаем данные при открытии страницы
         if self.combo_element.count() > 0:
             self.load_data()
 
@@ -80,7 +113,6 @@ class RegressionPage(QWidget):
         top_widget = QWidget()
         top_layout = QHBoxLayout()
 
-        # --- Левая верхняя (Таблицы) ---
         left_top_group = QGroupBox("Результаты и управление")
         left_top_layout = QVBoxLayout()
 
@@ -89,11 +121,17 @@ class RegressionPage(QWidget):
         self.btn_save_equation = QPushButton("Сохранить уравнение")
         self.btn_load_data = QPushButton("Выгрузка данных")
 
+        # НОВАЯ КНОПКА: Автоподбор
+        self.btn_auto_select = QPushButton("✨ Автоподбор")
+        self.btn_auto_select.setStyleSheet("background-color: #f0fdf4; font-weight: bold; border: 1px solid #22c55e;")
+
         self.btn_change_selection.clicked.connect(self.open_sample_dialog)
         self.btn_save_equation.clicked.connect(self.save_equation)
         self.btn_load_data.clicked.connect(self.load_data)
+        self.btn_auto_select.clicked.connect(self.auto_select_terms)
 
         btn_layout.addWidget(self.btn_change_selection)
+        btn_layout.addWidget(self.btn_auto_select)
         btn_layout.addWidget(self.btn_save_equation)
         btn_layout.addWidget(self.btn_load_data)
         btn_layout.addStretch()
@@ -130,14 +168,12 @@ class RegressionPage(QWidget):
         right_top_layout = QVBoxLayout()
         self.fig, self.ax = plt.subplots(figsize=(5, 4))
         self.canvas = FigureCanvas(self.fig)
-
         self.canvas.mpl_connect('button_press_event', self.on_plot_double_click)
-
         right_top_layout.addWidget(self.canvas)
         right_top_group.setLayout(right_top_layout)
 
-        top_layout.addWidget(left_top_group, 40)
-        top_layout.addWidget(right_top_group, 60)
+        top_layout.addWidget(left_top_group, 45)
+        top_layout.addWidget(right_top_group, 55)
         top_widget.setLayout(top_layout)
 
         # === Нижняя часть ===
@@ -167,17 +203,20 @@ class RegressionPage(QWidget):
         terms_group.setLayout(terms_layout)
         bottom_layout.addWidget(terms_group)
 
-        bottom_layout.addWidget(QLabel("Таблица выборки (Двойной клик исключает/возвращает строку):"))
-        self.data_table = QTableWidget()
-        self.data_table.setColumnCount(16)
-        self.data_table.setHorizontalHeaderLabels([
-            "Продукт", "Дата/Время",
-            "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
-            "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"
-        ])
-        self.data_table.cellDoubleClicked.connect(self.on_table_double_click)
-        self.data_table.setSortingEnabled(True)
-        bottom_layout.addWidget(self.data_table)
+        # === ВКЛАДКИ ДЛЯ ТАБЛИЦ ===
+        bottom_layout.addWidget(QLabel("Таблицы выборки (Двойной клик исключает/возвращает строку):"))
+        self.tabs = QTabWidget()
+
+        self.table_active = self.create_data_table()
+        self.table_excluded = self.create_data_table()
+
+        self.tabs.addTab(self.table_active, "Рабочая выборка")
+        self.tabs.addTab(self.table_excluded, "Исключенные строки")
+
+        self.table_active.cellDoubleClicked.connect(lambda r, c: self.on_table_double_click(r, self.table_active))
+        self.table_excluded.cellDoubleClicked.connect(lambda r, c: self.on_table_double_click(r, self.table_excluded))
+
+        bottom_layout.addWidget(self.tabs)
 
         bottom_widget.setLayout(bottom_layout)
         main_splitter.addWidget(top_widget)
@@ -188,63 +227,17 @@ class RegressionPage(QWidget):
 
         self.ini_load_elements()
 
-    def on_table_double_click(self, row, col):
-        pr_item = self.data_table.item(row, 0)
-        dt_item = self.data_table.item(row, 1)
-        if not pr_item or not dt_item: return
-
-        for i, rec in enumerate(self.raw_buffer):
-            if str(rec.get("pr_nmb", "")) == pr_item.text() and rec.get("meas_dt", "") == dt_item.text():
-                self.toggle_row_state(i)
-                break
-
-    def on_plot_double_click(self, event):
-        if not event.dblclick or event.inaxes != self.ax:
-            return
-
-        x, y = event.xdata, event.ydata
-        if x is None or y is None: return
-
-        min_dist = float('inf')
-        closest_idx = -1
-
-        xlim = self.ax.get_xlim()
-        ylim = self.ax.get_ylim()
-        x_range = xlim[1] - xlim[0]
-        y_range = ylim[1] - ylim[0]
-        if x_range == 0 or y_range == 0: return
-
-        el_nmb = self.combo_element.currentData()
-        chem_col = f"c_chem_{el_nmb:02d}"
-
-        for i, rec in enumerate(self.raw_buffer):
-            cx = rec.get(chem_col, 0)
-            cy = rec.get('c_calc', None)
-            if cx and cy is not None:
-                dist = ((cx - x) / x_range) ** 2 + ((cy - y) / y_range) ** 2
-                if dist < min_dist:
-                    min_dist = dist
-                    closest_idx = i
-
-        if closest_idx != -1 and min_dist < 0.002:
-            self.toggle_row_state(closest_idx)
-
-    def toggle_row_state(self, idx):
-        if idx < 0 or idx >= len(self.raw_buffer): return
-
-        current_state = self.raw_buffer[idx].get('is_active', True)
-        self.raw_buffer[idx]['is_active'] = not current_state
-        self.raw_buffer.sort(key=lambda item: (not item.get('is_active', True), item.get('meas_dt', '')))
-
-        el_nmb = self.combo_element.currentData()
-        chem_col = f"c_chem_{el_nmb:02d}"
-        self.y_vector_raw = np.array([rec.get(chem_col, 0.0) for rec in self.raw_buffer])
-
-        self._update_data_table_from_buffer()
-        self.perform_regression()
-
-    def sort_data_table(self, logical_index):
-        self.data_table.sortItems(logical_index, Qt.DescendingOrder)
+    def create_data_table(self):
+        table = QTableWidget()
+        table.setColumnCount(17)
+        table.setHorizontalHeaderLabels([
+            "Продукт", "Дата/Время", "Название пробы",
+            "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
+            "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"
+        ])
+        table.setSortingEnabled(True)
+        table.setSelectionBehavior(QTableWidget.SelectRows)
+        return table
 
     def ini_load_elements(self):
         try:
@@ -286,20 +279,71 @@ class RegressionPage(QWidget):
             self.current_meas_type = el_set_row["meas_type"]
             self._load_equation_terms(self.current_meas_type, el_nmb)
 
-            self.raw_buffer = self._fetch_pr_meas_data(sample_config, el_nmb, self.current_meas_type)
+            self._fetch_pr_meas_data(sample_config, el_nmb, self.current_meas_type)
 
             if not self.raw_buffer:
-                self.data_table.setRowCount(0)
+                self.table_active.setRowCount(0)
+                self.table_excluded.setRowCount(0)
                 return
 
-            chem_col = f"c_chem_{el_nmb:02d}"
-            self.y_vector_raw = np.array([rec.get(chem_col, 0.0) for rec in self.raw_buffer])
-
             self._apply_initial_equation(el_set_row, self.current_meas_type)
-            self._update_data_table_from_buffer()
-            self.perform_regression()
+            self.recalculate_all()
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки: {str(e)}")
+
+    def _fetch_pr_meas_data(self, sample_config, el_nmb, meas_type):
+        self.raw_buffer.clear()
+        for cond in sample_config:
+            pr_nmb = cond["product_id"]
+            start_dt = f"{cond['date_from']} {cond['time_from']}"
+            end_dt = f"{cond['date_to']} {cond['time_to']}"
+
+            cols = ["pr_nmb", "meas_dt", "sample_name"]
+
+            if meas_type == 0:
+                cols.extend([f"i_00_{i:02d}" for i in range(20)])
+            else:
+                cols.extend([f"c_cor_{i:02d}" for i in range(1, 9)])
+
+            chem_col = f"c_chem_{el_nmb:02d}"
+            cols.append(chem_col)
+
+            query = f"""
+                SELECT {', '.join(cols)}
+                FROM PR_MEAS
+                WHERE timestamp BETWEEN ? AND ?
+                AND pr_nmb = ? AND {chem_col} <> 0 AND active_model = 1
+            """
+
+            meas_index = self.combo_meas_type.currentIndex()
+            if meas_index == 1:
+                query += " AND meas_type = 0"
+            elif meas_index == 2:
+                query += " AND meas_type = 1"
+            query += " ORDER BY meas_dt, timestamp"
+
+            try:
+                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
+                for r in rows:
+                    dt = r.get("meas_dt")
+                    dt_str = dt.strftime("%Y-%m-%d %H:%M:%S") if hasattr(dt, 'strftime') else str(dt or "")
+
+                    record = {
+                        "pr_nmb": r.get("pr_nmb", ""),
+                        "meas_dt_str": dt_str,
+                        "sample_name": r.get("sample_name", ""),
+                        "c_chem": float(r.get(chem_col, 0.0)),
+                        "is_active": True,
+                        "raw_db_row": r,
+                        "features": [0.0] * 10,
+                        "c_calc": 0.0,
+                        "dc": 0.0,
+                        "ddc": 0.0
+                    }
+                    self.raw_buffer.append(record)
+            except Exception as e:
+                print(f"Ошибка запроса БД: {e}")
 
     def _load_equation_terms(self, meas_type, el_nmb):
         try:
@@ -328,54 +372,8 @@ class RegressionPage(QWidget):
         except Exception as e:
             print(f"Ошибка в _load_equation_terms: {e}")
 
-    def _fetch_pr_meas_data(self, sample_config, el_nmb, meas_type):
-        all_rows = []
-        for cond in sample_config:
-            pr_nmb = cond["product_id"]
-            start_dt = f"{cond['date_from']} {cond['time_from']}"
-            end_dt = f"{cond['date_to']} {cond['time_to']}"
-
-            cols = ["pr_nmb", "meas_dt"]
-            if meas_type == 0:
-                cols.extend([f"i_00_{i:02d}" for i in range(20)])
-            else:
-                cols.extend([f"c_cor_{i:02d}" for i in range(1, 9)])
-
-            chem_col = f"c_chem_{el_nmb:02d}"
-            cor_col = f"c_cor_{el_nmb:02d}"
-            cols.extend([chem_col, cor_col])
-
-            query = f"""
-                SELECT {', '.join(cols)},
-                    {cor_col} - {chem_col} AS dc,
-                    CASE
-                        WHEN {chem_col} <> 0 AND {chem_col} IS NOT NULL
-                        THEN ABS({cor_col} - {chem_col}) / {chem_col}
-                        ELSE 0
-                    END AS ddc
-                FROM PR_MEAS
-                WHERE timestamp BETWEEN ? AND ?
-                AND pr_nmb = ? AND {chem_col} <> 0 AND active_model = 1
-            """
-
-            meas_index = self.combo_meas_type.currentIndex()
-            if meas_index == 1:
-                query += " AND meas_type = 0"
-            elif meas_index == 2:
-                query += " AND meas_type = 1"
-            query += " ORDER BY meas_dt, timestamp"
-
-            try:
-                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
-                for r in rows: r['is_active'] = True
-                all_rows.extend(rows)
-            except Exception as e:
-                print(f"Ошибка запроса: {e}")
-        return all_rows
-
     def _apply_initial_equation(self, el_set_row, meas_type):
         try:
-            k_prefix = "k_i_" if meas_type == 0 else "k_c_"
             op_prefix = "operand_i_" if meas_type == 0 else "operand_c_"
             op_type = "operator_i_" if meas_type == 0 else "operator_c_"
 
@@ -400,13 +398,9 @@ class RegressionPage(QWidget):
                                 term_lookup[(term["x1"], term["x2"], term["op"])] = term["description"].strip()
                         break
 
-            term_specs = [
-                (f"{op_prefix}01_01", f"{op_prefix}02_01", f"{op_type}01"),
-                (f"{op_prefix}01_02", f"{op_prefix}02_02", f"{op_type}02"),
-                (f"{op_prefix}01_03", f"{op_prefix}02_03", f"{op_type}03"),
-                (f"{op_prefix}01_04", f"{op_prefix}02_04", f"{op_type}04"),
-                (f"{op_prefix}01_05", f"{op_prefix}02_05", f"{op_type}05"),
-            ]
+            term_specs = []
+            for i in range(1, 11):
+                term_specs.append((f"{op_prefix}01_{i:02d}", f"{op_prefix}02_{i:02d}", f"{op_type}{i:02d}"))
 
             found_terms = []
             for x1_key, x2_key, op_key in term_specs:
@@ -426,140 +420,357 @@ class RegressionPage(QWidget):
         except Exception as e:
             print(f"Ошибка _apply_initial_equation: {e}")
 
-    def _update_data_table_from_buffer(self):
-        self.data_table.blockSignals(True)
-        self.data_table.setSortingEnabled(False)
-        self.data_table.setRowCount(0)
+    # ================== ЯДРО МАТЕМАТИКИ И ОБНОВЛЕНИЯ ==================
+    def recalculate_all(self):
+        if not self.raw_buffer: return
 
+        el_nmb = self.combo_element.currentData()
+        for i, combo in enumerate(self.combo_equation_terms):
+            desc = combo.currentText().strip()
+            feature_array = self._compute_feature(desc, self.current_meas_type, el_nmb)
+            for row_idx, rec in enumerate(self.raw_buffer):
+                rec["features"][i] = feature_array[row_idx]
+
+        active_X = []
+        active_y = []
+        for rec in self.raw_buffer:
+            if rec["is_active"] and rec["c_chem"] != 0:
+                active_X.append([1.0] + rec["features"])
+                active_y.append(rec["c_chem"])
+
+        coeffs = np.zeros(11)
+        t_stats = np.zeros(11)
+
+        if len(active_y) > 0:
+            X_mat = np.array(active_X)
+            y_vec = np.array(active_y)
+
+            active_cols = [0]
+            for i in range(1, 11):
+                if self.combo_equation_terms[i - 1].currentText().strip():
+                    active_cols.append(i)
+
+            if len(active_cols) > 0:
+                X_reduced = X_mat[:, active_cols]
+                try:
+                    dof = max(len(y_vec) - X_reduced.shape[1], 1)
+                    XTX_pinv = np.linalg.pinv(X_reduced.T @ X_reduced)
+                    c_reduced = XTX_pinv @ X_reduced.T @ y_vec
+
+                    y_pred = X_reduced @ c_reduced
+                    residuals = y_vec - y_pred
+                    mse = np.sum(residuals ** 2) / dof
+                    std_errs = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
+
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        t_reduced = np.where(std_errs != 0, c_reduced / std_errs, 0)
+
+                    for idx_reduced, idx_full in enumerate(active_cols):
+                        coeffs[idx_full] = c_reduced[idx_reduced]
+                        t_stats[idx_full] = np.abs(t_reduced[idx_reduced])
+                except Exception as e:
+                    print(f"Ошибка матричного расчета: {e}")
+
+        for rec in self.raw_buffer:
+            c_calc = coeffs[0] + sum(coeffs[i + 1] * rec["features"][i] for i in range(10))
+            rec["c_calc"] = c_calc
+            rec["dc"] = c_calc - rec["c_chem"]
+            rec["ddc"] = abs(rec["dc"]) / rec["c_chem"] if rec["c_chem"] != 0 else 0.0
+
+        self._update_coefficients_table(coeffs, t_stats)
+        self._update_statistics_table()
+        self._rebuild_tables_ui()
+        self._update_plot()
+
+    # ================== АЛГОРИТМ АВТОПОДБОРА (ПОШАГОВАЯ РЕГРЕССИЯ) ==================
+    def auto_select_terms(self):
+        """Прямой пошаговый отбор лучших членов уравнения на основе Adjusted R2"""
         if not self.raw_buffer:
-            self.data_table.blockSignals(False)
-            self.data_table.setSortingEnabled(True)
+            QMessageBox.warning(self, "Внимание", "Нет данных для автоподбора.")
             return
 
-        self.data_table.setRowCount(len(self.raw_buffer))
-        el_nmb = self.combo_element.currentData()
-        chem_col = f"c_chem_{el_nmb:02d}"
-
-        for row_idx, rec in enumerate(self.raw_buffer):
-            is_active = rec.get('is_active', True)
-            bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
-
-            def set_text_item(col, val):
-                item = QTableWidgetItem(str(val))
-                item.setBackground(bg_color)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.data_table.setItem(row_idx, col, item)
-
-            def set_num_item(col, val_str):
-                item = NumericItem(val_str)
-                item.setBackground(bg_color)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.data_table.setItem(row_idx, col, item)
-
-            set_text_item(0, rec.get("pr_nmb", ""))
-            set_text_item(1, rec.get("meas_dt", ""))
-
-            c_chem_raw = rec.get(chem_col, "")
-            try:
-                c_chem_str = f"{float(c_chem_raw):.3f}" if c_chem_raw != "" else ""
-            except ValueError:
-                c_chem_str = str(c_chem_raw)
-
-            set_num_item(12, c_chem_str)
-            for col in (13, 14, 15): set_num_item(col, "")
-
-        self.data_table.blockSignals(False)
-        self.data_table.setSortingEnabled(True)
-
-    def perform_regression(self):
-        if not hasattr(self, 'raw_buffer') or not self.raw_buffer: return
+        self.setCursor(Qt.WaitCursor)  # Курсор загрузки
 
         try:
-            X_active, y_vector, active_indices = self._build_regression_data()
-            if X_active is None or X_active.shape[0] < X_active.shape[1]:
-                self.apply_current_equation(fallback_zeros=True)
-                self._update_plot(self.y_vector_raw)
+            # Получаем все доступные члены из выпадающего списка
+            combo = self.combo_equation_terms[0]
+            all_terms = [combo.itemText(i) for i in range(1, combo.count())]
+
+            if not all_terms:
                 return
 
-            coeffs_active, stats, std_errs, t_stats_active, p_vals_active = self._calculate_regression(X_active,
-                                                                                                       y_vector)
+            active_mask = np.array([rec['is_active'] for rec in self.raw_buffer])
+            y_full = np.array([rec['c_chem'] for rec in self.raw_buffer])
 
-            full_coeffs = np.zeros(11)
-            full_t_stats = np.zeros(11)
+            valid_mask = (y_full != 0) & active_mask
+            y_vector = y_full[valid_mask]
 
-            full_coeffs[0] = coeffs_active[0]
-            full_t_stats[0] = np.abs(t_stats_active[0])
+            n_samples = len(y_vector)
+            if n_samples < 5:
+                QMessageBox.warning(self, "Внимание", "Слишком мало активных точек для качественного подбора.")
+                return
 
-            for i, original_index in enumerate(active_indices):
-                full_coeffs[original_index] = coeffs_active[i + 1]
-                full_t_stats[original_index] = np.abs(t_stats_active[i + 1])
+            el_nmb = self.combo_element.currentData()
+            meas_type = self.current_meas_type
 
-            self._update_coefficients_table(full_coeffs, full_t_stats)
-            self.apply_current_equation()
-            self._update_statistics_table(stats, y_vector)
-            self._update_plot(y_vector)
+            # Предвычисляем все фичи один раз для невероятной скорости
+            feature_dict = {}
+            for desc in all_terms:
+                vals = self._compute_feature(desc, meas_type, el_nmb)
+                feature_dict[desc] = np.array(vals)[valid_mask]
 
-        except Exception as e:
-            print(f"Ошибка в perform_regression: {e}")
+            selected_terms = []
+            current_X = np.ones((n_samples, 1))  # Начинаем с A0 (сдвиг)
 
-    def _build_regression_data(self):
-        try:
-            active_mask = np.array([rec.get('is_active', True) for rec in self.raw_buffer])
-            valid_mask = (self.y_vector_raw != 0) & active_mask
-            y_vector = self.y_vector_raw[valid_mask]
+            def get_adj_r2_and_t(X, y):
+                """Считает скорректированный R2 и t-статистику для последнего добавленного столбца"""
+                n, p = X.shape
+                if n <= p: return -float('inf'), 0
 
-            features = []
-            active_indices = []
+                XTX_pinv = np.linalg.pinv(X.T @ X)
+                coeffs = XTX_pinv @ X.T @ y
+                y_pred = X @ coeffs
+                residuals = y - y_pred
 
+                ss_tot = np.sum((y - np.mean(y)) ** 2)
+                ss_res = np.sum(residuals ** 2)
+                r2 = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+                adj_r2 = 1 - (1 - r2) * (n - 1) / (n - p)
+
+                mse = ss_res / (n - p)
+                var_c = np.abs(np.diag(XTX_pinv)) * mse
+                std_errs = np.sqrt(var_c)
+
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    t_stats = np.where(std_errs != 0, coeffs / std_errs, 0)
+
+                last_t_stat = np.abs(t_stats[-1]) if len(t_stats) > 1 else 0
+                return adj_r2, last_t_stat
+
+            current_adj_r2, _ = get_adj_r2_and_t(current_X, y_vector)
+
+            # Ищем до 10 членов
+            for step in range(10):
+                best_desc = None
+                best_adj_r2 = current_adj_r2
+
+                for desc in all_terms:
+                    if desc in selected_terms:
+                        continue
+
+                    test_X = np.column_stack([current_X, feature_dict[desc]])
+                    adj_r2, last_t = get_adj_r2_and_t(test_X, y_vector)
+
+                    # Штрафуем незначимые коэффициенты.
+                    # t > 1.5 означает, что коэффициент статистически значимо отличается от 0
+                    if adj_r2 > best_adj_r2 and last_t > 1.5:
+                        best_adj_r2 = adj_r2
+                        best_desc = desc
+
+                # Порог улучшения 0.005, чтобы не добавлять мусорные члены ради копеечного профита
+                if best_desc and (best_adj_r2 - current_adj_r2 > 0.005):
+                    selected_terms.append(best_desc)
+                    current_X = np.column_stack([current_X, feature_dict[best_desc]])
+                    current_adj_r2 = best_adj_r2
+                else:
+                    break  # Улучшений больше нет
+
+            if not selected_terms:
+                QMessageBox.information(self, "Результат", "Не удалось подобрать значимые члены для этих данных.")
+                return
+
+            # Обновляем UI (применяем найденные члены в комбобоксы)
             for i, combo in enumerate(self.combo_equation_terms):
-                term_desc = combo.currentText().strip()
-                if term_desc and term_desc != "-":
-                    feat_vals = self._compute_feature(term_desc, self.current_meas_type,
-                                                      self.combo_element.currentData())
-                    features.append(np.array(feat_vals)[valid_mask])
-                    active_indices.append(i + 1)
+                combo.blockSignals(True)
+                if i < len(selected_terms):
+                    idx = combo.findText(selected_terms[i])
+                    combo.setCurrentIndex(idx if idx >= 0 else 0)
+                else:
+                    combo.setCurrentIndex(0)
+                combo.blockSignals(False)
 
-            if len(y_vector) == 0: return None, None, None
+            # Запускаем полный финальный расчет
+            self.recalculate_all()
 
-            X_matrix = np.ones((len(y_vector), len(features) + 1))
-            for col_idx, feat_vals in enumerate(features):
-                X_matrix[:, col_idx + 1] = feat_vals
+            # Показываем красивое сообщение с результатами
+            QMessageBox.information(self, "Успех",
+                                    f"Автоподбор завершен!\n\n"
+                                    f"Выбрано членов уравнения: {len(selected_terms)}\n"
+                                    f"Текущий R²: {(current_adj_r2 if current_adj_r2 > 0 else 0):.4f}")
 
-            return X_matrix, y_vector, active_indices
         except Exception as e:
-            print(f"Ошибка построения матрицы: {e}")
-            return None, None, None
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка при автоподборе: {e}")
+        finally:
+            self.setCursor(Qt.ArrowCursor)  # Возвращаем нормальный курсор
 
-    def _calculate_regression(self, X, y):
-        try:
-            n_samples, n_features = X.shape
-            dof = max(n_samples - n_features, 1)
+    def _compute_feature(self, feature_desc: str, meas_type: int, el_nmb: int) -> list:
+        if not feature_desc or feature_desc == "-":
+            return [0.0] * len(self.raw_buffer)
 
-            XTX_pinv = np.linalg.pinv(X.T @ X)
-            coeffs = XTX_pinv @ X.T @ y
+        json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
+        json_path = get_config_path() / json_file
+        if not os.path.exists(json_path):
+            return [0.0] * len(self.raw_buffer)
 
-            y_pred = X @ coeffs
-            residuals = y - y_pred
-            mse = np.sum(residuals ** 2) / dof
-            std_errs = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
+        with open(json_path, "r", encoding="utf-8") as f:
+            json_data = json.load(f)
 
-            with np.errstate(divide='ignore', invalid='ignore'):
-                t_stats = np.where(std_errs != 0, coeffs / std_errs, 0)
+        x1, x2, op = 0, 0, 0
+        found = False
+        target_desc = feature_desc.strip()
 
+        if meas_type == 0:
+            for term in json_data.get("interactions", []):
+                if term.get("description", "").strip() == target_desc:
+                    x1, x2, op = term["x1"], term["x2"], term["op"]
+                    found = True
+                    break
+        else:
+            for group in json_data.get("interactions", []):
+                if group.get("element_original_number") == el_nmb:
+                    for term in group.get("interactions", []):
+                        if term.get("description", "").strip() == target_desc:
+                            x1, x2, op = term["x1"], term["x2"], term["op"]
+                            found = True
+                            break
+                    if found: break
+
+        if not found: return [0.0] * len(self.raw_buffer)
+
+        result = []
+        for rec in self.raw_buffer:
             try:
-                from scipy import stats
-                p_vals = 2 * (1 - stats.t.cdf(np.abs(t_stats), dof))
-            except ImportError:
-                p_vals = np.zeros(n_features)
+                db_row = rec["raw_db_row"]
+                if meas_type == 0:
+                    val1 = float(db_row.get(f"i_00_{x1:02d}", 0.0))
+                    val2 = float(db_row.get(f"i_00_{x2:02d}", 0.0)) if x2 != 0 else 1.0
+                else:
+                    val1 = float(db_row.get(f"c_cor_{x1:02d}", 0.0)) if x1 != 0 else 1.0
+                    val2 = float(db_row.get(f"c_cor_{x2:02d}", 0.0)) if x2 != 0 else 1.0
 
-            ss_tot = np.sum((y - np.mean(y)) ** 2)
-            r_sq = 1 - (np.sum(residuals ** 2) / ss_tot) if ss_tot != 0 else 0
+                if op == 0:
+                    res = 0.0
+                elif op == 1:
+                    res = val1
+                elif op == 2:
+                    res = val1 * val2
+                elif op == 3:
+                    res = val1 / val2 if val2 != 0 else 0.0
+                elif op == 4:
+                    res = val1 * val1
+                elif op == 5:
+                    res = 1.0 / val1 if val1 != 0 else 0.0
+                elif op == 6:
+                    res = val1 / (val2 * val2) if val2 != 0 else 0.0
+                elif op == 7:
+                    res = 1.0 / (val1 * val1) if val1 != 0 else 0.0
+                else:
+                    res = 0.0
+                result.append(res)
+            except:
+                result.append(0.0)
+        return result
 
-            stats_dict = {'r_squared': r_sq}
-            return coeffs, stats_dict, std_errs, t_stats, p_vals
-        except Exception as e:
-            print(f"Ошибка в _calculate_regression: {e}")
-            return np.zeros(X.shape[1]), {}, np.zeros(X.shape[1]), np.zeros(X.shape[1]), np.ones(X.shape[1])
+    # ================== ОТРИСОВКА ИНТЕРФЕЙСА ==================
+    def _rebuild_tables_ui(self):
+        for t in [self.table_active, self.table_excluded]:
+            t.blockSignals(True)
+            t.setUpdatesEnabled(False)
+            t.setSortingEnabled(False)
+            t.setRowCount(0)
+
+        active_count = sum(1 for r in self.raw_buffer if r['is_active'])
+        excl_count = len(self.raw_buffer) - active_count
+
+        self.table_active.setRowCount(active_count)
+        self.table_excluded.setRowCount(excl_count)
+
+        self.tabs.setTabText(0, f"Рабочая выборка ({active_count})")
+        self.tabs.setTabText(1, f"Исключенные строки ({excl_count})")
+
+        act_idx, exc_idx = 0, 0
+
+        for buf_idx, rec in enumerate(self.raw_buffer):
+            is_act = rec['is_active']
+            t_widget = self.table_active if is_act else self.table_excluded
+            row_idx = act_idx if is_act else exc_idx
+
+            item_pr = QTableWidgetItem(str(rec["pr_nmb"]))
+            item_pr.setData(Qt.UserRole, buf_idx)
+            item_pr.setFlags(item_pr.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            t_widget.setItem(row_idx, 0, item_pr)
+
+            t_widget.setItem(row_idx, 1, self._create_readonly_item(rec["meas_dt_str"]))
+
+            sample_name = rec["sample_name"]
+            t_widget.setItem(row_idx, 2, self._create_readonly_item(sample_name if sample_name else ""))
+
+            for i in range(10):
+                t_widget.setItem(row_idx, 3 + i, self._create_readonly_item(fmt_num(rec["features"][i]), True))
+
+            t_widget.setItem(row_idx, 13, self._create_readonly_item(fmt_num(rec["c_chem"]), True))
+            t_widget.setItem(row_idx, 14, self._create_readonly_item(fmt_num(rec["c_calc"]), True))
+            t_widget.setItem(row_idx, 15, self._create_readonly_item(fmt_num(rec["dc"]), True))
+            t_widget.setItem(row_idx, 16, self._create_readonly_item(f"{rec['ddc'] * 100:.2f}%", True))
+
+            if is_act:
+                act_idx += 1
+            else:
+                exc_idx += 1
+
+        for t in [self.table_active, self.table_excluded]:
+            t.setSortingEnabled(True)
+            t.setUpdatesEnabled(True)
+            t.blockSignals(False)
+
+    def _create_readonly_item(self, text, is_numeric=False):
+        item = NumericItem(text) if is_numeric else QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        return item
+
+    def on_table_double_click(self, row, table_widget):
+        pr_item = table_widget.item(row, 0)
+        if not pr_item: return
+
+        buffer_idx = pr_item.data(Qt.UserRole)
+
+        if buffer_idx is not None and 0 <= buffer_idx < len(self.raw_buffer):
+            self.raw_buffer[buffer_idx]['is_active'] = not self.raw_buffer[buffer_idx]['is_active']
+            QTimer.singleShot(0, self.recalculate_all)
+
+    def on_plot_double_click(self, event):
+        """Исключает или возвращает точку при двойном клике по графику"""
+        if not event.dblclick or event.inaxes != self.ax:
+            return
+
+        x, y = event.xdata, event.ydata
+        if x is None or y is None:
+            return
+
+        min_dist = float('inf')
+        closest_idx = -1
+
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+        x_range = xlim[1] - xlim[0]
+        y_range = ylim[1] - ylim[0]
+
+        if x_range == 0 or y_range == 0:
+            return
+
+        for i, rec in enumerate(self.raw_buffer):
+            cx = rec.get('c_chem')
+            cy = rec.get('c_calc')
+
+            if cx is not None and cy is not None:
+                dist = ((cx - x) / x_range) ** 2 + ((cy - y) / y_range) ** 2
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_idx = i
+
+        if closest_idx != -1 and min_dist < 0.002:
+            self.raw_buffer[closest_idx]['is_active'] = not self.raw_buffer[closest_idx]['is_active']
+            QTimer.singleShot(0, self.recalculate_all)
 
     def _update_coefficients_table(self, coefficients, t_stats):
         a0_item = self.coeff_table.item(0, 1)
@@ -572,15 +783,11 @@ class RegressionPage(QWidget):
             if multiplier_item:
                 multiplier_item.setText(term_desc if term_desc else "-")
 
-            header_item = self.data_table.horizontalHeaderItem(1 + i)
-            if header_item:
-                header_item.setToolTip(term_desc if term_desc else f"A{i} (не выбран)")
-
         from PySide6.QtGui import QColor
 
         for i, (coeff, t_stat) in enumerate(zip(coefficients, t_stats)):
             value_item = self.coeff_table.item(i, 2)
-            if value_item: value_item.setText(f"{coeff:.6g}")
+            if value_item: value_item.setText(fmt_num(coeff))
 
             significance_item = self.coeff_table.item(i, 3)
             if significance_item:
@@ -596,29 +803,16 @@ class RegressionPage(QWidget):
                     else:
                         significance_item.setBackground(QColor("#FFCCCC"))
 
-    def _update_statistics_table(self, statistics=None, y_vector=None):
-        if statistics is None: statistics = {}
+    def _update_statistics_table(self):
         c_chem, c_calc, dc = [], [], []
 
-        for row in range(self.data_table.rowCount()):
-            # Проверяем UI строки, чтобы не брать красные
-            chem_item = self.data_table.item(row, 12)
-            if chem_item and chem_item.background().color().name() == "#ffcccc":
-                continue
+        for rec in self.raw_buffer:
+            if rec['is_active']:
+                c_chem.append(rec['c_chem'])
+                c_calc.append(rec['c_calc'])
+                dc.append(rec['dc'])
 
-            try:
-                chem_val = self.data_table.item(row, 12).text()
-                calc_val = self.data_table.item(row, 13).text()
-                if chem_val and calc_val:
-                    c_val = float(chem_val)
-                    calc = float(calc_val)
-                    c_chem.append(c_val)
-                    c_calc.append(calc)
-                    dc.append(calc - c_val)
-            except:
-                continue
-
-        if not c_chem:
+        if not c_chem or len(c_chem) < 2:
             for r in range(6): self.stats_table.item(r, 1).setText("0.0")
             return
 
@@ -644,35 +838,26 @@ class RegressionPage(QWidget):
             f"{arrParam[3]:.2f}",
             f"{arrParam[4]:.2f}",
             f"{arrParam[5]:.2f}",
-            f"{arrParam[6]:.2f}"
+            f"{arrParam[6]:.4f}"
         ]
 
         for row, formatted_val in enumerate(formats):
             item = self.stats_table.item(row, 1)
             if item: item.setText(formatted_val)
 
-    def _update_plot(self, y_vector):
+    def _update_plot(self):
         try:
             self.ax.clear()
             c_chem_act, c_calc_act = [], []
             c_chem_exc, c_calc_exc = [], []
 
-            for row in range(self.data_table.rowCount()):
-                chem_item = self.data_table.item(row, 12)
-                calc_item = self.data_table.item(row, 13)
-
-                if chem_item and calc_item and chem_item.text() and calc_item.text():
-                    try:
-                        cv = float(chem_item.text())
-                        ca = float(calc_item.text())
-                        if chem_item.background().color().name() != "#ffcccc":
-                            c_chem_act.append(cv)
-                            c_calc_act.append(ca)
-                        else:
-                            c_chem_exc.append(cv)
-                            c_calc_exc.append(ca)
-                    except ValueError:
-                        pass
+            for rec in self.raw_buffer:
+                if rec['is_active']:
+                    c_chem_act.append(rec['c_chem'])
+                    c_calc_act.append(rec['c_calc'])
+                else:
+                    c_chem_exc.append(rec['c_chem'])
+                    c_calc_exc.append(rec['c_calc'])
 
             if c_chem_act and c_calc_act:
                 self.ax.scatter(c_chem_act, c_calc_act, alpha=0.6, color='tab:blue', label='Участвуют')
@@ -693,146 +878,6 @@ class RegressionPage(QWidget):
             self.canvas.draw()
         except Exception as e:
             print(f"Ошибка в _update_plot: {e}")
-
-    def apply_current_equation(self, fallback_zeros=False):
-        try:
-            if not hasattr(self, 'raw_buffer') or not self.raw_buffer: return
-
-            coeffs = []
-            if not fallback_zeros:
-                for i in range(11):
-                    item = self.coeff_table.item(i, 2)
-                    try:
-                        coeffs.append(float(item.text()) if item and item.text() else 0.0)
-                    except:
-                        coeffs.append(0.0)
-            else:
-                coeffs = [0.0] * 11
-
-            el_nmb = self.combo_element.currentData()
-            features = []
-
-            self.data_table.setSortingEnabled(False)
-
-            for i, combo in enumerate(self.combo_equation_terms):
-                desc = combo.currentText().strip()
-                feat_vals = self._compute_feature(desc, self.current_meas_type, el_nmb)
-                features.append(feat_vals)
-                self._fill_feature_column(i, feat_vals)
-
-            for row_idx in range(len(self.raw_buffer)):
-                c_chem = self.raw_buffer[row_idx].get(f"c_chem_{el_nmb:02d}", 0.0)
-                X_row = [1.0] + [features[i][row_idx] for i in range(10)]
-
-                c_calc = sum(coeffs[i] * X_row[i] for i in range(11))
-                self.raw_buffer[row_idx]['c_calc'] = c_calc
-
-                dC = c_calc - c_chem
-                ddc = abs(dC) / c_chem if c_chem != 0 else 0.0
-
-                is_active = self.raw_buffer[row_idx].get('is_active', True)
-                bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
-
-                def set_calc_item(col, val_str):
-                    item = NumericItem(val_str)
-                    item.setBackground(bg_color)
-                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                    pr_val = str(self.raw_buffer[row_idx].get("pr_nmb", ""))
-                    dt_val = self.raw_buffer[row_idx].get("meas_dt", "")
-
-                    for ui_row in range(self.data_table.rowCount()):
-                        if self.data_table.item(ui_row, 0).text() == pr_val and self.data_table.item(ui_row,
-                                                                                                     1).text() == dt_val:
-                            self.data_table.setItem(ui_row, col, item)
-                            break
-
-                set_calc_item(13, f"{c_calc:.3f}")
-                set_calc_item(14, f"{dC:.3f}")
-                set_calc_item(15, f"{ddc * 100:.2f}%")
-
-            self.data_table.setSortingEnabled(True)
-
-        except Exception as e:
-            print(f"Ошибка в apply_current_equation(): {e}")
-
-    def _compute_feature(self, feature_desc: str, meas_type: int, el_nmb: int) -> list:
-        if not feature_desc or feature_desc == "-": return [0.0] * len(self.raw_buffer)
-        json_file = "lines_math_interactions.json" if meas_type == 0 else "math_interactions.json"
-        json_path = get_config_path() / json_file
-        if not os.path.exists(json_path): return [0.0] * len(self.raw_buffer)
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            json_data = json.load(f)
-
-        x1, x2, op = 0, 0, 0
-        found = False
-        if meas_type == 0:
-            for term in json_data.get("interactions", []):
-                if term.get("description") == feature_desc:
-                    x1, x2, op = term["x1"], term["x2"], term["op"]
-                    found = True;
-                    break
-        else:
-            for group in json_data.get("interactions", []):
-                if group.get("element_original_number") == el_nmb:
-                    for term in group.get("interactions", []):
-                        if term.get("description") == feature_desc:
-                            x1, x2, op = term["x1"], term["x2"], term["op"]
-                            found = True;
-                            break
-                    if found: break
-
-        if not found: return [0.0] * len(self.raw_buffer)
-
-        result = []
-        for rec in self.raw_buffer:
-            try:
-                if meas_type == 0:
-                    val1 = rec.get(f"i_00_{x1:02d}", 0.0)
-                    val2 = rec.get(f"i_00_{x2:02d}", 0.0) if x2 != 0 else 1.0
-                else:
-                    val1 = rec.get(f"c_cor_{x1:02d}", 0.0) if x1 != 0 else 1.0
-                    val2 = rec.get(f"c_cor_{x2:02d}", 0.0) if x2 != 0 else 1.0
-
-                if op == 0:
-                    res = 0.0
-                elif op == 1:
-                    res = val1
-                elif op == 2:
-                    res = val1 * val2
-                elif op == 3:
-                    res = val1 / val2 if val2 != 0 else 0.0
-                elif op == 4:
-                    res = val1 * val1
-                elif op == 5:
-                    res = 1.0 / val1 if val1 != 0 else 0.0
-                elif op == 6:
-                    res = val1 / (val2 * val2) if val2 != 0 else 0.0
-                elif op == 7:
-                    res = 1.0 / (val1 * val1) if val1 != 0 else 0.0
-                else:
-                    res = 0.0
-                result.append(res)
-            except:
-                result.append(0.0)
-        return result
-
-    def _fill_feature_column(self, col_index: int, values: list):
-        if 0 <= col_index <= 9:
-            for row_idx, val in enumerate(values):
-                is_active = self.raw_buffer[row_idx].get('is_active', True)
-                item = NumericItem(f"{val:.3f}")
-                item.setBackground(QColor("#ffffff") if is_active else QColor("#ffcccc"))
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-
-                pr_val = str(self.raw_buffer[row_idx].get("pr_nmb", ""))
-                dt_val = self.raw_buffer[row_idx].get("meas_dt", "")
-
-                for ui_row in range(self.data_table.rowCount()):
-                    if self.data_table.item(ui_row, 0).text() == pr_val and self.data_table.item(ui_row,
-                                                                                                 1).text() == dt_val:
-                        self.data_table.setItem(ui_row, 2 + col_index, item)
-                        break
 
     def save_equation(self):
         try:
@@ -879,14 +924,14 @@ class RegressionPage(QWidget):
                 if desc and desc != "-":
                     if meas_type == 0:
                         for term in json_data.get("interactions", []):
-                            if term.get("description") == desc:
+                            if term.get("description", "").strip() == desc:
                                 x1, x2, op = term["x1"], term["x2"], term["op"]
                                 break
                     else:
                         for group in json_data.get("interactions", []):
                             if group.get("element_original_number") == el_nmb:
                                 for term in group.get("interactions", []):
-                                    if term.get("description") == desc:
+                                    if term.get("description", "").strip() == desc:
                                         x1, x2, op = term["x1"], term["x2"], term["op"]
                                         break
                                 break
@@ -895,45 +940,34 @@ class RegressionPage(QWidget):
             prefix_k = "k_i_alin" if meas_type == 0 else "k_c_alin"
             prefix_op = "i" if meas_type == 0 else "c"
 
-            update_fields = [
-                f"{prefix_k}00 = ?",
-                f"{prefix_k}01 = ?", f"operand_{prefix_op}_01_01 = ?", f"operand_{prefix_op}_02_01 = ?",
-                f"operator_{prefix_op}_01 = ?",
-                f"{prefix_k}02 = ?", f"operand_{prefix_op}_01_02 = ?", f"operand_{prefix_op}_02_02 = ?",
-                f"operator_{prefix_op}_02 = ?",
-                f"{prefix_k}03 = ?", f"operand_{prefix_op}_01_03 = ?", f"operand_{prefix_op}_02_03 = ?",
-                f"operator_{prefix_op}_03 = ?",
-                f"{prefix_k}04 = ?", f"operand_{prefix_op}_01_04 = ?", f"operand_{prefix_op}_02_04 = ?",
-                f"operator_{prefix_op}_04 = ?",
-                f"{prefix_k}05 = ?", f"operand_{prefix_op}_01_05 = ?", f"operand_{prefix_op}_02_05 = ?",
-                f"operator_{prefix_op}_05 = ?"
-            ]
+            update_fields = [f"{prefix_k}00 = ?"]
+            for i in range(1, 11):
+                update_fields.extend([
+                    f"{prefix_k}{i:02d} = ?",
+                    f"operand_{prefix_op}_01_{i:02d} = ?",
+                    f"operand_{prefix_op}_02_{i:02d} = ?",
+                    f"operator_{prefix_op}_{i:02d} = ?"
+                ])
 
             for pr_nmb in target_products:
                 for mdl_nmb in target_models:
-                    params = [
-                        coeffs[0],
-                        coeffs[1], terms[0][0], terms[0][1], terms[0][2],
-                        coeffs[2], terms[1][0], terms[1][1], terms[1][2],
-                        coeffs[3], terms[2][0], terms[2][1], terms[2][2],
-                        coeffs[4], terms[3][0], terms[3][1], terms[3][2],
-                        coeffs[5], terms[4][0], terms[4][1], terms[4][2],
-                        pr_nmb, el_nmb, mdl_nmb
-                    ]
+                    params = [coeffs[0]]
+                    for i in range(1, 11):
+                        params.extend([
+                            coeffs[i],
+                            terms[i - 1][0],
+                            terms[i - 1][1],
+                            terms[i - 1][2]
+                        ])
+                    params.extend([pr_nmb, el_nmb, mdl_nmb])
+
                     query = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?"
                     self.db.execute(query, params)
 
-            unsupported_used = any(coeffs[i] != 0.0 or terms[i - 1][2] != 0 for i in range(6, 11))
-            if unsupported_used:
-                QMessageBox.warning(self, "Внимание",
-                                    f"Уравнение сохранено частично для {len(target_products)} продуктов и {len(target_models)} моделей.\n"
-                                    "База данных успешно приняла члены A0 — A5.\n"
-                                    "Для A6 — A10 необходимо доработать таблицу el_set.")
-            else:
-                QMessageBox.information(self, "Успех",
-                                        f"Уравнение успешно сохранено!\n"
-                                        f"Обновлено продуктов: {len(target_products)}\n"
-                                        f"Обновлено моделей: {len(target_models)}")
+            QMessageBox.information(self, "Успех",
+                                    f"Уравнение (до 10 членов) успешно сохранено!\n"
+                                    f"Обновлено продуктов: {len(target_products)}\n"
+                                    f"Обновлено моделей: {len(target_models)}")
 
         except Exception as e:
             print("Ошибка при сохранении уравнения:")

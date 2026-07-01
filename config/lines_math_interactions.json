@@ -58,6 +58,26 @@
             "original_number": 5,
             "adjusted_number": 4,
             "name": "Cu_Ka"
+        },
+        {
+            "original_number": 6,
+            "adjusted_number": 5,
+            "name": "Ca_Ka"
+        },
+        {
+            "original_number": 7,
+            "adjusted_number": 6,
+            "name": "Zn_Ka"
+        },
+        {
+            "original_number": 8,
+            "adjusted_number": 7,
+            "name": "As_Ka"
+        },
+        {
+            "original_number": 9,
+            "adjusted_number": 8,
+            "name": "Cr_Ka"
         }
     ],
     "interactions": [
@@ -98,6 +118,30 @@
             "op": 1
         },
         {
+            "description": "Ca_Ka",
+            "x1": 5,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Zn_Ka",
+            "x1": 6,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "As_Ka",
+            "x1": 7,
+            "x2": 0,
+            "op": 1
+        },
+        {
+            "description": "Cr_Ka",
+            "x1": 8,
+            "x2": 0,
+            "op": 1
+        },
+        {
             "description": "Fe_Ka * Co_Ka",
             "x1": 0,
             "x2": 1,
@@ -122,6 +166,30 @@
             "op": 2
         },
         {
+            "description": "Fe_Ka * Ca_Ka",
+            "x1": 0,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Zn_Ka",
+            "x1": 0,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * As_Ka",
+            "x1": 0,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Fe_Ka * Cr_Ka",
+            "x1": 0,
+            "x2": 8,
+            "op": 2
+        },
+        {
             "description": "Co_Ka * Ni_Ka",
             "x1": 1,
             "x2": 2,
@@ -140,6 +208,30 @@
             "op": 2
         },
         {
+            "description": "Co_Ka * Ca_Ka",
+            "x1": 1,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * Zn_Ka",
+            "x1": 1,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * As_Ka",
+            "x1": 1,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Co_Ka * Cr_Ka",
+            "x1": 1,
+            "x2": 8,
+            "op": 2
+        },
+        {
             "description": "Ni_Ka * NC",
             "x1": 2,
             "x2": 3,
@@ -152,9 +244,117 @@
             "op": 2
         },
         {
+            "description": "Ni_Ka * Ca_Ka",
+            "x1": 2,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Ni_Ka * Zn_Ka",
+            "x1": 2,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "Ni_Ka * As_Ka",
+            "x1": 2,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Ni_Ka * Cr_Ka",
+            "x1": 2,
+            "x2": 8,
+            "op": 2
+        },
+        {
             "description": "NC * Cu_Ka",
             "x1": 3,
             "x2": 4,
+            "op": 2
+        },
+        {
+            "description": "NC * Ca_Ka",
+            "x1": 3,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "NC * Zn_Ka",
+            "x1": 3,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "NC * As_Ka",
+            "x1": 3,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "NC * Cr_Ka",
+            "x1": 3,
+            "x2": 8,
+            "op": 2
+        },
+        {
+            "description": "Cu_Ka * Ca_Ka",
+            "x1": 4,
+            "x2": 5,
+            "op": 2
+        },
+        {
+            "description": "Cu_Ka * Zn_Ka",
+            "x1": 4,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "Cu_Ka * As_Ka",
+            "x1": 4,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Cu_Ka * Cr_Ka",
+            "x1": 4,
+            "x2": 8,
+            "op": 2
+        },
+        {
+            "description": "Ca_Ka * Zn_Ka",
+            "x1": 5,
+            "x2": 6,
+            "op": 2
+        },
+        {
+            "description": "Ca_Ka * As_Ka",
+            "x1": 5,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Ca_Ka * Cr_Ka",
+            "x1": 5,
+            "x2": 8,
+            "op": 2
+        },
+        {
+            "description": "Zn_Ka * As_Ka",
+            "x1": 6,
+            "x2": 7,
+            "op": 2
+        },
+        {
+            "description": "Zn_Ka * Cr_Ka",
+            "x1": 6,
+            "x2": 8,
+            "op": 2
+        },
+        {
+            "description": "As_Ka * Cr_Ka",
+            "x1": 7,
+            "x2": 8,
             "op": 2
         },
         {
@@ -182,6 +382,30 @@
             "op": 3
         },
         {
+            "description": "Fe_Ka / Ca_Ka",
+            "x1": 0,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Zn_Ka",
+            "x1": 0,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / As_Ka",
+            "x1": 0,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Fe_Ka / Cr_Ka",
+            "x1": 0,
+            "x2": 8,
+            "op": 3
+        },
+        {
             "description": "Co_Ka / Fe_Ka",
             "x1": 1,
             "x2": 0,
@@ -203,6 +427,30 @@
             "description": "Co_Ka / Cu_Ka",
             "x1": 1,
             "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Ca_Ka",
+            "x1": 1,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Zn_Ka",
+            "x1": 1,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / As_Ka",
+            "x1": 1,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Co_Ka / Cr_Ka",
+            "x1": 1,
+            "x2": 8,
             "op": 3
         },
         {
@@ -230,6 +478,30 @@
             "op": 3
         },
         {
+            "description": "Ni_Ka / Ca_Ka",
+            "x1": 2,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Zn_Ka",
+            "x1": 2,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / As_Ka",
+            "x1": 2,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Ni_Ka / Cr_Ka",
+            "x1": 2,
+            "x2": 8,
+            "op": 3
+        },
+        {
             "description": "NC / Fe_Ka",
             "x1": 3,
             "x2": 0,
@@ -254,6 +526,30 @@
             "op": 3
         },
         {
+            "description": "NC / Ca_Ka",
+            "x1": 3,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "NC / Zn_Ka",
+            "x1": 3,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "NC / As_Ka",
+            "x1": 3,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "NC / Cr_Ka",
+            "x1": 3,
+            "x2": 8,
+            "op": 3
+        },
+        {
             "description": "Cu_Ka / Fe_Ka",
             "x1": 4,
             "x2": 0,
@@ -275,6 +571,222 @@
             "description": "Cu_Ka / NC",
             "x1": 4,
             "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Ca_Ka",
+            "x1": 4,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Zn_Ka",
+            "x1": 4,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / As_Ka",
+            "x1": 4,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Cu_Ka / Cr_Ka",
+            "x1": 4,
+            "x2": 8,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Fe_Ka",
+            "x1": 5,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Co_Ka",
+            "x1": 5,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Ni_Ka",
+            "x1": 5,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / NC",
+            "x1": 5,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Cu_Ka",
+            "x1": 5,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Zn_Ka",
+            "x1": 5,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / As_Ka",
+            "x1": 5,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Ca_Ka / Cr_Ka",
+            "x1": 5,
+            "x2": 8,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Fe_Ka",
+            "x1": 6,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Co_Ka",
+            "x1": 6,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Ni_Ka",
+            "x1": 6,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / NC",
+            "x1": 6,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Cu_Ka",
+            "x1": 6,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Ca_Ka",
+            "x1": 6,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / As_Ka",
+            "x1": 6,
+            "x2": 7,
+            "op": 3
+        },
+        {
+            "description": "Zn_Ka / Cr_Ka",
+            "x1": 6,
+            "x2": 8,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Fe_Ka",
+            "x1": 7,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Co_Ka",
+            "x1": 7,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Ni_Ka",
+            "x1": 7,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / NC",
+            "x1": 7,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Cu_Ka",
+            "x1": 7,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Ca_Ka",
+            "x1": 7,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Zn_Ka",
+            "x1": 7,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "As_Ka / Cr_Ka",
+            "x1": 7,
+            "x2": 8,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Fe_Ka",
+            "x1": 8,
+            "x2": 0,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Co_Ka",
+            "x1": 8,
+            "x2": 1,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Ni_Ka",
+            "x1": 8,
+            "x2": 2,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / NC",
+            "x1": 8,
+            "x2": 3,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Cu_Ka",
+            "x1": 8,
+            "x2": 4,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Ca_Ka",
+            "x1": 8,
+            "x2": 5,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / Zn_Ka",
+            "x1": 8,
+            "x2": 6,
+            "op": 3
+        },
+        {
+            "description": "Cr_Ka / As_Ka",
+            "x1": 8,
+            "x2": 7,
             "op": 3
         },
         {
@@ -304,6 +816,30 @@
         {
             "description": "Cu_Ka ^ 2",
             "x1": 4,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Ca_Ka ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Zn_Ka ^ 2",
+            "x1": 6,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "As_Ka ^ 2",
+            "x1": 7,
+            "x2": 0,
+            "op": 4
+        },
+        {
+            "description": "Cr_Ka ^ 2",
+            "x1": 8,
             "x2": 0,
             "op": 4
         },
@@ -338,6 +874,30 @@
             "op": 5
         },
         {
+            "description": "1 / Ca_Ka",
+            "x1": 5,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Zn_Ka",
+            "x1": 6,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / As_Ka",
+            "x1": 7,
+            "x2": 0,
+            "op": 5
+        },
+        {
+            "description": "1 / Cr_Ka",
+            "x1": 8,
+            "x2": 0,
+            "op": 5
+        },
+        {
             "description": "Fe_Ka / Co_Ka ^ 2",
             "x1": 0,
             "x2": 1,
@@ -359,6 +919,30 @@
             "description": "Fe_Ka / Cu_Ka ^ 2",
             "x1": 0,
             "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Ca_Ka ^ 2",
+            "x1": 0,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Zn_Ka ^ 2",
+            "x1": 0,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / As_Ka ^ 2",
+            "x1": 0,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Fe_Ka / Cr_Ka ^ 2",
+            "x1": 0,
+            "x2": 8,
             "op": 6
         },
         {
@@ -386,6 +970,30 @@
             "op": 6
         },
         {
+            "description": "Co_Ka / Ca_Ka ^ 2",
+            "x1": 1,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Zn_Ka ^ 2",
+            "x1": 1,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / As_Ka ^ 2",
+            "x1": 1,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Co_Ka / Cr_Ka ^ 2",
+            "x1": 1,
+            "x2": 8,
+            "op": 6
+        },
+        {
             "description": "Ni_Ka / Fe_Ka ^ 2",
             "x1": 2,
             "x2": 0,
@@ -407,6 +1015,30 @@
             "description": "Ni_Ka / Cu_Ka ^ 2",
             "x1": 2,
             "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Ca_Ka ^ 2",
+            "x1": 2,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Zn_Ka ^ 2",
+            "x1": 2,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / As_Ka ^ 2",
+            "x1": 2,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Ni_Ka / Cr_Ka ^ 2",
+            "x1": 2,
+            "x2": 8,
             "op": 6
         },
         {
@@ -434,6 +1066,30 @@
             "op": 6
         },
         {
+            "description": "NC / Ca_Ka ^ 2",
+            "x1": 3,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "NC / Zn_Ka ^ 2",
+            "x1": 3,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "NC / As_Ka ^ 2",
+            "x1": 3,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "NC / Cr_Ka ^ 2",
+            "x1": 3,
+            "x2": 8,
+            "op": 6
+        },
+        {
             "description": "Cu_Ka / Fe_Ka ^ 2",
             "x1": 4,
             "x2": 0,
@@ -455,6 +1111,222 @@
             "description": "Cu_Ka / NC ^ 2",
             "x1": 4,
             "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Ca_Ka ^ 2",
+            "x1": 4,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Zn_Ka ^ 2",
+            "x1": 4,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / As_Ka ^ 2",
+            "x1": 4,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Cu_Ka / Cr_Ka ^ 2",
+            "x1": 4,
+            "x2": 8,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Fe_Ka ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Co_Ka ^ 2",
+            "x1": 5,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Ni_Ka ^ 2",
+            "x1": 5,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / NC ^ 2",
+            "x1": 5,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Cu_Ka ^ 2",
+            "x1": 5,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Zn_Ka ^ 2",
+            "x1": 5,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / As_Ka ^ 2",
+            "x1": 5,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Ca_Ka / Cr_Ka ^ 2",
+            "x1": 5,
+            "x2": 8,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Fe_Ka ^ 2",
+            "x1": 6,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Co_Ka ^ 2",
+            "x1": 6,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Ni_Ka ^ 2",
+            "x1": 6,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / NC ^ 2",
+            "x1": 6,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Cu_Ka ^ 2",
+            "x1": 6,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Ca_Ka ^ 2",
+            "x1": 6,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / As_Ka ^ 2",
+            "x1": 6,
+            "x2": 7,
+            "op": 6
+        },
+        {
+            "description": "Zn_Ka / Cr_Ka ^ 2",
+            "x1": 6,
+            "x2": 8,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Fe_Ka ^ 2",
+            "x1": 7,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Co_Ka ^ 2",
+            "x1": 7,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Ni_Ka ^ 2",
+            "x1": 7,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / NC ^ 2",
+            "x1": 7,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Cu_Ka ^ 2",
+            "x1": 7,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Ca_Ka ^ 2",
+            "x1": 7,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Zn_Ka ^ 2",
+            "x1": 7,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "As_Ka / Cr_Ka ^ 2",
+            "x1": 7,
+            "x2": 8,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Fe_Ka ^ 2",
+            "x1": 8,
+            "x2": 0,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Co_Ka ^ 2",
+            "x1": 8,
+            "x2": 1,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Ni_Ka ^ 2",
+            "x1": 8,
+            "x2": 2,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / NC ^ 2",
+            "x1": 8,
+            "x2": 3,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Cu_Ka ^ 2",
+            "x1": 8,
+            "x2": 4,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Ca_Ka ^ 2",
+            "x1": 8,
+            "x2": 5,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / Zn_Ka ^ 2",
+            "x1": 8,
+            "x2": 6,
+            "op": 6
+        },
+        {
+            "description": "Cr_Ka / As_Ka ^ 2",
+            "x1": 8,
+            "x2": 7,
             "op": 6
         },
         {
@@ -484,6 +1356,30 @@
         {
             "description": "1 / Cu_Ka ^ 2",
             "x1": 4,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Ca_Ka ^ 2",
+            "x1": 5,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Zn_Ka ^ 2",
+            "x1": 6,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / As_Ka ^ 2",
+            "x1": 7,
+            "x2": 0,
+            "op": 7
+        },
+        {
+            "description": "1 / Cr_Ka ^ 2",
+            "x1": 8,
             "x2": 0,
             "op": 7
         }
