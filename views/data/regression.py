@@ -272,9 +272,36 @@ class RegressionPage(QWidget):
             pr_nmb = sample_config[0].get("product_id")
             el_nmb = self.combo_element.currentData()
 
-            el_set_row = self.db.fetch_one("SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = 1",
-                                           [pr_nmb, el_nmb])
-            if not el_set_row: return
+            # ========== ИЗМЕНЕНИЕ ЗДЕСЬ ==========
+            # Сначала находим активную модель для данного продукта
+            active_mdl = self.db.fetch_one(
+                "SELECT mdl_nmb FROM mdl_set WHERE pr_nmb = ? AND active_model = 1",
+                [pr_nmb]
+            )
+
+            if not active_mdl:
+                # Если активной модели нет, пробуем найти любую модель (первую попавшуюся)
+                active_mdl = self.db.fetch_one(
+                    "SELECT TOP 1 mdl_nmb FROM mdl_set WHERE pr_nmb = ?",
+                    [pr_nmb]
+                )
+                if not active_mdl:
+                    QMessageBox.warning(self, "Внимание", f"Не найдено ни одной модели для продукта {pr_nmb}")
+                    return
+
+            active_mdl_nmb = active_mdl["mdl_nmb"]
+
+            # Теперь используем найденную активную модель вместо жесткого mdl_nmb = 1
+            el_set_row = self.db.fetch_one(
+                "SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
+                [pr_nmb, el_nmb, active_mdl_nmb]
+            )
+            # ===================================
+
+            if not el_set_row:
+                QMessageBox.warning(self, "Внимание",
+                                    f"Не найдена запись в el_set для продукта {pr_nmb}, элемента {el_nmb}, модели {active_mdl_nmb}")
+                return
 
             self.current_meas_type = el_set_row["meas_type"]
             self._load_equation_terms(self.current_meas_type, el_nmb)
