@@ -43,6 +43,7 @@ from views.cfg.cfg_ac import CfgacPage
 from views.cfg.cfg_pr import CfgprPage
 from views.cfg.cfg_sp import CfgspPage
 from views.data.rf_meas import RfMeasPage
+from views.data.compare_models import CompareModelsPage
 
 # ИМПОРТ ОКНА АВТОРИЗАЦИИ
 from views.login import LoginDialog
@@ -97,6 +98,7 @@ class MainWindow(QMainWindow):
         data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
         data_item.addChild(self.create_menu_item("Нормативы", "standards"))
         data_item.addChild(self.create_menu_item("Отчет", "report"))
+        data_item.addChild(self.create_menu_item("Сравнение моделей", "compare_models"))
 
         self.tree.addTopLevelItem(measurement_item)
         self.tree.addTopLevelItem(products_item)
@@ -138,6 +140,7 @@ class MainWindow(QMainWindow):
             "rf_meas": RfMeasPage,
             "standards": StandardsPage,
             "report": ReportPage,
+            "compare_models": CompareModelsPage,
             "settings": SettingsPage,
             "users": UsersPage,
             "logs": LogsPage,
@@ -152,7 +155,7 @@ class MainWindow(QMainWindow):
             "lines", "ranges", "background", "params",
             "elements", "criteria", "composition", "regression", "correction", "recalc", "settings",
             "equations", "models", "standards", "report", "cfg_main", "cfg_ac",
-            "cfg_pr", "cfg_sp", "rf_meas"
+            "cfg_pr", "cfg_sp", "rf_meas", "compare_models"
         }
 
         # Кэш созданных страниц
