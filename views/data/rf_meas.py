@@ -127,7 +127,7 @@ class RfMeasPage(QWidget):
             where_clause += " AND ac_nmb = ?"
             params.append(ac_nmb)
 
-        order_clause = " ORDER BY meas_dt DESC"
+        order_clause = " ORDER BY timestamp DESC"
         limit_clause = " LIMIT 1000" if is_postgres else ""
 
         query = select_clause + where_clause + order_clause + limit_clause
@@ -229,6 +229,7 @@ class RfMeasPage(QWidget):
         item = QTableWidgetItem(text)
         item.setTextAlignment(Qt.AlignCenter)
         return item
+
 
     def refresh(self):
         """Метод, вызываемый при каждом открытии вкладки (настроено в main.py)"""

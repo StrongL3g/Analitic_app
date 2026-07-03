@@ -1,12 +1,14 @@
+# views/data/composition.py
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QTableWidget,
     QPushButton, QLabel, QHBoxLayout, QCheckBox, QComboBox, QDateTimeEdit,
-    QTimeEdit, QMessageBox, QHeaderView, QScrollArea, QTableWidgetItem, QProgressDialog)
+    QTimeEdit, QMessageBox, QHeaderView, QScrollArea, QTableWidgetItem, QProgressDialog, QFileDialog)
 from PySide6.QtCore import Qt, QDateTime, QTime
 from PySide6.QtGui import QFontMetrics
 from database.db import Database
 import math
 import json
+import csv
 from pathlib import Path
 from utils.path_manager import get_config_path
 
@@ -20,12 +22,9 @@ class TimeEdit15Min(QTimeEdit):
         self.setTime(QTime(0, 0))
 
     def stepBy(self, steps):
-        """Переопределяем изменение значения стрелочками с шагом 15 минут"""
         current_time = self.time()
         minutes = current_time.minute()
         hours = current_time.hour()
-
-        # Изменяем время с шагом 15 минут
         new_minutes = minutes + (steps * 15)
         if new_minutes >= 60:
             hours += 1
@@ -34,7 +33,6 @@ class TimeEdit15Min(QTimeEdit):
             hours -= 1
             new_minutes += 60
 
-        # Корректируем часы если вышли за границы
         if hours >= 24:
             hours = 0
         elif hours < 0:
@@ -54,84 +52,54 @@ class CompositionPage(QWidget):
         self.init_ui()
 
     def _load_config_file(self, filename: str) -> list:
-        """Загружает конфигурационный файл JSON"""
         config_path = get_config_path() / filename
-
         if not config_path.exists():
             print(f"Файл конфигурации не найден: {config_path}")
             return []
-
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-
             if not isinstance(data, list):
                 print(f"Ошибка: {filename} должен содержать список")
                 return []
-
             return data
-
-        except json.JSONDecodeError as e:
-            print(f"Ошибка формата JSON в файле {filename}: {str(e)}")
-            return []
         except Exception as e:
             print(f"Ошибка загрузки файла {filename}: {str(e)}")
             return []
 
     def get_configured_elements(self) -> list:
-        """Получает список сконфигурированных элементов из JSON-файла"""
         try:
             data = self._load_config_file("elements.json")
-            if not data:
-                return []
-
-            # Извлекаем имена элементов, исключая невалидные значения
+            if not data: return []
             elements = []
             for item in data:
-                try:
-                    if not isinstance(item, dict):
-                        continue
-
-                    element_name = item.get('name', '').strip()
-                    if element_name and element_name not in ('-', 'None', ''):
-                        elements.append(element_name)
-                except Exception as e:
-                    print(f"Ошибка обработки элемента {item}: {str(e)}")
-                    continue
-
-            # Сортировка по полю 'number'
+                if not isinstance(item, dict): continue
+                element_name = item.get('name', '').strip()
+                if element_name and element_name not in ('-', 'None', ''):
+                    elements.append(element_name)
             if all('number' in item for item in data):
                 elements = sorted(elements,
                                   key=lambda x: next(item['number'] for item in data if item.get('name') == x))
-
-            print(f"Успешно загружено {len(elements)} элементов")
             return elements
-
         except Exception as e:
             print(f"Ошибка в get_configured_elements: {str(e)}")
             return []
 
     def round_to_15_min(self, time: QTime) -> QTime:
-        """Округляет время до ближайших 15 минут"""
         minute = time.minute()
         rounded_minute = (minute // 15) * 15
         return QTime(time.hour(), rounded_minute)
 
     def validate_dates(self) -> bool:
-        """Проверяет корректность периода"""
         dt_from = QDateTime(self.date_from.date(), self.time_from.time())
         dt_to = QDateTime(self.date_to.date(), self.time_to.time())
-
         if dt_to < dt_from:
             self.date_to.setStyleSheet("background-color: #ffdddd;")
-            QMessageBox.warning(self, "Ошибка", "Дата 'До' не может быть раньше 'От'!")
             return False
-
         self.date_to.setStyleSheet("")
         return True
 
     def init_table(self) -> QTableWidget:
-        """Инициализация таблицы с данными"""
         table = QTableWidget()
         table.setEditTriggers(QTableWidget.AllEditTriggers)
         table.setSelectionMode(QTableWidget.SingleSelection)
@@ -142,184 +110,107 @@ class CompositionPage(QWidget):
         return table
 
     def configure_table_normal(self):
-        """Настройка таблицы в обычном режиме"""
         elements = self.get_configured_elements()
-        column_count = 4 + len(elements) * 3
+        column_count = 5 + len(elements) * 3
         self.table.clear()
         self.table.setColumnCount(column_count)
-
-        headers = ["ID", "Модель", "Время цикла", "Калибр."]
+        headers = ["ID", "Модель", "Время (ts)", "Название пробы", "Калибр."]
         for element in elements:
             headers.extend([f"С расч ({element})", f"С кор ({element})", f"С хим ({element})"])
         self.table.setHorizontalHeaderLabels(headers)
-
-        # Разрешаем редактирование всех ячеек
         self.table.setEditTriggers(QTableWidget.AllEditTriggers)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
-
-        # Устанавливаем ширину столбцов
-        id_width = 50
-        model_width = QFontMetrics(self.font()).horizontalAdvance("Модель") + 20
-        time_width = QFontMetrics(self.font()).horizontalAdvance("Время цикла") + 20
-        calib_width = QFontMetrics(self.font()).horizontalAdvance("Калибр.") + 20
-        element_width = max(
-            QFontMetrics(self.font()).horizontalAdvance("С расч (XXX)"),
-            QFontMetrics(self.font()).horizontalAdvance("С кор (XXX)"),
-            QFontMetrics(self.font()).horizontalAdvance("С хим (XXX)")
-        ) + 20
-
-        self.table.setColumnWidth(0, id_width)
-        self.table.setColumnWidth(1, model_width)
-        self.table.setColumnWidth(2, time_width)
-        self.table.setColumnWidth(3, calib_width)
-
-        for i in range(4, column_count):
+        self.table.setColumnWidth(0, 50)
+        self.table.setColumnWidth(1, 70)
+        self.table.setColumnWidth(2, 140)
+        self.table.setColumnWidth(3, 120)
+        self.table.setColumnWidth(4, 70)
+        element_width = 90
+        for i in range(5, column_count):
             self.table.setColumnWidth(i, element_width)
 
     def configure_table_intensity(self):
-        """Настройка таблицы в режиме интенсивностей"""
-        column_count = 4 + len(self.intensity_columns)
+        column_count = 5 + len(self.intensity_columns)
         self.table.clear()
         self.table.setColumnCount(column_count)
-
-        headers = ["ID", "Модель", "Время цикла", "Калибр."] + self.intensity_columns
+        headers = ["ID", "Модель", "Время (ts)", "Название пробы", "Калибр."] + self.intensity_columns
         self.table.setHorizontalHeaderLabels(headers)
-
-        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table.setSelectionMode(QTableWidget.NoSelection)
-
-        # Устанавливаем ширину столбцов
-        self.table.setColumnWidth(0, 80)
-        self.table.setColumnWidth(1, 120)
-        self.table.setColumnWidth(2, 150)
-        self.table.setColumnWidth(3, 80)
-        for i in range(4, column_count):
-            self.table.setColumnWidth(i, 100)
+        self.table.setColumnWidth(0, 50)
+        self.table.setColumnWidth(1, 70)
+        self.table.setColumnWidth(2, 140)
+        self.table.setColumnWidth(3, 120)
+        self.table.setColumnWidth(4, 70)
+        for i in range(5, column_count):
+            self.table.setColumnWidth(i, 90)
 
     def toggle_intensity_mode(self):
-        """Переключает режим отображения таблицы"""
         try:
             self.table.setRowCount(0)
-
             if self.check_inten.isChecked():
-                self.save_btn.hide()
-
                 if not self.load_intensity_columns():
                     self.check_inten.setChecked(False)
                     return
-
                 self.configure_table_intensity()
                 self.load_intensity_data()
-
             else:
-                self.save_btn.show()
                 self.configure_table_normal()
                 self.load_normal_data()
-
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось переключить режим: {str(e)}")
             self.check_inten.setChecked(False)
 
     def load_intensity_columns(self) -> bool:
-        """Загружает названия столбцов интенсивностей"""
         try:
             data = self._load_config_file("range.json")
-            if not data:
-                self.intensity_columns = []
-                return False
-
-            # Извлекаем имена, исключая пустые значения ("-")
+            if not data: return False
             self.intensity_columns = []
             for item in data:
-                if not isinstance(item, dict):
-                    continue
-
+                if not isinstance(item, dict): continue
                 name = item.get('name', '').strip()
                 if name and name != '-':
                     self.intensity_columns.append(name)
-
-            if not self.intensity_columns:
-                QMessageBox.warning(self, "Ошибка",
-                                    "Не найдено ни одного валидного имени столбца в range.json")
-                return False
-
+            if not self.intensity_columns: return False
             return True
-
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки столбцов интенсивностей: {str(e)}")
+            print(f"Ошибка загрузки столбцов интенсивностей: {str(e)}")
             self.intensity_columns = []
             return False
 
     def load_intensity_data(self):
-        """Загружает данные интенсивностей"""
         try:
             self.table.setRowCount(0)
             self.original_data = {}
-
-            manual_only = self.check_man.isChecked()
-            has_chemistry = self.check_chem.isChecked()
-            only_calib = self.check_calib.isChecked()
-
-            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
-            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
-
             pr_nmb = self.product_combo.currentData()
-            if not pr_nmb or pr_nmb <= 0:
-                return
+            if not pr_nmb or pr_nmb <= 0: return
+
+            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyyMMdd HH:mm:ss")
+            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyyMMdd HH:mm:ss")
 
             num_columns = len(self.intensity_columns)
-            if num_columns == 0:
-                QMessageBox.warning(self, "Ошибка", "Не загружены названия столбцов интенсивностей")
-                return
-
             intensity_columns = [f"i_00_{i:02d}" for i in range(num_columns)]
             select_columns = ", ".join(intensity_columns)
 
-            if self.db.db_type == 'postgres':
-                query = f"""
-                SELECT 
-                    id, mdl_nmb, meas_dt, calibrate_sample, {select_columns}
+            query = f"""
+                SELECT id, mdl_nmb, timestamp, pr_nmb, sample_name, calibrate_sample, {select_columns}
                 FROM pr_meas
-                WHERE meas_dt BETWEEN ? AND ?
+                WHERE timestamp BETWEEN ? AND ?
                 AND pr_nmb = ? AND active_model = 1
-                """
-            else:
-                query = f"""
-                SELECT TOP (1000)
-                    id, mdl_nmb, meas_dt, calibrate_sample, {select_columns}
-                FROM pr_meas
-                WHERE meas_dt BETWEEN ? AND ?
-                AND pr_nmb = ? AND active_model = 1
-                """
-
+            """
             params = [dt_from, dt_to, pr_nmb]
-
             conditions = []
-
-            if manual_only:
+            if self.check_man.isChecked():
                 conditions.append("meas_type = 0")
             else:
                 conditions.append("meas_type = 1")
+            if self.check_calib.isChecked(): conditions.append("calibrate_sample = 1")
+            if conditions: query += " AND " + " AND ".join(conditions)
 
-            if has_chemistry:
-                conditions.append("1=1")
-
-            if only_calib:
-                conditions.append("calibrate_sample = 1")
-
-            if conditions:
-                query += " AND " + " AND ".join(conditions)
-
-            if self.db.db_type == 'postgres':
-                query += " ORDER BY timestamp LIMIT 1000"
-            else:
-                query += " ORDER BY timestamp"
+            query += " ORDER BY timestamp DESC"
+            if self.db.db_type == 'postgres': query += " LIMIT 1000"
 
             rows = self.db.fetch_all(query, params)
-
             if not rows:
-                QMessageBox.information(self, "Информация",
-                                        "Данные интенсивностей не найдены. Проверьте параметры фильтрации.")
+                QMessageBox.information(self, "Информация", "Данные интенсивностей не найдены.")
                 return
 
             for row in rows:
@@ -327,244 +218,201 @@ class CompositionPage(QWidget):
                 self.table.insertRow(row_pos)
 
                 id_item = QTableWidgetItem(str(row.get('id', '')))
-                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования ID
+                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)
+
+                # Сохраняем id, pr_nmb и timestamp для UPDATE
+                id_item.setData(Qt.UserRole, {
+                    'id': row.get('id'),
+                    'pr_nmb': row.get('pr_nmb'),
+                    'timestamp': row.get('timestamp')
+                })
                 self.table.setItem(row_pos, 0, id_item)
 
                 model_item = QTableWidgetItem(str(row.get('mdl_nmb', '')))
-                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования модели
+                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 1, model_item)
 
-                meas_dt = row.get('meas_dt')
-                if isinstance(meas_dt, str):
-                    dt_str = meas_dt
-                elif hasattr(meas_dt, 'strftime'):
-                    dt_str = meas_dt.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    dt_str = str(meas_dt) if meas_dt else ""
-
-                time_item = QTableWidgetItem(dt_str)
-                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
+                ts = row.get('timestamp')
+                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S") if hasattr(ts, 'strftime') else str(ts or "")
+                time_item = QTableWidgetItem(ts_str)
+                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 2, time_item)
 
-                # Калибровочная проба (только для чтения)
+                sample_name = row.get('sample_name', '') or ''
+                name_item = QTableWidgetItem(sample_name)
+                self.table.setItem(row_pos, 3, name_item)
+                self.original_data[(row_pos, 3)] = sample_name
+
                 calib_val = row.get('calibrate_sample', 0)
                 calib_item = QTableWidgetItem()
-                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Галочка видна, но не кликабельна
+                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 calib_item.setCheckState(Qt.Checked if calib_val else Qt.Unchecked)
-                self.table.setItem(row_pos, 3, calib_item)
+                self.table.setItem(row_pos, 4, calib_item)
+                self.original_data[(row_pos, 4)] = 1 if calib_val else 0
 
-                # Заполнение столбцов интенсивностей
                 for i in range(num_columns):
                     col_name = f"i_00_{i:02d}"
                     val = row.get(col_name)
                     item_text = f"{float(val):.4f}" if val is not None else ""
-                    self.table.setItem(row_pos, 4 + i, QTableWidgetItem(item_text))
+                    int_item = QTableWidgetItem(item_text)
+                    int_item.setFlags(int_item.flags() & ~Qt.ItemIsEditable)
+                    self.table.setItem(row_pos, 5 + i, int_item)
 
             self.table.resizeColumnsToContents()
-
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки данных интенсивностей: {str(e)}")
-            self.table.setRowCount(0)
-            self.original_data = {}
-
-    def load_data(self):
-        """Загрузка данных с автоматической проверкой конфигурации элементов"""
-        if self.check_inten.isChecked():
-            self.load_intensity_data()
-        else:
-            self.load_normal_data()
+            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки интенсивностей: {str(e)}")
 
     def load_normal_data(self):
-        """Загружает данные в обычном режиме"""
         try:
             self.table.setRowCount(0)
             self.original_data = {}
-
-            manual_only = self.check_man.isChecked()
-            has_chemistry = self.check_chem.isChecked()
-            only_calib = self.check_calib.isChecked()
-
-            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyy-MM-dd HH:mm:ss")
-            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyy-MM-dd HH:mm:ss")
-
             pr_nmb = self.product_combo.currentData()
-            if not pr_nmb or pr_nmb <= 0:
-                return
+            if not pr_nmb or pr_nmb <= 0: return
 
-            if self.db.db_type == 'postgres':
-                query = """
-                SELECT 
-                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb, calibrate_sample,
-                    c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
-                    c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
-                    c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
-                FROM pr_meas
-                WHERE meas_dt BETWEEN ? AND ?
-                AND pr_nmb = ? AND active_model = 1
-                """
-            else:
-                query = """
-                SELECT TOP (1000)
-                    id, mdl_nmb, meas_dt, cuv_nmb, meas_type, pr_nmb, calibrate_sample,
-                    c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
-                    c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
-                    c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
-                FROM pr_meas
-                WHERE meas_dt BETWEEN ? AND ?
-                AND pr_nmb = ? AND active_model = 1
-                """
+            dt_from = QDateTime(self.date_from.date(), self.time_from.time()).toString("yyyyMMdd HH:mm:ss")
+            dt_to = QDateTime(self.date_to.date(), self.time_to.time()).toString("yyyyMMdd HH:mm:ss")
 
+            query = """
+            SELECT 
+                id, mdl_nmb, timestamp, cuv_nmb, meas_type, pr_nmb, sample_name, calibrate_sample,
+                c_01,c_02,c_03,c_04,c_05,c_06,c_07,c_08,
+                c_cor_01,c_cor_02,c_cor_03,c_cor_04,c_cor_05,c_cor_06,c_cor_07,c_cor_08,
+                c_chem_01,c_chem_02,c_chem_03,c_chem_04,c_chem_05,c_chem_06,c_chem_07,c_chem_08
+            FROM pr_meas
+            WHERE timestamp BETWEEN ? AND ?
+            AND pr_nmb = ? AND active_model = 1
+            """
             params = [dt_from, dt_to, pr_nmb]
-
             conditions = []
-
-            if manual_only:
+            if self.check_man.isChecked():
                 conditions.append("meas_type = 0")
             else:
                 conditions.append("meas_type = 1")
-
-            if has_chemistry:
+            if self.check_chem.isChecked():
                 chem_conditions = [f"c_chem_{i:02d} <> 0" for i in range(1, 9)]
                 conditions.append(f"({' OR '.join(chem_conditions)})")
+            if self.check_calib.isChecked(): conditions.append("calibrate_sample = 1")
+            if conditions: query += " AND " + " AND ".join(conditions)
 
-            if only_calib:
-                conditions.append("calibrate_sample = 1")
-
-            if conditions:
-                query += " AND " + " AND ".join(conditions)
-
-            if self.db.db_type == 'postgres':
-                query += " ORDER BY timestamp LIMIT 1000"
-            else:
-                query += " ORDER BY timestamp"
+            query += " ORDER BY timestamp DESC"
+            if self.db.db_type == 'postgres': query += " LIMIT 1000"
 
             rows = self.db.fetch_all(query, params)
-
             if not rows:
-                QMessageBox.information(self, "Информация",
-                                        "Данные не найдены. Проверьте параметры фильтрации.")
+                QMessageBox.information(self, "Информация", "Данные не найдены.")
                 return
 
             elements = self.get_configured_elements()
-
             for row in rows:
                 row_pos = self.table.rowCount()
                 self.table.insertRow(row_pos)
 
-                # Добавляем данные в таблицу
                 id_item = QTableWidgetItem(str(row.get('id', '')))
-                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования ID
+                id_item.setFlags(id_item.flags() & ~Qt.ItemIsEditable)
+
+                # Сохраняем id, pr_nmb и timestamp для UPDATE
+                id_item.setData(Qt.UserRole, {
+                    'id': row.get('id'),
+                    'pr_nmb': row.get('pr_nmb'),
+                    'timestamp': row.get('timestamp')
+                })
                 self.table.setItem(row_pos, 0, id_item)
 
                 model_item = QTableWidgetItem(str(row.get('mdl_nmb', '')))
-                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования модели
+                model_item.setFlags(model_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 1, model_item)
 
-                meas_dt = row.get('meas_dt')
-                if isinstance(meas_dt, str):
-                    dt_str = meas_dt
-                elif hasattr(meas_dt, 'strftime'):
-                    dt_str = meas_dt.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    dt_str = str(meas_dt) if meas_dt else ""
-
-                time_item = QTableWidgetItem(dt_str)
-                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования времени
+                ts = row.get('timestamp')
+                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S") if hasattr(ts, 'strftime') else str(ts or "")
+                time_item = QTableWidgetItem(ts_str)
+                time_item.setFlags(time_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row_pos, 2, time_item)
 
-                # Калибровочная проба (только для чтения)
+                sample_name = row.get('sample_name', '') or ''
+                name_item = QTableWidgetItem(sample_name)
+                self.table.setItem(row_pos, 3, name_item)
+                self.original_data[(row_pos, 3)] = sample_name
+
                 calib_val = row.get('calibrate_sample', 0)
                 calib_item = QTableWidgetItem()
-                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Галочка видна, но не кликабельна
+                calib_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 calib_item.setCheckState(Qt.Checked if calib_val else Qt.Unchecked)
-                self.table.setItem(row_pos, 3, calib_item)
+                self.table.setItem(row_pos, 4, calib_item)
+                self.original_data[(row_pos, 4)] = 1 if calib_val else 0
 
                 for i, element in enumerate(elements, 1):
-                    if i > 8:
-                        break
-
-                    col_base = 4 + (i - 1) * 3
+                    if i > 8: break
+                    col_base = 5 + (i - 1) * 3
                     for prefix in ['c_', 'c_cor_', 'c_chem_']:
                         val = row.get(f"{prefix}{i:02d}")
                         item_text = f"{float(val):.4f}" if val is not None else ""
                         item = QTableWidgetItem(item_text)
-
-                        # Устанавливаем флаги редактирования только для столбцов "С хим"
                         if prefix == 'c_chem_':
                             item.setFlags(item.flags() | Qt.ItemIsEditable)
+                            try:
+                                self.original_data[(row_pos, col_base)] = float(item_text)
+                            except:
+                                self.original_data[(row_pos, col_base)] = 0.0
                         else:
                             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-
                         self.table.setItem(row_pos, col_base, item)
                         col_base += 1
 
-            # Сохраняем исходные значения для сравнения при сохранении
-            for row in range(self.table.rowCount()):
-                for col in range(self.table.columnCount()):
-                    header = self.table.horizontalHeaderItem(col)
-                    if header and "С хим" in header.text():
-                        item = self.table.item(row, col)
-                        if item:
-                            try:
-                                self.original_data[(row, col)] = float(item.text())
-                            except ValueError:
-                                self.original_data[(row, col)] = 0.0
-
             self.table.resizeColumnsToContents()
-
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки данных (обычный режим): {str(e)}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки данных: {str(e)}")
             self.table.setRowCount(0)
             self.original_data = {}
 
     def save_data(self):
-        """Сохраняет изменения в базу данных"""
+        """Сохраняет измененную химию, имя пробы и галочку во ВСЕ модели текущего измерения"""
+        from datetime import datetime, timedelta
+
         try:
-            if not hasattr(self.db, 'execute'):
-                QMessageBox.critical(self, "Ошибка", "Нет подключения к базе данных")
-                return
-
             updates = []
+
             for row in range(self.table.rowCount()):
-                row_id_item = self.table.item(row, 0)
-                if not row_id_item:
-                    continue
+                id_item = self.table.item(row, 0)
+                if not id_item: continue
+                meta = id_item.data(Qt.UserRole)
+                if not meta: continue
 
-                row_id = row_id_item.text()
-                if not row_id.isdigit():
-                    continue
+                row_changes = {}
 
-                for col in range(self.table.columnCount()):
-                    header = self.table.horizontalHeaderItem(col)
-                    if not header or "С хим" not in header.text():
-                        continue
+                # 1. Проверка Названия пробы (столбец 3)
+                item_sn = self.table.item(row, 3)
+                new_sn = item_sn.text().strip() if item_sn else ""
+                old_sn = self.original_data.get((row, 3), "")
+                if new_sn != old_sn:
+                    row_changes['sample_name'] = new_sn
 
-                    item = self.table.item(row, col)
-                    if not item:
-                        continue
+                # 2. Проверка Калибровки (столбец 4)
+                item_cal = self.table.item(row, 4)
+                if item_cal:
+                    new_cal = 1 if item_cal.checkState() == Qt.Checked else 0
+                    old_cal = self.original_data.get((row, 4), 0)
+                    if new_cal != old_cal:
+                        row_changes['calibrate_sample'] = new_cal
 
-                    try:
-                        element_name = header.text().split("(")[1].split(")")[0]
-                        element_idx = self.get_configured_elements().index(element_name) + 1
-                    except (IndexError, ValueError):
-                        continue
+                # 3. Проверка Химии (только если не режим Интенсивностей)
+                if not self.check_inten.isChecked():
+                    for col in range(5, self.table.columnCount()):
+                        header = self.table.horizontalHeaderItem(col)
+                        if header and "С хим" in header.text():
+                            item_chem = self.table.item(row, col)
+                            if item_chem:
+                                try:
+                                    new_chem = float(item_chem.text().replace(',', '.'))
+                                except ValueError:
+                                    new_chem = 0.0
+                                old_chem = self.original_data.get((row, col), 0.0)
+                                if not math.isclose(new_chem, old_chem, rel_tol=1e-5, abs_tol=1e-8):
+                                    element_name = header.text().split("(")[1].split(")")[0]
+                                    element_idx = self.get_configured_elements().index(element_name) + 1
+                                    row_changes[f'c_chem_{element_idx:02d}'] = new_chem
 
-                    try:
-                        current_value = float(item.text())
-                    except ValueError:
-                        QMessageBox.warning(self, "Ошибка",
-                                            f"Некорректное значение в строке {row + 1}, столбец {col + 1}")
-                        return
-
-                    original_value = self.original_data.get((row, col))
-                    if original_value is None or not math.isclose(current_value, original_value, rel_tol=1e-5):
-                        updates.append({
-                            'id': int(row_id),
-                            'element_num': element_idx,
-                            'value': current_value,
-                            'row': row,
-                            'col': col
-                        })
+                if row_changes:
+                    updates.append((meta, row_changes))
 
             if not updates:
                 QMessageBox.information(self, "Информация", "Нет изменений для сохранения")
@@ -572,124 +420,125 @@ class CompositionPage(QWidget):
 
             progress = QProgressDialog("Сохранение изменений...", "Отмена", 0, len(updates), self)
             progress.setWindowModality(Qt.WindowModal)
-            progress.setMinimumDuration(0)
-
-            failed_updates = []
             success_count = 0
 
-            for i, update in enumerate(updates):
-                progress.setValue(i)
-                if progress.wasCanceled():
-                    break
+            for i, (meta, fields) in enumerate(updates):
+                if progress.wasCanceled(): break
 
-                query = f"""
-                UPDATE pr_meas
-                SET c_chem_{update['element_num']:02d} = ?
-                WHERE id = ?
-                """
-                params = [update['value'], update['id']]
+                pr_nmb = meta['pr_nmb']
+                ts = meta['timestamp']
+
+                # Приводим к объекту datetime, если пришло строкой
+                if isinstance(ts, str):
+                    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+                        try:
+                            ts = datetime.strptime(ts, fmt)
+                            break
+                        except ValueError:
+                            pass
+
+                set_clauses = [f"{k} = ?" for k in fields.keys()]
+                params = list(fields.values())
+
+                if isinstance(ts, datetime):
+                    # Создаем окно ±3 секунды в безопасном формате YYYYMMDD HH:mm:ss
+                    ts_min = (ts - timedelta(seconds=3)).strftime("%Y%m%d %H:%M:%S")
+                    ts_max = (ts + timedelta(seconds=3)).strftime("%Y%m%d %H:%M:%S")
+
+                    query = f"UPDATE pr_meas SET {', '.join(set_clauses)} WHERE pr_nmb = ? AND timestamp BETWEEN ? AND ?"
+                    params.extend([pr_nmb, ts_min, ts_max])
+                else:
+                    # Резервный вариант на случай непредвиденного формата даты (обновит хотя бы текущую строку)
+                    query = f"UPDATE pr_meas SET {', '.join(set_clauses)} WHERE id = ?"
+                    params.append(meta['id'])
 
                 try:
                     self.db.execute(query, params)
-
-                    if self.verify_update_in_db(update['id'], update):
-                        self.original_data[(update['row'], update['col'])] = update['value']
-                        success_count += 1
-                    else:
-                        failed_updates.append(update['id'])
-
+                    success_count += 1
                 except Exception as e:
-                    failed_updates.append(update['id'])
-                    print(f"Ошибка при обновлении ID {update['id']}: {str(e)}")
+                    print(f"Ошибка сохранения: {e}")
 
-            progress.setValue(len(updates))
+                progress.setValue(i + 1)
 
-            message = []
-            if success_count > 0:
-                message.append(f"Успешно обновлено: {success_count}")
-            if failed_updates:
-                message.append(
-                    f"Проблемы с ID: {', '.join(map(str, failed_updates))} (но проверьте БД - возможно обновление прошло)")
+            QMessageBox.information(
+                self,
+                "Результат",
+                f"Успешно сохранено проб: {success_count} из {len(updates)}\n(Изменения применены ко всем моделям измерения)."
+            )
 
-            QMessageBox.information(self, "Результат сохранения", "\n".join(message))
+            self.load_data()
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {str(e)}")
 
-    def verify_update_in_db(self, record_id: int, update_data: dict) -> bool:
-        """Проверяет, что данные были успешно обновлены в БД"""
+    def export_to_csv(self):
+        """Экспорт таблицы в CSV файл"""
+        path, _ = QFileDialog.getSaveFileName(self, "Экспорт в CSV", "", "CSV Files (*.csv)")
+        if not path: return
         try:
-            query = f"""
-            SELECT c_chem_{update_data['element_num']:02d}
-            FROM pr_meas
-            WHERE id = ?
-            """
-            result = self.db.fetch_one(query, [record_id])
-
-            if not result:
-                return False
-
-            if isinstance(result, dict):
-                db_value = result[f'c_chem_{update_data["element_num"]:02d}']
-            else:
-                db_value = result[0] if isinstance(result, (list, tuple)) else result
-
-            return math.isclose(float(db_value), update_data['value'], rel_tol=1e-5)
-
+            with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f, delimiter=';')
+                headers = [self.table.horizontalHeaderItem(i).text() for i in range(self.table.columnCount())]
+                writer.writerow(headers)
+                for row in range(self.table.rowCount()):
+                    row_data = []
+                    for col in range(self.table.columnCount()):
+                        item = self.table.item(row, col)
+                        if col == 4:  # Столбец калибровки
+                            row_data.append("1" if item and item.checkState() == Qt.Checked else "0")
+                        else:
+                            row_data.append(item.text() if item else "")
+                    writer.writerow(row_data)
+            QMessageBox.information(self, "Успех", "Данные успешно выгружены в CSV.")
         except Exception as e:
-            print(f"Ошибка при проверке обновления ID {record_id}: {str(e)}")
-            return False
+            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить файл:\n{e}")
 
     def force_reload_data(self):
-        """Принудительная перезагрузка данных"""
         try:
-            if not self.check_inten.isChecked():
-                self.configure_table_normal()
+            if not self.check_inten.isChecked(): self.configure_table_normal()
             self.load_data()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при обновлении данных: {str(e)}")
 
+    def load_data(self):
+        """Единая точка входа для загрузки данных (вызывается при смене фильтров)"""
+        if hasattr(self, 'check_inten') and self.check_inten.isChecked():
+            self.load_intensity_data()
+        else:
+            self.load_normal_data()
+
     def load_products_list(self):
-        """Загрузка списка продуктов из cfg02"""
         try:
             products = self.db.fetch_all("SELECT pr_nmb, pr_name FROM cfg02 WHERE pr_nmb > 0 ORDER BY pr_nmb")
             self.product_combo.blockSignals(True)
             self.product_combo.clear()
-            for p in products:
-                self.product_combo.addItem(f"№{p['pr_nmb']}: {p['pr_name']}", p['pr_nmb'])
+            for p in products: self.product_combo.addItem(f"№{p['pr_nmb']}: {p['pr_name']}", p['pr_nmb'])
             self.product_combo.blockSignals(False)
         except Exception as e:
-            print(f"Ошибка загрузки списка продуктов: {e}")
+            print(f"Ошибка загрузки списка: {e}")
 
     def init_ui(self):
-        """Инициализация пользовательского интерфейса"""
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
         self.setMinimumWidth(800)
 
-        title = QLabel("Ввод химических содержаний")
+        title = QLabel("Ввод химических содержаний и управление пробами")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         title.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(title)
 
-        # Верхняя панель с настройками
         container = QHBoxLayout()
         container.setAlignment(Qt.AlignLeft)
         container.setSpacing(10)
 
-        # Чекбоксы
         checkboxes = QVBoxLayout()
         checkboxes.setSpacing(10)
-
         self.check_man = QCheckBox("Ручное измерение")
         self.check_man.stateChanged.connect(self.load_data)
-
         self.check_chem = QCheckBox("Наличие химии")
         self.check_chem.stateChanged.connect(self.load_data)
-
         self.check_calib = QCheckBox("Только калибровочные")
         self.check_calib.stateChanged.connect(self.load_data)
-
         self.check_inten = QCheckBox("Интенсивности")
         self.check_inten.setChecked(False)
         self.check_inten.stateChanged.connect(self.toggle_intensity_mode)
@@ -698,10 +547,8 @@ class CompositionPage(QWidget):
         checkboxes.addWidget(self.check_chem)
         checkboxes.addWidget(self.check_calib)
         checkboxes.addWidget(self.check_inten)
-
         container.addLayout(checkboxes)
 
-        # Даты и время
         dates_layout = QVBoxLayout()
         dates_layout.setSpacing(10)
 
@@ -732,24 +579,19 @@ class CompositionPage(QWidget):
         self.time_to.setTime(self.round_to_15_min(QTime.currentTime()))
         to_layout.addWidget(self.time_to)
         dates_layout.addLayout(to_layout)
-
         container.addLayout(dates_layout)
         main_layout.addLayout(container)
 
         product_layout = QHBoxLayout()
         product_layout.addWidget(QLabel("Выберите продукт:"))
-
         self.product_combo = QComboBox()
         self.product_combo.setFixedWidth(200)
         self.load_products_list()
         self.product_combo.currentIndexChanged.connect(self.force_reload_data)
-
         product_layout.addWidget(self.product_combo)
-        product_layout.addStretch()  # "пружина" толкает элементы влево
-
+        product_layout.addStretch()
         main_layout.addLayout(product_layout)
 
-        # Кнопки
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignLeft)
         btn_layout.setSpacing(10)
@@ -757,14 +599,18 @@ class CompositionPage(QWidget):
         self.refresh_btn = QPushButton("Обновить")
         self.refresh_btn.clicked.connect(self.force_reload_data)
 
-        self.save_btn = QPushButton("Сохранить изменения")
+        self.save_btn = QPushButton("💾 Сохранить изменения")
+        self.save_btn.setStyleSheet("background-color: #dcfce7; font-weight: bold; border: 1px solid #22c55e;")
         self.save_btn.clicked.connect(self.save_data)
+
+        self.export_btn = QPushButton("📊 Экспорт в CSV")
+        self.export_btn.clicked.connect(self.export_to_csv)
 
         btn_layout.addWidget(self.refresh_btn)
         btn_layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.export_btn)
         main_layout.addLayout(btn_layout)
 
-        # Таблица
         self.table = self.init_table()
         self.configure_table_normal()
 
@@ -773,16 +619,13 @@ class CompositionPage(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-
         main_layout.addWidget(scroll_area)
 
-        # Связывание валидации дат
         self.date_from.dateTimeChanged.connect(self.validate_dates)
         self.time_from.timeChanged.connect(self.validate_dates)
         self.date_to.dateTimeChanged.connect(self.validate_dates)
         self.time_to.timeChanged.connect(self.validate_dates)
 
     def showEvent(self, event):
-        """Обновляет список продуктов при показе вкладки"""
         super().showEvent(event)
         self.load_products_list()

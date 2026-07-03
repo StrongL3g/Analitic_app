@@ -6,10 +6,10 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QComboBox, QGroupBox, QSplitter, QMessageBox, QHeaderView,
-    QDialog, QFormLayout, QLineEdit, QDialogButtonBox
+    QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QTabWidget
 )
 from PySide6.QtGui import QColor
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from database.db import Database
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,31 +17,36 @@ from views.data.sample_dialog import SampleDialog
 from utils.path_manager import get_config_path
 
 
-# === НАДЕЖНЫЙ КЛАСС ДЛЯ ЧИСЛОВОЙ СОРТИРОВКИ ===
+def fmt_num(val):
+    if val is None or val == "": return ""
+    try:
+        v = float(val)
+        if v == 0.0: return "0.000"
+        abs_v = abs(v)
+        if abs_v < 0.001 or abs_v >= 100000:
+            return f"{v:.3e}"
+        else:
+            return f"{v:.4f}"
+    except (ValueError, TypeError):
+        return str(val)
+
+
 class NumericItem(QTableWidgetItem):
     def __lt__(self, other):
         def to_float(text):
-            if not text:
-                return None
+            if not text: return None
             t = text.strip().replace(',', '.')
-            if not t or t == "-":
-                return None
-            if t.endswith('%'):
-                t = t[:-1]
+            if not t or t == "-": return None
+            if t.endswith('%'): t = t[:-1]
             try:
                 return float(t)
             except ValueError:
                 return None
 
-        v1 = to_float(self.text())
-        v2 = to_float(other.text())
-
-        if v1 is not None and v2 is not None:
-            return v1 < v2
-        if v1 is None and v2 is not None:
-            return True
-        if v1 is not None and v2 is None:
-            return False
+        v1, v2 = to_float(self.text()), to_float(other.text())
+        if v1 is not None and v2 is not None: return v1 < v2
+        if v1 is None and v2 is not None: return True
+        if v1 is not None and v2 is None: return False
         return super().__lt__(other)
 
 
@@ -54,7 +59,6 @@ class CorrectionPage(QWidget):
 
         self.init_ui()
 
-        # Подключаем обработчики изменения фильтров
         self.combo_element.currentIndexChanged.connect(self.load_data)
         self.combo_meas_type.currentIndexChanged.connect(self.load_data)
         self.combo_model.currentIndexChanged.connect(self.load_data)
@@ -75,7 +79,6 @@ class CorrectionPage(QWidget):
         top_widget = QWidget()
         top_layout = QHBoxLayout()
 
-        # --- Левая верхняя (Таблицы) ---
         left_top_group = QGroupBox("Результаты и управление")
         left_top_layout = QVBoxLayout()
 
@@ -94,7 +97,6 @@ class CorrectionPage(QWidget):
         btn_layout.addStretch()
         left_top_layout.addLayout(btn_layout)
 
-        # Таблица коэффициентов (K0, K1)
         left_top_layout.addWidget(QLabel("Коэффициенты корректировки:"))
         self.coeff_table = QTableWidget(2, 3)
         self.coeff_table.setHorizontalHeaderLabels(["Коэффициент", "Значение", "Значимость"])
@@ -110,7 +112,6 @@ class CorrectionPage(QWidget):
             self.coeff_table.setItem(row, 2, QTableWidgetItem("0.0"))
         left_top_layout.addWidget(self.coeff_table)
 
-        # Таблица характеристик
         left_top_layout.addWidget(QLabel("Характеристики уравнения:"))
         self.stats_table = QTableWidget(3, 4)
         self.stats_table.setHorizontalHeaderLabels(["Параметр", "Без корр-ки", "После корр-ки", "Изменение"])
@@ -122,10 +123,8 @@ class CorrectionPage(QWidget):
             item.setBackground(Qt.GlobalColor.lightGray)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.stats_table.setItem(row, 0, item)
-            for col in range(1, 4):
-                self.stats_table.setItem(row, col, QTableWidgetItem("0.0"))
+            for col in range(1, 4): self.stats_table.setItem(row, col, QTableWidgetItem("0.0"))
         left_top_layout.addWidget(self.stats_table)
-
         left_top_group.setLayout(left_top_layout)
 
         # --- Верхняя правая (График) ---
@@ -149,7 +148,6 @@ class CorrectionPage(QWidget):
         self.combo_element = QComboBox()
         self.combo_meas_type = QComboBox()
         self.combo_meas_type.addItems(["Все пробы", "Ручные", "Цикл"])
-
         self.combo_model = QComboBox()
         self.combo_model.addItems(["Модель 1", "Модель 2", "Модель 3"])
 
@@ -162,18 +160,18 @@ class CorrectionPage(QWidget):
         combo_layout.addStretch()
         bottom_layout.addLayout(combo_layout)
 
-        bottom_layout.addWidget(
-            QLabel("Таблица выборки (Клик на заголовок для сортировки, Двойной клик на строку - исключить):"))
-        self.data_table = QTableWidget()
-        self.data_table.setColumnCount(7)
-        self.data_table.setHorizontalHeaderLabels([
-            "Продукт", "Дата/Время", "C_расч", "C_хим", "C_корр", "ΔC", "δC=|ΔC/C_хим|"
-        ])
-        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.data_table.cellDoubleClicked.connect(self.on_table_double_click)
-        self.data_table.setSortingEnabled(True)
-        bottom_layout.addWidget(self.data_table)
+        # Вкладки таблиц
+        bottom_layout.addWidget(QLabel("Таблицы выборки (Двойной клик на строку - исключить/вернуть):"))
+        self.tabs = QTabWidget()
+        self.table_active = self.create_data_table()
+        self.table_excluded = self.create_data_table()
+        self.tabs.addTab(self.table_active, "Рабочая выборка")
+        self.tabs.addTab(self.table_excluded, "Исключенные строки")
 
+        self.table_active.cellDoubleClicked.connect(lambda r, c: self.on_table_double_click(r, self.table_active))
+        self.table_excluded.cellDoubleClicked.connect(lambda r, c: self.on_table_double_click(r, self.table_excluded))
+
+        bottom_layout.addWidget(self.tabs)
         bottom_widget.setLayout(bottom_layout)
         main_splitter.addWidget(top_widget)
         main_splitter.addWidget(bottom_widget)
@@ -183,15 +181,27 @@ class CorrectionPage(QWidget):
 
         self.ini_load_elements()
 
-    def on_table_double_click(self, row, col):
-        pr_item = self.data_table.item(row, 0)
-        dt_item = self.data_table.item(row, 1)
-        if not pr_item or not dt_item: return
+    def create_data_table(self):
+        table = QTableWidget()
+        table.setColumnCount(7)
+        table.setHorizontalHeaderLabels(["Продукт", "Время (ts)", "C_расч", "C_хим", "C_корр", "ΔC", "δC=|ΔC/C_хим|"])
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setSortingEnabled(True)
+        table.setSelectionBehavior(QTableWidget.SelectRows)
+        return table
 
-        for i, rec in enumerate(self.raw_buffer):
-            if str(rec.get("pr_nmb", "")) == pr_item.text() and rec.get("meas_dt", "") == dt_item.text():
-                self.toggle_row_state(i)
-                break
+    def _create_readonly_item(self, text, is_numeric=False):
+        item = NumericItem(text) if is_numeric else QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        return item
+
+    def on_table_double_click(self, row, table_widget):
+        pr_item = table_widget.item(row, 0)
+        if not pr_item: return
+        buffer_idx = pr_item.data(Qt.UserRole)
+        if buffer_idx is not None and 0 <= buffer_idx < len(self.raw_buffer):
+            self.raw_buffer[buffer_idx]['is_active'] = not self.raw_buffer[buffer_idx]['is_active']
+            QTimer.singleShot(0, self.perform_correction)
 
     def on_plot_double_click(self, event):
         if not event.dblclick or event.inaxes != self.ax: return
@@ -200,29 +210,19 @@ class CorrectionPage(QWidget):
 
         min_dist = float('inf')
         closest_idx = -1
-
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
         x_range, y_range = xlim[1] - xlim[0], ylim[1] - ylim[0]
         if x_range == 0 or y_range == 0: return
 
         for i, rec in enumerate(self.raw_buffer):
-            cx = rec.get('c_corr', None)
-            cy = rec.get('c_chem', None)
+            cx, cy = rec.get('c_corr', None), rec.get('c_chem', None)
             if cx is not None and cy is not None:
                 dist = ((cx - x) / x_range) ** 2 + ((cy - y) / y_range) ** 2
-                if dist < min_dist:
-                    min_dist, closest_idx = dist, i
+                if dist < min_dist: min_dist, closest_idx = dist, i
 
         if closest_idx != -1 and min_dist < 0.002:
-            self.toggle_row_state(closest_idx)
-
-    def toggle_row_state(self, idx):
-        if idx < 0 or idx >= len(self.raw_buffer): return
-        self.raw_buffer[idx]['is_active'] = not self.raw_buffer[idx].get('is_active', True)
-        self.raw_buffer.sort(key=lambda item: (not item.get('is_active', True), item.get('meas_dt', '')))
-
-        self._update_data_table_from_buffer()
-        self.perform_correction()
+            self.raw_buffer[closest_idx]['is_active'] = not self.raw_buffer[closest_idx]['is_active']
+            QTimer.singleShot(0, self.perform_correction)
 
     def ini_load_elements(self):
         try:
@@ -232,43 +232,34 @@ class CorrectionPage(QWidget):
                     elements_data = json.load(f)
                 valid_elements = [elem for elem in elements_data if elem.get("name") != "-"]
                 self.combo_element.clear()
-                for elem in valid_elements:
-                    self.combo_element.addItem(elem["name"], elem["number"])
+                for elem in valid_elements: self.combo_element.addItem(elem["name"], elem["number"])
         except Exception as e:
             print(f"Ошибка загрузки элементов: {e}")
 
     def open_sample_dialog(self):
         dialog = SampleDialog(self.db, self)
-        if dialog.exec():
-            self.load_data()
+        if dialog.exec(): self.load_data()
 
     def load_data(self):
         try:
             sample_path = get_config_path() / "sample" / "s_regress.json"
             if not os.path.exists(sample_path): return
-
             with open(sample_path, "r", encoding="utf-8") as f:
                 sample_config = json.load(f)
-
             if not sample_config: return
 
-            # ЗАЩИТА: Получаем продукт из конфига выборки
             pr_nmb = sample_config[0].get("product_id")
             if not pr_nmb or pr_nmb <= 0:
-                self.data_table.setRowCount(0)
+                for t in [self.table_active, self.table_excluded]: t.setRowCount(0)
                 return
 
             el_nmb = self.combo_element.currentData()
             mdl_nmb = self.combo_model.currentIndex() + 1
-
             el_set_row = self.db.fetch_one("SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
                                            [pr_nmb, el_nmb, mdl_nmb])
-            if el_set_row:
-                self.current_meas_type = el_set_row["meas_type"]
 
+            if el_set_row: self.current_meas_type = el_set_row["meas_type"]
             self.raw_buffer = self._fetch_c_data(sample_config, el_nmb, mdl_nmb)
-
-            self._update_data_table_from_buffer()
             self.perform_correction()
 
         except Exception as e:
@@ -278,81 +269,46 @@ class CorrectionPage(QWidget):
         all_rows = []
         for cond in sample_config:
             pr_nmb = cond["product_id"]
-            start_dt = f"{cond['date_from']} {cond['time_from']}"
-            end_dt = f"{cond['date_to']} {cond['time_to']}"
+            if pr_nmb <= 0: continue
+
+            d_from = cond['date_from'].replace('-', '')
+            d_to = cond['date_to'].replace('-', '')
+            start_dt = f"{d_from} {cond['time_from']}"
+            end_dt = f"{d_to} {cond['time_to']}"
 
             c_calc_col = f"c_{el_nmb:02d}"
             c_chem_col = f"c_chem_{el_nmb:02d}"
 
             query = f"""
-                SELECT pr_nmb, meas_dt, timestamp, 
+                SELECT pr_nmb, timestamp, 
                        {c_calc_col} AS c_calc, 
                        {c_chem_col} AS c_chem
                 FROM PR_MEAS
                 WHERE timestamp BETWEEN ? AND ?
                 AND pr_nmb = ? AND {c_chem_col} <> 0 AND mdl_nmb = ?
             """
-
             meas_index = self.combo_meas_type.currentIndex()
             if meas_index == 1:
                 query += " AND meas_type = 0"
             elif meas_index == 2:
                 query += " AND meas_type = 1"
-            query += " ORDER BY meas_dt, timestamp"
+            query += " ORDER BY timestamp DESC"
 
             try:
                 rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb, mdl_nmb])
                 for r in rows:
                     r['is_active'] = True
+                    ts = r.get("timestamp")
+                    r['timestamp_str'] = ts.strftime("%Y-%m-%d %H:%M:%S") if hasattr(ts, 'strftime') else str(ts or "")
                 all_rows.extend(rows)
             except Exception as e:
                 print(f"Ошибка SQL: {e}")
-
         return all_rows
-
-    def _update_data_table_from_buffer(self):
-        self.data_table.blockSignals(True)
-        self.data_table.setSortingEnabled(False)
-        self.data_table.setRowCount(0)
-
-        for row_idx, rec in enumerate(self.raw_buffer):
-            self.data_table.insertRow(row_idx)
-            is_active = rec.get('is_active', True)
-            bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
-
-            def set_text(col, val):
-                item = QTableWidgetItem(str(val))
-                item.setBackground(bg_color)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.data_table.setItem(row_idx, col, item)
-
-            def set_num(col, val):
-                item = NumericItem(str(val))
-                item.setBackground(bg_color)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.data_table.setItem(row_idx, col, item)
-
-            set_text(0, rec.get("pr_nmb", ""))
-            set_text(1, rec.get("meas_dt", ""))
-
-            c_calc = rec.get("c_calc", 0)
-            c_chem = rec.get("c_chem", 0)
-
-            set_num(2, f"{c_calc:.3f}")
-            set_num(3, f"{c_chem:.3f}")
-            set_num(4, "")
-            set_num(5, "")
-            set_num(6, "")
-
-        self.data_table.blockSignals(False)
-        self.data_table.setSortingEnabled(True)
 
     def perform_correction(self):
         if not self.raw_buffer: return
 
-        c_calc_active = []
-        c_chem_active = []
-
+        c_calc_active, c_chem_active = [], []
         for rec in self.raw_buffer:
             if rec.get('is_active', True):
                 c_calc_active.append(rec.get("c_calc", 0))
@@ -361,74 +317,81 @@ class CorrectionPage(QWidget):
         if len(c_calc_active) > 1:
             X = np.vstack([np.ones(len(c_calc_active)), c_calc_active]).T
             y = np.array(c_chem_active)
-
             XTX_pinv = np.linalg.pinv(X.T @ X)
             coeffs = XTX_pinv @ X.T @ y
-
             y_pred = X @ coeffs
             mse = np.sum((y - y_pred) ** 2) / max(len(y) - 2, 1)
             std_errs = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
             with np.errstate(divide='ignore', invalid='ignore'):
                 t_stats = np.where(std_errs != 0, np.abs(coeffs / std_errs), 0)
         else:
-            coeffs = [0.0, 1.0]
-            t_stats = [0.0, 0.0]
+            coeffs, t_stats = [0.0, 1.0], [0.0, 0.0]
 
         for i in range(2):
             self.coeff_table.item(i, 1).setText(f"{coeffs[i]:.6g}")
-
             sig_item = self.coeff_table.item(i, 2)
             sig_item.setText(f"{t_stats[i]:.2f}")
-
-            is_bad = False
-            if i == 0 and t_stats[i] < 0.000000001: is_bad = True
-            if i == 1 and t_stats[i] < 2.0: is_bad = True
-
+            is_bad = (i == 0 and t_stats[i] < 0.000000001) or (i == 1 and t_stats[i] < 2.0)
             sig_item.setBackground(QColor("#FFCCCC") if is_bad else Qt.GlobalColor.white)
 
-        self.apply_correction(coeffs[0], coeffs[1])
-
-        self._update_statistics()
-        self._update_plot()
-
-    def apply_correction(self, k0, k1):
-        self.data_table.setSortingEnabled(False)
-        for row_idx, rec in enumerate(self.raw_buffer):
+        k0, k1 = coeffs[0], coeffs[1]
+        for rec in self.raw_buffer:
             c_chem = rec.get("c_chem", 0)
             c_calc = rec.get("c_calc", 0)
-
             c_corr = k0 + k1 * c_calc
             rec['c_corr'] = c_corr
-
             dc = c_corr - c_chem
-            ddc = abs(dc) / c_chem if c_chem != 0 else 0
+            rec['dc'] = dc
+            rec['ddc'] = abs(dc) / c_chem if c_chem != 0 else 0
 
-            is_active = rec.get('is_active', True)
-            bg_color = QColor("#ffffff") if is_active else QColor("#ffcccc")
+        self._update_statistics()
+        self._rebuild_tables_ui()
+        self._update_plot()
 
-            def set_cell(col, text):
-                item = NumericItem(text)
-                item.setBackground(bg_color)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                pr_val = str(rec.get("pr_nmb", ""))
-                dt_val = rec.get("meas_dt", "")
-                for ui_row in range(self.data_table.rowCount()):
-                    if self.data_table.item(ui_row, 0).text() == pr_val and self.data_table.item(ui_row,
-                                                                                                 1).text() == dt_val:
-                        self.data_table.setItem(ui_row, col, item)
-                        break
+    def _rebuild_tables_ui(self):
+        for t in [self.table_active, self.table_excluded]:
+            t.blockSignals(True)
+            t.setUpdatesEnabled(False)
+            t.setSortingEnabled(False)
+            t.setRowCount(0)
 
-            set_cell(4, f"{c_corr:.3f}")
-            set_cell(5, f"{dc:.3f}")
-            set_cell(6, f"{ddc * 100:.2f}%")
+        active_count = sum(1 for r in self.raw_buffer if r['is_active'])
+        excl_count = len(self.raw_buffer) - active_count
+        self.table_active.setRowCount(active_count)
+        self.table_excluded.setRowCount(excl_count)
+        self.tabs.setTabText(0, f"Рабочая выборка ({active_count})")
+        self.tabs.setTabText(1, f"Исключенные строки ({excl_count})")
 
-        self.data_table.setSortingEnabled(True)
+        act_idx, exc_idx = 0, 0
+        for buf_idx, rec in enumerate(self.raw_buffer):
+            is_act = rec['is_active']
+            t_widget = self.table_active if is_act else self.table_excluded
+            row_idx = act_idx if is_act else exc_idx
+
+            item_pr = QTableWidgetItem(str(rec.get("pr_nmb", "")))
+            item_pr.setData(Qt.UserRole, buf_idx)
+            item_pr.setFlags(item_pr.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            t_widget.setItem(row_idx, 0, item_pr)
+
+            t_widget.setItem(row_idx, 1, self._create_readonly_item(rec.get("timestamp_str", "")))
+            t_widget.setItem(row_idx, 2, self._create_readonly_item(fmt_num(rec.get("c_calc", 0)), True))
+            t_widget.setItem(row_idx, 3, self._create_readonly_item(fmt_num(rec.get("c_chem", 0)), True))
+            t_widget.setItem(row_idx, 4, self._create_readonly_item(fmt_num(rec.get("c_corr", 0)), True))
+            t_widget.setItem(row_idx, 5, self._create_readonly_item(fmt_num(rec.get("dc", 0)), True))
+            t_widget.setItem(row_idx, 6, self._create_readonly_item(f"{rec.get('ddc', 0) * 100:.2f}%", True))
+
+            if is_act:
+                act_idx += 1
+            else:
+                exc_idx += 1
+
+        for t in [self.table_active, self.table_excluded]:
+            t.setSortingEnabled(True)
+            t.setUpdatesEnabled(True)
+            t.blockSignals(False)
 
     def _update_statistics(self):
-        c_chem_list = []
-        c_calc_list = []
-        c_corr_list = []
-
+        c_chem_list, c_calc_list, c_corr_list = [], [], []
         for rec in self.raw_buffer:
             if rec.get('is_active', True):
                 c_chem_list.append(rec.get("c_chem", 0))
@@ -436,15 +399,12 @@ class CorrectionPage(QWidget):
                 c_corr_list.append(rec.get("c_corr", 0))
 
         if not c_chem_list: return
-
         before_stats = self._calc_stats(c_chem_list, c_calc_list)
         after_stats = self._calc_stats(c_chem_list, c_corr_list)
 
         for row in range(3):
-            val_before = before_stats[row]
-            val_after = after_stats[row]
+            val_before, val_after = before_stats[row], after_stats[row]
             val_delta = val_before - val_after
-
             if row == 1:
                 self.stats_table.item(row, 1).setText(f"{val_before * 100:.2f}%")
                 self.stats_table.item(row, 2).setText(f"{val_after * 100:.2f}%")
@@ -459,49 +419,31 @@ class CorrectionPage(QWidget):
                 self.stats_table.item(row, 3).setText(f"{val_delta:.2f}")
 
     def _calc_stats(self, c_chem, c_pred):
-        y_true = np.array(c_chem)
-        y_pred = np.array(c_pred)
-
+        y_true, y_pred = np.array(c_chem), np.array(c_pred)
         dc = y_pred - y_true
         stdev_dc = np.std(dc, ddof=1) if len(dc) > 1 else 0.0
-
         max_val, min_val = np.max(y_true), np.min(y_true)
         rel_stdev = (stdev_dc * 2) / (max_val + min_val) if (max_val + min_val) != 0 else 0
-
         sum_xy = np.sum((y_true - np.mean(y_true)) * (y_pred - np.mean(y_pred)))
-        sum_x2 = np.sum((y_true - np.mean(y_true)) ** 2)
-        sum_y2 = np.sum((y_pred - np.mean(y_pred)) ** 2)
+        sum_x2, sum_y2 = np.sum((y_true - np.mean(y_true)) ** 2), np.sum((y_pred - np.mean(y_pred)) ** 2)
         r2 = ((sum_xy ** 2) / sum_x2) / sum_y2 if (sum_x2 != 0 and sum_y2 != 0) else 0
-
         return [stdev_dc, rel_stdev, r2]
 
     def _update_plot(self):
         try:
             self.ax.clear()
-            cx_act, cy_act = [], []
-            cx_exc, cy_exc = [], []
-
-            for row in range(self.data_table.rowCount()):
-                chem_item = self.data_table.item(row, 3)  # C_хим у нас в колонке 3
-                calc_item = self.data_table.item(row, 4)  # C_корр у нас в колонке 4
-
-                if chem_item and calc_item and chem_item.text() and calc_item.text():
-                    try:
-                        cv = float(calc_item.text())  # По оси X у нас C_corr
-                        ca = float(chem_item.text())  # По оси Y у нас C_chem
-                        if chem_item.background().color().name() != "#ffcccc":
-                            cx_act.append(cv)
-                            cy_act.append(ca)
-                        else:
-                            cx_exc.append(cv)
-                            cy_exc.append(ca)
-                    except ValueError:
-                        pass
+            cx_act, cy_act, cx_exc, cy_exc = [], [], [], []
+            for rec in self.raw_buffer:
+                ca, cv = rec.get("c_chem"), rec.get("c_corr")
+                if ca is not None and cv is not None:
+                    if rec.get('is_active', True):
+                        cx_act.append(cv); cy_act.append(ca)
+                    else:
+                        cx_exc.append(cv); cy_exc.append(ca)
 
             if cx_act and cy_act:
                 self.ax.scatter(cx_act, cy_act, alpha=0.6, color='tab:blue', label='Участвуют')
-                min_v = min(min(cx_act), min(cy_act))
-                max_v = max(max(cx_act), max(cy_act))
+                min_v, max_v = min(min(cx_act), min(cy_act)), max(max(cx_act), max(cy_act))
                 self.ax.plot([min_v, max_v], [min_v, max_v], 'r--', label='Идеал', alpha=0.7)
 
             if cx_exc and cy_exc:
@@ -513,14 +455,13 @@ class CorrectionPage(QWidget):
                 self.ax.set_title("График зависимости C_хим от C_корр")
                 self.ax.legend()
                 self.ax.grid(True, alpha=0.3)
-
             self.canvas.draw()
         except Exception as e:
             print(f"Ошибка в _update_plot: {e}")
 
     def save_correction(self):
         try:
-            if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
+            if not self.raw_buffer:
                 QMessageBox.warning(self, "Внимание", "Нет данных для сохранения. Сначала загрузите выборку.")
                 return
 
@@ -533,26 +474,20 @@ class CorrectionPage(QWidget):
 
             el_nmb = self.combo_element.currentData()
             mdl_nmb_current = self.combo_model.currentIndex() + 1
-
             default_pr_nmb = 1
+
             sample_path = get_config_path() / "sample" / "s_regress.json"
             if sample_path.exists():
-                try:
-                    with open(sample_path, "r", encoding="utf-8") as f:
-                        sample_config = json.load(f)
-                        if sample_config:
-                            default_pr_nmb = sample_config[0].get("product_id", 1)
-                except Exception:
-                    pass
+                with open(sample_path, "r", encoding="utf-8") as f:
+                    sample_config = json.load(f)
+                    if sample_config: default_pr_nmb = sample_config[0].get("product_id", 1)
 
-            # ЗАЩИТА: Если продукт -1, то сохранять в базу некорректно
             if default_pr_nmb <= 0:
                 QMessageBox.warning(self, "Ошибка", "Нельзя сохранить корректировку для 'Нет продукта'.")
                 return
 
             dialog = SaveCorrectionDialog(default_pr=default_pr_nmb, default_mdl=mdl_nmb_current, parent=self)
-            if not dialog.exec():
-                return
+            if not dialog.exec(): return
 
             try:
                 target_products, target_models = dialog.get_data()
@@ -561,28 +496,21 @@ class CorrectionPage(QWidget):
                 return
 
             updated_count = 0
-
             for pr_nmb in target_products:
                 for mdl_nmb in target_models:
                     row = self.db.fetch_one(
                         "SELECT meas_type FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
-                        [pr_nmb, el_nmb, mdl_nmb]
-                    )
-
+                        [pr_nmb, el_nmb, mdl_nmb])
                     if row:
-                        local_meas_type = row["meas_type"]
-                        prefix = "k_i_klin" if local_meas_type == 0 else "k_c_klin"
-                        col_k0 = f"{prefix}00"
-                        col_k1 = f"{prefix}01"
-
-                        query = f"UPDATE el_set SET {col_k0} = ?, {col_k1} = ? WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?"
-                        self.db.execute(query, [k0, k1, pr_nmb, el_nmb, mdl_nmb])
+                        prefix = "k_i_klin" if row["meas_type"] == 0 else "k_c_klin"
+                        self.db.execute(
+                            f"UPDATE el_set SET {prefix}00 = ?, {prefix}01 = ? WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
+                            [k0, k1, pr_nmb, el_nmb, mdl_nmb])
                         updated_count += 1
 
             if updated_count > 0:
                 QMessageBox.information(self, "Успех",
-                                        f"Коэффициенты K0 и K1 успешно сохранены!\n"
-                                        f"Обновлено записей в базе: {updated_count}")
+                                        f"Коэффициенты K0 и K1 успешно сохранены!\nОбновлено записей в базе: {updated_count}")
             else:
                 QMessageBox.warning(self, "Внимание",
                                     "Не найдено записей в таблице el_set для выбранных продуктов и моделей.")
@@ -598,33 +526,23 @@ class SaveCorrectionDialog(QDialog):
         self.setWindowTitle("Сохранение коэффициентов K0, K1")
         self.setModal(True)
         self.resize(350, 150)
-
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
-
         self.products_edit = QLineEdit(str(default_pr))
-        self.products_edit.setPlaceholderText("Например: 1, 2, 4-6")
-
         self.models_edit = QLineEdit(str(default_mdl))
-        self.models_edit.setPlaceholderText("Например: 1, 2")
-
         form_layout.addRow("Продукты:", self.products_edit)
         form_layout.addRow("Модели:", self.models_edit)
         layout.addLayout(form_layout)
-
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        self.button_box.button(QDialogButtonBox.Ok).setText("Сохранить")
-        self.button_box.button(QDialogButtonBox.Cancel).setText("Отмена")
         layout.addWidget(self.button_box)
 
     def get_data(self):
         try:
             def parse_numbers(text):
                 numbers = set()
-                parts = text.replace(' ', '').split(',')
-                for part in parts:
+                for part in text.replace(' ', '').split(','):
                     if not part: continue
                     if '-' in part:
                         start, end = map(int, part.split('-'))
@@ -634,14 +552,9 @@ class SaveCorrectionDialog(QDialog):
                         numbers.add(int(part))
                 return sorted(list(numbers))
 
-            pr_list = parse_numbers(self.products_edit.text())
-            # ЗАЩИТА:
-            if any(p <= 0 for p in pr_list):
-                raise ValueError("Номера продуктов должны быть положительными (больше 0).")
-            mdl_list = parse_numbers(self.models_edit.text())
-
-            if not pr_list or not mdl_list:
-                raise ValueError("Поля продуктов и моделей не могут быть пустыми.")
+            pr_list, mdl_list = parse_numbers(self.products_edit.text()), parse_numbers(self.models_edit.text())
+            if any(p <= 0 for p in pr_list): raise ValueError("Номера продуктов должны быть > 0.")
+            if not pr_list or not mdl_list: raise ValueError("Поля продуктов и моделей не могут быть пустыми.")
             return pr_list, mdl_list
         except Exception:
             raise ValueError("Некорректный формат ввода.\nИспользуйте только числа, запятые и тире.")
