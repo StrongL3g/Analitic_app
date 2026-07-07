@@ -415,11 +415,12 @@ class RecalcPage(QWidget):
             chem_col = f"c_chem_{el_nmb:02d}"
             cols.append(chem_col)
 
+            # Изменили mdl_nmb = ? на active_model = 1 для соответствия структуре PR_MEAS
             query = f"""
                 SELECT {', '.join(cols)}
                 FROM PR_MEAS
                 WHERE timestamp BETWEEN ? AND ?
-                AND pr_nmb = ? AND {chem_col} <> 0 AND mdl_nmb = ?
+                AND pr_nmb = ? AND {chem_col} <> 0 AND active_model = 1
             """
             meas_index = self.combo_meas_type.currentIndex()
             if meas_index == 1:
@@ -429,7 +430,7 @@ class RecalcPage(QWidget):
             query += " ORDER BY timestamp DESC"
 
             try:
-                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb, mdl_nmb])
+                rows = self.db.fetch_all(query, [start_dt, end_dt, pr_nmb])
                 for r in rows:
                     r['is_active'] = True
                     ts = r.get("timestamp")
@@ -437,25 +438,26 @@ class RecalcPage(QWidget):
                     r['raw_db_row'] = r
                 all_rows.extend(rows)
             except Exception as e:
-                print(f"Ошибка запроса: {e}")
+                print(f"Ошибка запроса выборки в свободном пересчете: {e}")
         return all_rows
 
-    def perform_recalc(self):
-        if not hasattr(self, 'raw_buffer') or not self.raw_buffer: return
+    def perform_recalc(self, *args):  # <--- Добавили *args, чтобы принимать любые сигналы от Qt
+        if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
+            return
         try:
             coeffs = []
             for i in range(11):
                 try:
                     coeffs.append(float(self.coeff_table.item(i, 2).text().replace(',', '.')))
-                except:
+                except ValueError:
                     coeffs.append(0.0)
             try:
                 k0 = float(self.coeff_table.item(11, 2).text().replace(',', '.'))
-            except:
+            except ValueError:
                 k0 = 0.0
             try:
                 k1 = float(self.coeff_table.item(12, 2).text().replace(',', '.'))
-            except:
+            except ValueError:
                 k1 = 1.0
 
             self._is_updating_ui = True
@@ -577,19 +579,21 @@ class RecalcPage(QWidget):
         sum_xy = np.sum((x - np.mean(x)) * (y - np.mean(y)))
         sum_x2 = np.sum((x - np.mean(x)) ** 2)
         sum_y2 = np.sum((y - np.mean(y)) ** 2)
-        r2 = ((sum_xy ** 2) / sum_x2) / sum_y2 if (sum_x2 != 0 and sum_y2 != 0) else 0
+
+        # Точная формула R² без потери точностей
+        r2 = (sum_xy ** 2) / (sum_x2 * sum_y2) if (sum_x2 != 0 and sum_y2 != 0) else 0.0
 
         t_calc = (abs(mean_dc) * np.sqrt(m)) / stdev_dc if stdev_dc != 0 else 0
         try:
             import scipy.stats as stats
             t_table = stats.t.ppf(0.975, m - 1)
             has_scipy = True
-        except:
+        except ImportError:
             t_table, has_scipy = 0.0, False
 
         try:
             norm_stdev = float(self.norm_stdev_edit.text().replace(',', '.'))
-        except:
+        except ValueError:
             norm_stdev = 0.0
 
         if norm_stdev > 0:
@@ -597,7 +601,8 @@ class RecalcPage(QWidget):
             if has_scipy:
                 try:
                     f_table = stats.f.ppf(0.95, m, m)
-                except:
+                except Exception as e:
+                    print(f"Ошибка расчета критерия Фишера: {e}")
                     f_table = 0.0
             else:
                 f_table = 0.0

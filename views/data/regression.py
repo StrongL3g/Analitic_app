@@ -6,9 +6,10 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QComboBox, QGroupBox, QSplitter, QMessageBox,
-    QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget
+    QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget, QApplication
 )
 from PySide6.QtGui import QColor, QCursor
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import Qt, QTimer
 from database.db import Database
 import matplotlib.pyplot as plt
@@ -87,6 +88,10 @@ class RegressionPage(QWidget):
         self.btn_load_data = QPushButton("Выгрузка данных")
         self.btn_auto_select = QPushButton("✨ Автоподбор")
         self.btn_auto_select.setStyleSheet("background-color: #f0fdf4; font-weight: bold; border: 1px solid #22c55e;")
+
+        # Добавляем горячую клавишу Ctrl+C для таблицы
+        shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
+        shortcut.activated.connect(self.copy_to_excel)
 
         self.btn_change_selection.clicked.connect(self.open_sample_dialog)
         self.btn_save_equation.clicked.connect(self.save_equation)
@@ -184,6 +189,30 @@ class RegressionPage(QWidget):
         layout.addWidget(main_splitter)
         self.setLayout(layout)
         self.ini_load_elements()
+
+    def copy_to_excel(self):
+        # Определяем, какая вкладка открыта (Рабочая или Исключенные)
+        current_table = self.tabs.currentWidget()
+
+        # Получаем выделенные диапазоны
+        selected_ranges = current_table.selectedRanges()
+        if not selected_ranges:
+            return
+
+        text = ""
+        # Проходим по строкам выделенного диапазона
+        for r in range(selected_ranges[0].topRow(), selected_ranges[0].bottomRow() + 1):
+            row_data = []
+            # Проходим по столбцам
+            for c in range(selected_ranges[0].leftColumn(), selected_ranges[0].rightColumn() + 1):
+                item = current_table.item(r, c)
+                row_data.append(item.text() if item else "")
+            # Соединяем ячейки через знак табуляции (Excel это понимает как столбцы)
+            text += "\t".join(row_data) + "\n"
+
+        # Кладем в буфер обмена
+        QApplication.clipboard().setText(text)
+        self.statusBar().showMessage("Данные скопированы в буфер обмена", 2000) if hasattr(self, 'statusBar') else None
 
     def create_data_table(self):
         table = QTableWidget()
@@ -407,21 +436,33 @@ class RegressionPage(QWidget):
             if len(active_cols) > 0:
                 X_reduced = X_mat[:, active_cols]
                 try:
-                    dof = max(len(y_vec) - X_reduced.shape[1], 1)
-                    XTX_pinv = np.linalg.pinv(X_reduced.T @ X_reduced)
-                    c_reduced = XTX_pinv @ X_reduced.T @ y_vec
-                    y_pred = X_reduced @ c_reduced
-                    mse = np.sum((y_vec - y_pred) ** 2) / dof
-                    std_errs = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
+                    dof = len(y_vec) - X_reduced.shape[1]
 
+                    # 1. Получаем псевдообратную матрицу напрямую для стабильности
+                    pinv_X = np.linalg.pinv(X_reduced)
+
+                    # 2. Считаем коэффициенты (это эквивалентно lstsq, но дает нам pinv_X для ошибок)
+                    c_reduced = pinv_X @ y_vec
+
+                    # 3. Считаем предсказания и среднеквадратичную ошибку (MSE)
+                    y_pred = X_reduced @ c_reduced
+                    mse = np.sum((y_vec - y_pred) ** 2) / max(dof, 1)
+
+                    # 4. Считаем ковариационную матрицу стабильным способом: pinv(X) @ pinv(X).T
+                    # Это полностью заменяет нестабильный pinv(X.T @ X)
+                    cov_matrix = (pinv_X @ pinv_X.T) * mse
+                    std_errs = np.sqrt(np.maximum(np.diag(cov_matrix), 0.0))
+
+                    # 5. Вычисляем t-статистику (только если есть степени свободы и ошибка > 0)
                     with np.errstate(divide='ignore', invalid='ignore'):
-                        t_reduced = np.where(std_errs != 0, c_reduced / std_errs, 0)
+                        t_reduced = np.where((std_errs > 0) & (dof > 0), c_reduced / std_errs, 0.0)
 
                     for idx_reduced, idx_full in enumerate(active_cols):
                         coeffs[idx_full] = c_reduced[idx_reduced]
                         t_stats[idx_full] = np.abs(t_reduced[idx_reduced])
+
                 except Exception as e:
-                    print(f"Ошибка матричного расчета: {e}")
+                    print(f"Ошибка матричного расчета регрессии/значимости: {e}")
 
         for rec in self.raw_buffer:
             c_calc = coeffs[0] + sum(coeffs[i + 1] * rec["features"][i] for i in range(10))
@@ -575,7 +616,8 @@ class RegressionPage(QWidget):
                 else:
                     res = 0.0
                 result.append(res)
-            except:
+            except Exception as e:
+                print(f"Ошибка в расчете: {e}")
                 result.append(0.0)
         return result
 
@@ -681,7 +723,7 @@ class RegressionPage(QWidget):
                     significance_item.setText("-")
                     significance_item.setBackground(Qt.GlobalColor.white)
                 else:
-                    significance_item.setText(f"{t_stat:.2f}")
+                    significance_item.setText(f"{t_stat:.4f}")
                     if t_stat >= 3.0:
                         significance_item.setBackground(Qt.GlobalColor.white)
                     elif t_stat >= 1.0:
@@ -715,7 +757,7 @@ class RegressionPage(QWidget):
         sum_xy = np.sum((x - np.mean(x)) * (y - np.mean(y)))
         sum_x2 = np.sum((x - np.mean(x)) ** 2)
         sum_y2 = np.sum((y - np.mean(y)) ** 2)
-        arrParam[6] = ((sum_xy ** 2) / sum_x2) / sum_y2 if (sum_x2 != 0 and sum_y2 != 0) else 0
+        arrParam[6] = (sum_xy ** 2) / (sum_x2 * sum_y2) if (sum_x2 != 0 and sum_y2 != 0) else 0
 
         formats = [
             f"{arrParam[1]:.4f}", f"{arrParam[2] * 100:.2f}%", f"{arrParam[3]:.2f}",
@@ -770,7 +812,8 @@ class RegressionPage(QWidget):
             meas_type = self.current_meas_type
 
             dialog = SaveEquationDialog(default_pr=default_pr_nmb, default_mdl="1", parent=self)
-            if not dialog.exec(): return
+            if not dialog.exec():
+                return
 
             try:
                 target_products, target_models = dialog.get_data()
@@ -783,7 +826,8 @@ class RegressionPage(QWidget):
                 item = self.coeff_table.item(i, 2)
                 try:
                     coeffs.append(float(item.text().replace(',', '.')) if item and item.text() else 0.0)
-                except:
+                except Exception as e:
+                    print(f"Ошибка парсинга коэффициента A{i}: {e}")
                     coeffs.append(0.0)
 
             terms = []
@@ -816,21 +860,33 @@ class RegressionPage(QWidget):
 
             update_fields = [f"{prefix_k}00 = ?"]
             for i in range(1, 11):
-                update_fields.extend([f"{prefix_k}{i:02d} = ?", f"operand_{prefix_op}_01_{i:02d} = ?",
-                                      f"operand_{prefix_op}_02_{i:02d} = ?", f"operator_{prefix_op}_{i:02d} = ?"])
+                update_fields.extend([
+                    f"{prefix_k}{i:02d} = ?",
+                    f"operand_{prefix_op}_01_{i:02d} = ?",
+                    f"operand_{prefix_op}_02_{i:02d} = ?",
+                    f"operator_{prefix_op}_{i:02d} = ?"
+                ])
 
+            # Формируем пакет параметров для executemany
+            params_list = []
             for pr_nmb in target_products:
                 for mdl_nmb in target_models:
                     params = [coeffs[0]]
-                    for i in range(1, 11): params.extend([coeffs[i], terms[i - 1][0], terms[i - 1][1], terms[i - 1][2]])
+                    for i in range(1, 11):
+                        params.extend([coeffs[i], terms[i - 1][0], terms[i - 1][1], terms[i - 1][2]])
                     params.extend([pr_nmb, el_nmb, mdl_nmb])
-                    self.db.execute(
-                        f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
-                        params)
+                    params_list.append(params)
 
-            QMessageBox.information(self, "Успех",
-                                    f"Уравнение (до 10 членов) успешно сохранено!\nОбновлено продуктов: {len(target_products)}\nОбновлено моделей: {len(target_models)}")
+            # Выполняем один пакетный запрос вместо сотен мелких
+            query = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?"
+            self.db.executemany(query, params_list)
+
+            QMessageBox.information(
+                self, "Успех",
+                f"Уравнение успешно сохранено пакетом!\nОбновлено продуктов: {len(target_products)}\nОбновлено моделей: {len(target_models)}"
+            )
         except Exception as e:
+            print(f"Критическая ошибка в save_equation: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить уравнение:\n{e}")
 
 

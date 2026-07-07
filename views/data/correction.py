@@ -317,13 +317,20 @@ class CorrectionPage(QWidget):
         if len(c_calc_active) > 1:
             X = np.vstack([np.ones(len(c_calc_active)), c_calc_active]).T
             y = np.array(c_chem_active)
-            XTX_pinv = np.linalg.pinv(X.T @ X)
-            coeffs = XTX_pinv @ X.T @ y
+            dof = max(len(y) - 2, 1)
+
+            # Стабильный расчет
+            pinv_X = np.linalg.pinv(X)
+            coeffs = pinv_X @ y
             y_pred = X @ coeffs
-            mse = np.sum((y - y_pred) ** 2) / max(len(y) - 2, 1)
-            std_errs = np.sqrt(np.abs(np.diag(XTX_pinv)) * mse)
+            mse = np.sum((y - y_pred) ** 2) / dof
+
+            # Ковариационная матрица для значимости
+            cov_matrix = (pinv_X @ pinv_X.T) * mse
+            std_errs = np.sqrt(np.maximum(np.diag(cov_matrix), 0.0))
+
             with np.errstate(divide='ignore', invalid='ignore'):
-                t_stats = np.where(std_errs != 0, np.abs(coeffs / std_errs), 0)
+                t_stats = np.where((std_errs > 0), np.abs(coeffs / std_errs), 0.0)
         else:
             coeffs, t_stats = [0.0, 1.0], [0.0, 0.0]
 
@@ -426,7 +433,7 @@ class CorrectionPage(QWidget):
         rel_stdev = (stdev_dc * 2) / (max_val + min_val) if (max_val + min_val) != 0 else 0
         sum_xy = np.sum((y_true - np.mean(y_true)) * (y_pred - np.mean(y_pred)))
         sum_x2, sum_y2 = np.sum((y_true - np.mean(y_true)) ** 2), np.sum((y_pred - np.mean(y_pred)) ** 2)
-        r2 = ((sum_xy ** 2) / sum_x2) / sum_y2 if (sum_x2 != 0 and sum_y2 != 0) else 0
+        r2 = (sum_xy ** 2) / (sum_x2 * sum_y2) if (sum_x2 != 0 and sum_y2 != 0) else 0
         return [stdev_dc, rel_stdev, r2]
 
     def _update_plot(self):

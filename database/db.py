@@ -100,3 +100,17 @@ class Database:
             except Exception as e:
                 conn.rollback()
                 raise Exception(f"Ошибка выполнения запроса: {e}")
+
+    def executemany(self, query, params_list):
+        """Выполняет один запрос для списка параметров (пакетное выполнение)"""
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            prepared_query, _ = self._prepare_query_and_params(query, None)
+            try:
+                # cursor.executemany принимает запрос и список кортежей с параметрами
+                cursor.executemany(prepared_query, params_list)
+                conn.commit()
+                return cursor.rowcount
+            except Exception as e:
+                conn.rollback()
+                raise Exception(f"Ошибка пакетного выполнения запроса: {e}")
