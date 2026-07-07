@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QComboBox, QGroupBox, QSplitter, QMessageBox,
-    QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget, QApplication
+    QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget, QApplication,
+    QFileDialog
 )
 from PySide6.QtGui import QColor, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -84,24 +85,39 @@ class RegressionPage(QWidget):
 
         btn_layout = QHBoxLayout()
         self.btn_change_selection = QPushButton("Изменить выборку")
-        self.btn_save_equation = QPushButton("Сохранить уравнение")
         self.btn_load_data = QPushButton("Выгрузка данных")
+
+        # --- НОВЫЕ КНОПКИ ---
+        self.btn_import_prog = QPushButton("📂 Импорт программы")
+        self.btn_export_prog = QPushButton("💾 Экспорт программы")
+        # --------------------
+
         self.btn_auto_select = QPushButton("✨ Автоподбор")
         self.btn_auto_select.setStyleSheet("background-color: #f0fdf4; font-weight: bold; border: 1px solid #22c55e;")
+        self.btn_save_equation = QPushButton("Сохранить уравнение")
 
         # Добавляем горячую клавишу Ctrl+C для таблицы
         shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
         shortcut.activated.connect(self.copy_to_excel)
 
         self.btn_change_selection.clicked.connect(self.open_sample_dialog)
-        self.btn_save_equation.clicked.connect(self.save_equation)
         self.btn_load_data.clicked.connect(self.load_data)
-        self.btn_auto_select.clicked.connect(self.auto_select_terms)
 
+        # --- ПРИВЯЗКА СИГНАЛОВ ---
+        self.btn_import_prog.clicked.connect(self.import_program)
+        self.btn_export_prog.clicked.connect(self.export_program)
+        # -------------------------
+
+        self.btn_auto_select.clicked.connect(self.auto_select_terms)
+        self.btn_save_equation.clicked.connect(self.save_equation)
+
+        # Выстраиваем кнопки в ряд
         btn_layout.addWidget(self.btn_change_selection)
+        btn_layout.addWidget(self.btn_load_data)
+        btn_layout.addWidget(self.btn_import_prog)
+        btn_layout.addWidget(self.btn_export_prog)
         btn_layout.addWidget(self.btn_auto_select)
         btn_layout.addWidget(self.btn_save_equation)
-        btn_layout.addWidget(self.btn_load_data)
         btn_layout.addStretch()
         left_top_layout.addLayout(btn_layout)
 
@@ -797,6 +813,79 @@ class RegressionPage(QWidget):
             self.canvas.draw()
         except Exception as e:
             print(f"Ошибка в _update_plot: {e}")
+
+    def export_program(self):
+        """Сохраняет текущее состояние (буфер, выбросы, выбранные члены) в JSON файл"""
+        if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
+            QMessageBox.warning(self, "Внимание", "Нет данных для экспорта.")
+            return
+
+        filename, _ = QFileDialog.getSaveFileName(self, "Экспорт аналитической программы", "", "JSON Files (*.json)")
+        if not filename:
+            return
+
+        try:
+            # Собираем все текущие параметры рабочего пространства
+            data = {
+                "el_nmb": self.combo_element.currentData(),
+                "meas_type_idx": self.combo_meas_type.currentIndex(),
+                "current_meas_type": self.current_meas_type,
+                "terms": [combo.currentText() for combo in self.combo_equation_terms],
+                "raw_buffer": self.raw_buffer
+            }
+
+            # default=str спасает от ошибок сериализации (например, даты (datetime) и Decimals из БД станут строками)
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4, default=str)
+
+            QMessageBox.information(self, "Успех", "Аналитическая программа успешно экспортирована!")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось экспортировать программу:\n{e}")
+
+    def import_program(self):
+        """Загружает сохраненное состояние из JSON файла"""
+        filename, _ = QFileDialog.getOpenFileName(self, "Импорт аналитической программы", "", "JSON Files (*.json)")
+        if not filename:
+            return
+
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 1. Восстанавливаем элемент (без триггера загрузки из БД)
+            self.combo_element.blockSignals(True)
+            idx = self.combo_element.findData(data.get("el_nmb"))
+            if idx >= 0:
+                self.combo_element.setCurrentIndex(idx)
+            self.combo_element.blockSignals(False)
+
+            # 2. Восстанавливаем тип пробы
+            self.combo_meas_type.blockSignals(True)
+            self.combo_meas_type.setCurrentIndex(data.get("meas_type_idx", 0))
+            self.combo_meas_type.blockSignals(False)
+
+            # 3. Восстанавливаем внутренние переменные и подтягиваем списки комбобоксов
+            self.current_meas_type = data.get("current_meas_type", 0)
+            self._load_equation_terms(self.current_meas_type, data.get("el_nmb"))
+
+            # 4. Восстанавливаем выбранные члены уравнения
+            saved_terms = data.get("terms", [])
+            for i, combo in enumerate(self.combo_equation_terms):
+                combo.blockSignals(True)
+                if i < len(saved_terms):
+                    t_idx = combo.findText(saved_terms[i])
+                    combo.setCurrentIndex(t_idx if t_idx >= 0 else 0)
+                else:
+                    combo.setCurrentIndex(0)
+                combo.blockSignals(False)
+
+            # 5. Восстанавливаем выборку и пересчитываем математику
+            self.raw_buffer = data.get("raw_buffer", [])
+            self.recalculate_all()
+
+            QMessageBox.information(self, "Успех", "Аналитическая программа успешно импортирована!")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось импортировать программу:\n{e}")
 
     def save_equation(self):
         try:
