@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QComboBox, QGroupBox, QSplitter, QMessageBox,
     QDialog, QDialogButtonBox, QLineEdit, QFormLayout, QTabWidget, QApplication,
-    QFileDialog
+    QFileDialog, QHeaderView
 )
 from PySide6.QtGui import QColor, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -111,15 +111,22 @@ class RegressionPage(QWidget):
         self.btn_auto_select.clicked.connect(self.auto_select_terms)
         self.btn_save_equation.clicked.connect(self.save_equation)
 
-        # Выстраиваем кнопки в ряд
-        btn_layout.addWidget(self.btn_change_selection)
-        btn_layout.addWidget(self.btn_load_data)
-        btn_layout.addWidget(self.btn_import_prog)
-        btn_layout.addWidget(self.btn_export_prog)
-        btn_layout.addWidget(self.btn_auto_select)
-        btn_layout.addWidget(self.btn_save_equation)
-        btn_layout.addStretch()
-        left_top_layout.addLayout(btn_layout)
+        # Выстраиваем кнопки в ДВА ряда
+        btn_layout_row1 = QHBoxLayout()
+        btn_layout_row1.addWidget(self.btn_change_selection)
+        btn_layout_row1.addWidget(self.btn_load_data)
+        btn_layout_row1.addWidget(self.btn_save_equation)
+        btn_layout_row1.addStretch()
+
+        btn_layout_row2 = QHBoxLayout()
+        btn_layout_row2.addWidget(self.btn_import_prog)
+        btn_layout_row2.addWidget(self.btn_export_prog)
+        btn_layout_row2.addWidget(self.btn_auto_select)
+        btn_layout_row2.addStretch()
+
+        # Добавляем оба ряда на панель
+        left_top_layout.addLayout(btn_layout_row1)
+        left_top_layout.addLayout(btn_layout_row2)
 
         left_top_layout.addWidget(QLabel("Сводная таблица коэффициентов:"))
         self.coeff_table = QTableWidget(11, 4)
@@ -132,7 +139,7 @@ class RegressionPage(QWidget):
                     item.setBackground(Qt.GlobalColor.lightGray)
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.coeff_table.setItem(row, col, item)
-        left_top_layout.addWidget(self.coeff_table)
+        left_top_layout.addWidget(self.coeff_table, 4)
 
         left_top_layout.addWidget(QLabel("Характеристики уравнения:"))
         self.stats_table = QTableWidget(6, 2)
@@ -144,7 +151,7 @@ class RegressionPage(QWidget):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.stats_table.setItem(row, 0, item)
             self.stats_table.setItem(row, 1, QTableWidgetItem("0.0"))
-        left_top_layout.addWidget(self.stats_table)
+        left_top_layout.addWidget(self.stats_table, 5)
         left_top_group.setLayout(left_top_layout)
 
         right_top_group = QGroupBox("График зависимости C_хим от C_расч")
@@ -155,8 +162,8 @@ class RegressionPage(QWidget):
         right_top_layout.addWidget(self.canvas)
         right_top_group.setLayout(right_top_layout)
 
-        top_layout.addWidget(left_top_group, 45)
-        top_layout.addWidget(right_top_group, 55)
+        top_layout.addWidget(left_top_group, 30)
+        top_layout.addWidget(right_top_group, 70)
         top_widget.setLayout(top_layout)
 
         bottom_widget = QWidget()
@@ -175,14 +182,35 @@ class RegressionPage(QWidget):
 
         terms_group = QGroupBox("Члены уравнения (A1 - A10)")
         terms_layout = QGridLayout()
+        # Задаем красивое расстояние между соседними парами (между А1 и А2)
+        terms_layout.setHorizontalSpacing(80)  # Увеличили горизонтальный отступ
+        terms_layout.setVerticalSpacing(20)
+
         self.combo_equation_terms = []
         for i in range(10):
             combo = QComboBox()
             combo.setMinimumWidth(120)
             self.combo_equation_terms.append(combo)
-            terms_layout.addWidget(QLabel(f"A{i + 1}:"), i // 5, (i % 5) * 2)
-            terms_layout.addWidget(combo, i // 5, (i % 5) * 2 + 1)
-        terms_group.setLayout(terms_layout)
+
+            # Создаем мини-контейнер для жесткой связки "Метка + Комбобокс"
+            pair_layout = QHBoxLayout()
+            pair_layout.setSpacing(10)  # Делаем отступ между 'A1:' и комбобоксом ровно 5 пикселей
+
+            label = QLabel(f"A{i + 1}:")
+            label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)  # Прижимаем текст к комбобоксу
+
+            pair_layout.addWidget(label)
+            pair_layout.addWidget(combo)
+
+            # Кладем готовую пару в ячейку сетки (2 строки, 5 столбцов)
+            terms_layout.addLayout(pair_layout, i // 5, i % 5)
+
+        center_layout = QHBoxLayout()
+        center_layout.addStretch()  # Пружина, которая давит слева
+        center_layout.addLayout(terms_layout)  # Наша ровная сетка с комбобоксами
+        center_layout.addStretch()
+
+        terms_group.setLayout(center_layout)
         bottom_layout.addWidget(terms_group)
 
         bottom_layout.addWidget(QLabel("Таблицы выборки (Двойной клик исключает/возвращает строку):"))
@@ -238,6 +266,19 @@ class RegressionPage(QWidget):
             "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10",
             "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"
         ])
+
+        # --- НАСТРОЙКА ШИРИНЫ СТОЛБЦОВ ---
+        table.setColumnWidth(0, 55)  # Продукт - сильно сужаем
+        table.setColumnWidth(1, 130)  # Время (ts) - расширяем, чтобы ровно влезала дата и время
+
+        # Столбцы с 3 по 16 (члены уравнения А1-А10 и результаты) - делаем компактными
+        for i in range(3, 17):
+            table.setColumnWidth(i, 90)
+
+        # Столбец 2 ("Название пробы") заставляем растягиваться и занимать всё оставшееся свободное место
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        # ---------------------------------
+
         table.setSortingEnabled(True)
         table.setSelectionBehavior(QTableWidget.SelectRows)
         return table
