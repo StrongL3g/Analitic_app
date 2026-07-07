@@ -205,7 +205,7 @@ class EquationsPage(QWidget):
             self.water_crit_edit, self.empty_crit_edit, self.c_min_edit, self.c_max_edit,
             self.k0_edit, self.k1_edit
         ]
-        for i in range(6):
+        for i in range(11):
             all_fields.append(self.equation_members[i].coeff_edit)
 
         for field in all_fields:
@@ -230,8 +230,8 @@ class EquationsPage(QWidget):
             (self.k1_edit, "k1")
         ]
 
-        # Добавляем коэффициенты A0-A5
-        for i in range(6):
+        # Добавляем коэффициенты A0-A10
+        for i in range(11):
             fields_to_check.append((self.equation_members[i].coeff_edit, f"A{i}"))
 
         # Проверяем каждое поле
@@ -414,18 +414,24 @@ class EquationsPage(QWidget):
         corr_group.setLayout(corr_layout)
         layout.addWidget(corr_group)
 
-        # Члены уравнения (A0-A5)
+        # Члены уравнения (A0-A10)
         members_group = QGroupBox("Члены уравнения")
         members_layout = QVBoxLayout()
         self.equation_members = []
 
-        for i in range(6):  # A0-A5
+        for i in range(11):  # A0-A10
             member_widget = self.create_member_widget(i)
             self.equation_members.append(member_widget)
             members_layout.addWidget(member_widget)
 
         members_group.setLayout(members_layout)
-        layout.addWidget(members_group)
+
+        # Оборачиваем в прокрутку, чтобы интерфейс помещался на экране
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setWidget(members_group)
+        layout.addWidget(scroll)
 
         tab.setLayout(layout)
         return tab
@@ -620,7 +626,7 @@ class EquationsPage(QWidget):
             self.k0_edit.setText(str(self.current_equation_data.get('k_i_klin00', 0)))
             self.k1_edit.setText(str(self.current_equation_data.get('k_i_klin01', 0)))
 
-            for i in range(6):
+            for i in range(11):
                 coeff_value = self.current_equation_data.get(f'k_i_alin{i:02d}', 0)
                 self.equation_members[i].coeff_edit.setText(str(coeff_value))
 
@@ -935,8 +941,8 @@ class EquationsPage(QWidget):
             self._safe_float_convert(self.k1_edit.text())
         ]
 
-        # Члены A0-A5
-        for i in range(6):
+        # Члены A0-A10
+        for i in range(11):
             member = self.equation_members[i]
             params.append(self._safe_float_convert(member.coeff_edit.text()))
             if i > 0 and member.interaction_combo:
@@ -968,16 +974,22 @@ class EquationsPage(QWidget):
                 for mdl_nmb in model_numbers:
                     # 1. Обновление el_set
                     if apply_mode in ["all", "coeffs_only"]:
-                        el_sql = f"""UPDATE el_set SET 
-                            meas_type = ?, c_min = ?, c_max = ?,
-                            k_{p}_klin00 = ?, k_{p}_klin01 = ?, k_{p}_alin00 = ?,
-                            k_{p}_alin01 = ?, operand_{p}_01_01 = ?, operand_{p}_02_01 = ?, operator_{p}_01 = ?,
-                            k_{p}_alin02 = ?, operand_{p}_01_02 = ?, operand_{p}_02_02 = ?, operator_{p}_02 = ?,
-                            k_{p}_alin03 = ?, operand_{p}_01_03 = ?, operand_{p}_02_03 = ?, operator_{p}_03 = ?,
-                            k_{p}_alin04 = ?, operand_{p}_01_04 = ?, operand_{p}_02_04 = ?, operator_{p}_04 = ?,
-                            k_{p}_alin05 = ?, operand_{p}_01_05 = ?, operand_{p}_02_05 = ?, operator_{p}_05 = ?
-                            WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?"""
+                        # Динамически собираем поля для обновления (до A10)
+                        update_fields = [
+                            "meas_type = ?", "c_min = ?", "c_max = ?",
+                            f"k_{p}_klin00 = ?", f"k_{p}_klin01 = ?", f"k_{p}_alin00 = ?"
+                        ]
+                        for i in range(1, 11):
+                            update_fields.extend([
+                                f"k_{p}_alin{i:02d} = ?",
+                                f"operand_{p}_01_{i:02d} = ?",
+                                f"operand_{p}_02_{i:02d} = ?",
+                                f"operator_{p}_{i:02d} = ?"
+                            ])
+
+                        el_sql = f"UPDATE el_set SET {', '.join(update_fields)} WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?"
                         self.db.execute(el_sql, params + [pr_nmb, mdl_nmb, self.current_equation_data.get('el_nmb')])
+
                     elif apply_mode == "type_only":
                         self.db.execute(
                             "UPDATE el_set SET meas_type = ? WHERE pr_nmb = ? AND mdl_nmb = ? AND el_nmb = ?",
@@ -1156,7 +1168,7 @@ class EquationsPage(QWidget):
             self.k1_edit.setText("1")
 
             # Очищаем члены уравнения
-            for i in range(6):
+            for i in range(11):
                 member_widget = self.equation_members[i]
                 member_widget.coeff_edit.setText("0")
 
@@ -1210,7 +1222,7 @@ class EquationsPage(QWidget):
         equation_parts.append(self._format_number(k0))
 
         # Добавляем остальные члены уравнения
-        for i in range(1, 6):  # alin01 to alin05
+        for i in range(1, 11):  # alin01 to alin10
             k_key = f'k_i_alin{i:02d}' if meas_type == 0 else f'k_c_alin{i:02d}'
             k_value = row.get(k_key, 0)
 
@@ -1271,8 +1283,8 @@ class EquationsPage(QWidget):
             self.k0_edit, self.k1_edit
         ]
 
-        # Добавляем коэффициенты A0-A5
-        for i in range(6):
+        # Добавляем коэффициенты A0-A10
+        for i in range(11):
             fields.append(self.equation_members[i].coeff_edit)
 
         for field in fields:
