@@ -40,4 +40,4 @@ jobs:
       with:
         name: AnaliticApp-Windows
         path: dist/
-        retention-days: 30
+        retention-days: 10
