@@ -342,7 +342,7 @@ class RegressionPage(QWidget):
                         "pr_nmb": r.get("pr_nmb", ""),
                         "timestamp_str": dt_str,
                         "sample_name": r.get("sample_name", ""),
-                        "c_chem": float(r.get(chem_col, 0.0)),
+                        "c_chem": float(r.get(chem_col) or 0.0),
                         "is_active": True,
                         "raw_db_row": r,
                         "features": [0.0] * 10,
@@ -607,11 +607,11 @@ class RegressionPage(QWidget):
             try:
                 db_row = rec["raw_db_row"]
                 if meas_type == 0:
-                    val1 = float(db_row.get(f"i_00_{x1:02d}", 0.0))
-                    val2 = float(db_row.get(f"i_00_{x2:02d}", 0.0)) if x2 != 0 else 1.0
+                    val1 = float(db_row.get(f"i_00_{x1:02d}") or 0.0)
+                    val2 = float(db_row.get(f"i_00_{x2:02d}") or 0.0) if x2 != 0 else 1.0
                 else:
-                    val1 = float(db_row.get(f"c_cor_{x1:02d}", 0.0)) if x1 != 0 else 1.0
-                    val2 = float(db_row.get(f"c_cor_{x2:02d}", 0.0)) if x2 != 0 else 1.0
+                    val1 = float(db_row.get(f"c_cor_{x1:02d}") or 0.0) if x1 != 0 else 1.0
+                    val2 = float(db_row.get(f"c_cor_{x2:02d}") or 0.0) if x2 != 0 else 1.0
 
                 if op == 0:
                     res = 0.0

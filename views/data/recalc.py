@@ -706,11 +706,11 @@ class RecalcPage(QWidget):
             try:
                 db_row = rec["raw_db_row"]
                 if meas_type == 0:
-                    val1 = float(db_row.get(f"i_00_{x1:02d}", 0.0))
-                    val2 = float(db_row.get(f"i_00_{x2:02d}", 0.0)) if x2 != 0 else 1.0
+                    val1 = float(db_row.get(f"i_00_{x1:02d}") or 0.0)
+                    val2 = float(db_row.get(f"i_00_{x2:02d}") or 0.0) if x2 != 0 else 1.0
                 else:
-                    val1 = float(db_row.get(f"c_cor_{x1:02d}", 0.0)) if x1 != 0 else 1.0
-                    val2 = float(db_row.get(f"c_cor_{x2:02d}", 0.0)) if x2 != 0 else 1.0
+                    val1 = float(db_row.get(f"c_cor_{x1:02d}") or 0.0) if x1 != 0 else 1.0
+                    val2 = float(db_row.get(f"c_cor_{x2:02d}") or 0.0) if x2 != 0 else 1.0
 
                 if op == 0:
                     res = 0.0
