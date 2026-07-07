@@ -161,6 +161,32 @@ class MainWindow(QMainWindow):
         # Кэш созданных страниц
         self.page_cache = {}
 
+        # ====================================================================
+        # === БЛОК АВТОМАТИЧЕСКОЙ ГЕНЕРАЦИИ JSON ПРИ ЗАПУСКЕ (ПРЕДЗАГРУЗКА) ===
+        # ====================================================================
+        try:
+            # 1. Проверяем наличие связи с БД простым тестовым запросом
+            self.db.fetch_all("SELECT 1")
+
+            # 2. База доступна. Кэшируем страницы. Это автоматически вызовет
+            # их load_data(), который создаст нужные JSON файлы.
+            # ПОРЯДОК СТРОГИЙ:
+            # - lines -> создает lines.json
+            # - elements -> создает elements.json и math_interactions.json
+            # - ranges -> создает range.json и lines_math_interactions.json (зависит от lines.json)
+
+            for key in ["lines", "elements", "ranges"]:
+                if key not in self.page_cache:
+                    page = self.page_classes[key](self.db)
+                    self.page_cache[key] = page
+                    self.stacked_widget.addWidget(page)
+
+            print("Startup: JSON файлы конфигурации успешно проверены/созданы.")
+
+        except Exception as e:
+            print(f"Startup: Отсутствует связь с БД. Пропуск генерации JSON файлов: {e}")
+        # ====================================================================
+
         # Подключение сигналов
         self.tree.itemClicked.connect(self.on_item_clicked)
 
