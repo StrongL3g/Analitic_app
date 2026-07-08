@@ -334,7 +334,7 @@ class BackgroundPage(QWidget):
 
         reply = QMessageBox.question(
             self, 'Внимание!',
-            f"Вы уверены, что хотите сбросить ВСЕ коэффициенты влияния для прибора №{self.current_ac_nmb}?\n(K1 станут 0.0, K2 станут 1.0)\nЭто действие необратимо и сразу применится к базе данных!",
+            f"Вы уверены, что хотите сбросить ВСЕ коэффициенты влияния для прибора №{self.current_ac_nmb}?\n(K1 станут 0.0, K2 станут 0.0)\nЭто действие необратимо и сразу применится к базе данных!",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
 
@@ -345,7 +345,7 @@ class BackgroundPage(QWidget):
                 query_k1 = f"UPDATE SET03 SET {set_clauses_k1} WHERE ac_nmb = ? AND k_nmb = 1"
 
                 # K2 сбрасываем в 1.0
-                set_clauses_k2 = ", ".join([f"ln_{i:02d} = 1.0" for i in range(1, 21)])
+                set_clauses_k2 = ", ".join([f"ln_{i:02d} = 0.0" for i in range(1, 21)])
                 query_k2 = f"UPDATE SET03 SET {set_clauses_k2} WHERE ac_nmb = ? AND k_nmb = 2"
 
                 with self.db.connect() as conn:
