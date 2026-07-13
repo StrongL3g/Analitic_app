@@ -537,7 +537,7 @@ class CompositionPage(QWidget):
         self.check_man.stateChanged.connect(self.load_data)
         self.check_chem = QCheckBox("Наличие химии")
         self.check_chem.stateChanged.connect(self.load_data)
-        self.check_calib = QCheckBox("Только калибровочные")
+        self.check_calib = QCheckBox("Калибровочные пробы")
         self.check_calib.stateChanged.connect(self.load_data)
         self.check_inten = QCheckBox("Интенсивности")
         self.check_inten.setChecked(False)
