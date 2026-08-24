@@ -1,16 +1,13 @@
-# views/settings.py
-import json
 from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit,
     QPushButton, QMessageBox, QGroupBox, QFormLayout, QComboBox,
-    QInputDialog, QColorDialog
+    QColorDialog
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from database.db import Database
 from config import get_config, set_config, load_app_config, save_app_config
-from utils.path_manager import get_config_path
 from utils.theme_manager import apply_application_theme
 
 
@@ -20,18 +17,12 @@ class SettingsPage(QWidget):
         self.db = db
         self.main_window = main_window
 
-        # Путь для пресетов - используем ту же директорию, что и для конфига
-        self.config_dir = get_config_path()
-        self.presets_file = self.config_dir / "presets.json"
-        self.presets = {}
-
         # Кастомные цвета по умолчанию
         self.custom_bg = "#ffffff"
         self.custom_text = "#000000"
         self.custom_accent = "#2196F3"
 
         self.init_ui()
-        self.load_presets()
         self.load_current_settings()
 
     def init_ui(self):
@@ -104,32 +95,7 @@ class SettingsPage(QWidget):
         layout.addWidget(theme_group)
 
         # =====================================================================
-        # 2. ГРУППА: ПРЕСЕТЫ ПОДКЛЮЧЕНИЙ К БД
-        # =====================================================================
-        preset_group = QGroupBox("Пресеты подключений к БД")
-        preset_layout = QHBoxLayout()
-
-        self.preset_combo = QComboBox()
-        self.preset_combo.addItem("--- Выберите пресет ---")
-        self.preset_combo.currentIndexChanged.connect(self.apply_preset)
-        self.preset_combo.setMinimumWidth(250)
-        preset_layout.addWidget(self.preset_combo)
-
-        save_preset_btn = QPushButton("Сохранить как пресет")
-        save_preset_btn.clicked.connect(self.save_preset)
-        preset_layout.addWidget(save_preset_btn)
-
-        del_preset_btn = QPushButton("Удалить пресет")
-        del_preset_btn.setStyleSheet("background-color: #ffcdd2;")
-        del_preset_btn.clicked.connect(self.delete_preset)
-        preset_layout.addWidget(del_preset_btn)
-
-        preset_layout.addStretch()
-        preset_group.setLayout(preset_layout)
-        layout.addWidget(preset_group)
-
-        # =====================================================================
-        # 3. ГРУППА: ПАРАМЕТРЫ ПОДКЛЮЧЕНИЯ
+        # 2. ГРУППА: ПАРАМЕТРЫ ПОДКЛЮЧЕНИЯ
         # =====================================================================
         db_group = QGroupBox("Параметры текущего подключения к БД")
         form_layout = QFormLayout()
@@ -171,6 +137,7 @@ class SettingsPage(QWidget):
 
         # --- Кнопки сохранения ---
         btn_layout = QHBoxLayout()
+
         test_btn = QPushButton("Проверить подключение")
         test_btn.clicked.connect(self.test_connection)
         test_btn.setFixedWidth(200)
@@ -219,7 +186,6 @@ class SettingsPage(QWidget):
         current_hex = self.custom_bg if target == "bg" else (
             self.custom_text if target == "text" else self.custom_accent)
         color = QColorDialog.getColor(QColor(current_hex), self, "Выберите цвет")
-
         if color.isValid():
             hex_name = color.name()
             if target == "bg":
@@ -247,6 +213,7 @@ class SettingsPage(QWidget):
         # Загрузка параметров БД
         db_type = config.get("DB_TYPE", "mssql").lower()
         self.db_type.setCurrentText(db_type)
+
         host = config.get("DB_SERVER") if db_type == "mssql" else config.get("DB_HOST")
         self.db_host.setText(host or config.get("DB_HOST") or "")
         self.db_port.setText(config.get("DB_PORT", ""))
@@ -274,115 +241,6 @@ class SettingsPage(QWidget):
             "DB_PASSWORD": self.db_pass.text().strip(),
             "DB_DRIVER": self.db_driver.text().strip()
         }
-
-    def load_presets(self):
-        """Загружает пресеты из файла"""
-        self.presets = {}
-        if self.presets_file.exists():
-            try:
-                with open(self.presets_file, 'r', encoding='utf-8') as f:
-                    self.presets = json.load(f)
-                print(f"✅ Загружено {len(self.presets)} пресетов из {self.presets_file}")
-            except Exception as e:
-                print(f"⚠️ Ошибка чтения пресетов: {e}")
-        else:
-            print(f"ℹ️ Файл пресетов не найден: {self.presets_file}")
-
-        self.preset_combo.blockSignals(True)
-        self.preset_combo.clear()
-        self.preset_combo.addItem("--- Выберите пресет ---")
-        for name in self.presets.keys():
-            self.preset_combo.addItem(name)
-        self.preset_combo.blockSignals(False)
-
-    def apply_preset(self, index):
-        if index <= 0:
-            return
-        preset_name = self.preset_combo.currentText()
-        preset = self.presets.get(preset_name, {})
-
-        if not preset:
-            QMessageBox.warning(self, "Ошибка", f"Пресет '{preset_name}' не найден!")
-            return
-
-        db_type = preset.get("DB_TYPE", "mssql").lower()
-        self.db_type.setCurrentText(db_type)
-        host = preset.get("DB_SERVER") if db_type == "mssql" else preset.get("DB_HOST")
-        self.db_host.setText(host or "")
-        self.db_port.setText(preset.get("DB_PORT", ""))
-        self.db_name.setText(preset.get("DB_NAME", ""))
-        self.db_user.setText(preset.get("DB_USER", ""))
-        self.db_pass.setText(preset.get("DB_PASSWORD", ""))
-        self.db_driver.setText(preset.get("DB_DRIVER", "ODBC Driver 18 for SQL Server"))
-
-        QMessageBox.information(self, "Успех", f"Пресет '{preset_name}' применен!")
-
-    def save_preset(self):
-        """Сохраняет текущие настройки как пресет"""
-        name, ok = QInputDialog.getText(self, "Сохранить пресет", "Введите название пресета:")
-        if ok and name.strip():
-            name = name.strip()
-
-            # Проверяем, не существует ли уже пресет с таким именем
-            if name in self.presets:
-                reply = QMessageBox.question(
-                    self,
-                    "Подтверждение",
-                    f"Пресет '{name}' уже существует. Перезаписать?",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.No
-                )
-                if reply == QMessageBox.No:
-                    return
-
-            # Сохраняем текущие данные
-            self.presets[name] = self.get_form_data()
-
-            try:
-                # Создаем директорию, если её нет
-                self.presets_file.parent.mkdir(parents=True, exist_ok=True)
-
-                with open(self.presets_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.presets, f, ensure_ascii=False, indent=4)
-
-                # Обновляем комбобокс
-                self.load_presets()
-                self.preset_combo.setCurrentText(name)
-
-                QMessageBox.information(self, "Успех", f"Пресет '{name}' успешно сохранен!")
-
-            except Exception as e:
-                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить пресет:\n\n{e}")
-
-    def delete_preset(self):
-        """Удаляет выбранный пресет"""
-        index = self.preset_combo.currentIndex()
-        if index <= 0:
-            QMessageBox.warning(self, "Предупреждение", "Выберите пресет для удаления!")
-            return
-
-        name = self.preset_combo.currentText()
-
-        reply = QMessageBox.question(
-            self,
-            "Подтверждение",
-            f"Удалить пресет '{name}'?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            if name in self.presets:
-                del self.presets[name]
-                try:
-                    with open(self.presets_file, 'w', encoding='utf-8') as f:
-                        json.dump(self.presets, f, ensure_ascii=False, indent=4)
-
-                    self.load_presets()
-                    QMessageBox.information(self, "Успех", f"Пресет '{name}' удален.")
-
-                except Exception as e:
-                    QMessageBox.critical(self, "Ошибка", f"Не удалось удалить пресет:\n\n{e}")
 
     def test_connection(self):
         """Проверяет подключение к БД"""
@@ -444,7 +302,6 @@ class SettingsPage(QWidget):
             # Читаем старый конфиг, чтобы не затереть другие настройки
             old_config = load_app_config()
             old_config.update(data)
-
             save_app_config(old_config)
 
             # Применяем тему сразу
@@ -458,6 +315,5 @@ class SettingsPage(QWidget):
                       "Пожалуйста, перезапустите систему для применения изменений."
 
             QMessageBox.information(self, "Успех", msg)
-
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить настройки: {e}")
