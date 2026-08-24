@@ -1,0 +1,54 @@
+name: Build Astra Linux Application
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-astra:
+    # ubuntu-22.04 имеет glibc, совместимую с Astra Linux 1.8 (Debian 12)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          # Зависимости для компиляции psycopg2 (из вашего requirements.txt)
+          sudo apt-get install -y build-essential libpq-dev python3-dev
+          # Зависимости для компиляции pyodbc
+          sudo apt-get install -y unixodbc-dev
+          # Графические зависимости для PySide6 / Qt6 (критично для VirtualBox и llvmpipe)
+          sudo apt-get install -y libegl1 libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-shape0
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Linux Executable
+        run: |
+          pyinstaller build_astra.spec
+
+      - name: Make executable and list results
+        run: |
+          chmod +x dist/Analitic_app
+          ls -la dist/
+
+      - name: Upload Linux Executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnaliticApp-AstraLinux
+          path: dist/Analitic_app
+          retention-days: 7
