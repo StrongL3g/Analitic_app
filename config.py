@@ -15,7 +15,6 @@ class SecureConfigManager:
     """Менеджер для безопасного хранения конфигурации с шифрованием"""
 
     def __init__(self):
-        # Определяем базовый путь для EXE или скрипта
         if getattr(sys, 'frozen', False):
             self.base_path = Path(sys.executable).parent
         else:
@@ -24,11 +23,9 @@ class SecureConfigManager:
         self.config_dir = self.base_path / 'config'
         self.config_dir.mkdir(exist_ok=True)
 
-        # Файлы для хранения
         self.key_file = self.config_dir / 'config.key'
         self.config_file = self.config_dir / 'config.encrypted'
 
-        # Маска для файлов (скрытые)
         self._hide_files()
 
     def _hide_files(self):
@@ -36,21 +33,18 @@ class SecureConfigManager:
         if os.name == 'nt':
             try:
                 import ctypes
-                # Скрываем директорию config
                 attrs = ctypes.windll.kernel32.GetFileAttributesW(str(self.config_dir))
-                if attrs != -1 and not (attrs & 2):  # 2 = FILE_ATTRIBUTE_HIDDEN
+                if attrs != -1 and not (attrs & 2):
                     ctypes.windll.kernel32.SetFileAttributesW(str(self.config_dir), attrs | 2)
 
-                # Скрываем файлы внутри
                 for file in self.config_dir.glob('*'):
                     attrs = ctypes.windll.kernel32.GetFileAttributesW(str(file))
                     if attrs != -1 and not (attrs & 2):
                         ctypes.windll.kernel32.SetFileAttributesW(str(file), attrs | 2)
             except:
-                pass  # Если не удалось скрыть - просто игнорируем
+                pass
 
     def _get_or_create_key(self) -> bytes:
-        """Получает или создает ключ шифрования"""
         if self.key_file.exists():
             with open(self.key_file, 'rb') as f:
                 return f.read()
@@ -61,11 +55,9 @@ class SecureConfigManager:
             return key
 
     def _get_cipher(self) -> Fernet:
-        """Возвращает объект шифра"""
         return Fernet(self._get_or_create_key())
 
     def load_config(self) -> Dict[str, Any]:
-        """Загружает зашифрованную конфигурацию"""
         try:
             if not self.config_file.exists():
                 return self._create_default_config()
@@ -82,7 +74,6 @@ class SecureConfigManager:
             return self._create_default_config()
 
     def save_config(self, config: Dict[str, Any]):
-        """Сохраняет зашифрованную конфигурацию"""
         try:
             cipher = self._get_cipher()
             json_data = json.dumps(config, ensure_ascii=False, indent=2)
@@ -97,33 +88,33 @@ class SecureConfigManager:
             print(f"❌ Ошибка сохранения конфига: {e}")
 
     def _create_default_config(self) -> Dict[str, Any]:
-        """Создает конфигурацию по умолчанию"""
         default_config = {
-            "DB_TYPE": "mssql",  # или postgres
+            "DB_TYPE": "mssql",
             "DB_HOST": "localhost",
-            "DB_PORT": "1433",  # для mssql
+            "DB_PORT": "1433",
             "DB_NAME": "database_name",
             "DB_USER": "username",
             "DB_PASSWORD": "password",
             "DB_SERVER": "server_name",
-            "DB_DRIVER": "ODBC Driver 18 for SQL Server"
+            "DB_DRIVER": "ODBC Driver 18 for SQL Server",
+            "THEME": "Системная",
+            "CUSTOM_BG": "#ffffff",
+            "CUSTOM_TEXT": "#000000",
+            "CUSTOM_ACCENT": "#2196F3"
         }
         self.save_config(default_config)
         return default_config
 
     def get(self, key: str, default=None):
-        """Получает значение конкретной настройки"""
         config = self.load_config()
         return config.get(key, default)
 
     def set(self, key: str, value: Any):
-        """Устанавливает значение конкретной настройки"""
         config = self.load_config()
         config[key] = value
         self.save_config(config)
 
     def get_db_config(self) -> Dict[str, Any]:
-        """Получает конфигурацию для подключения к БД"""
         config = self.load_config()
         db_type = config.get("DB_TYPE", "mssql").lower()
 
@@ -136,7 +127,7 @@ class SecureConfigManager:
                 "password": config.get("DB_PASSWORD"),
                 "db_type": "postgres"
             }
-        else:  # MSSQL
+        else:
             return {
                 "server": config.get("DB_SERVER"),
                 "port": config.get("DB_PORT", "1433"),
@@ -152,7 +143,7 @@ class SecureConfigManager:
 _secure_manager = SecureConfigManager()
 
 
-# Глобальные переменные для обратной совместимости
+# --- ОСНОВНЫЕ ФУНКЦИИ ---
 def get_config(key, default=None):
     """Получает настройку"""
     return _secure_manager.get(key, default)
@@ -163,7 +154,26 @@ def set_config(key, value):
     _secure_manager.set(key, value)
 
 
-# Конфиг для БД
+# --- ФУНКЦИИ ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ ---
+def load_app_config():
+    """Устаревшая функция. Используйте get_config()"""
+    return _secure_manager.load_config()
+
+
+def save_app_config(config):
+    """Устаревшая функция. Используйте set_config()"""
+    _secure_manager.save_config(config)
+
+
+def unset_config(key):
+    """Удаляет настройку"""
+    config = _secure_manager.load_config()
+    if key in config:
+        del config[key]
+        _secure_manager.save_config(config)
+
+
+# --- КОНФИГ ДЛЯ БД ---
 DB_CONFIG = _secure_manager.get_db_config()
 
 
@@ -188,11 +198,7 @@ def refresh_app_settings():
         PR_COUNT = 8
 
 
-# Для тестирования
 if __name__ == "__main__":
     print("Тестирование SecureConfigManager")
     print(f"DB_CONFIG: {DB_CONFIG}")
-
-    # Пример сохранения
-    set_config("DB_HOST", "192.168.1.100")
-    print(f"DB_HOST: {get_config('DB_HOST')}")
+    print(f"THEME: {get_config('THEME')}")

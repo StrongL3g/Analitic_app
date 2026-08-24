@@ -1,10 +1,20 @@
 # utils/theme_manager.py
-from config import load_app_config
+from config import get_config, set_config
+
+
+def get_theme():
+    """Получает текущую тему из настроек"""
+    return get_config("THEME", "Системная")
+
+
+def set_theme(theme_name: str):
+    """Устанавливает тему в настройки"""
+    set_config("THEME", theme_name)
 
 
 def apply_application_theme(app_instance):
-    config = load_app_config()
-    theme_type = config.get("THEME", "Системная")
+    """Применяет тему к приложению"""
+    theme_type = get_theme()
 
     # Общие стили для кнопок и списков, чтобы они не ломались
     base_controls = """
@@ -51,9 +61,9 @@ def apply_application_theme(app_instance):
     elif theme_type == "Светлая":
         app_instance.setStyleSheet(light_qss)
     elif theme_type == "Кастомная":
-        bg = config.get("CUSTOM_BG", "#ffffff")
-        text = config.get("CUSTOM_TEXT", "#000000")
-        accent = config.get("CUSTOM_ACCENT", "#2196F3")
+        bg = get_config("CUSTOM_BG", "#ffffff")
+        text = get_config("CUSTOM_TEXT", "#000000")
+        accent = get_config("CUSTOM_ACCENT", "#2196F3")
         app_instance.setStyleSheet(f"""
             QWidget {{ background-color: {bg}; color: {text}; }}
             QPushButton {{ background-color: {accent}; color: white; border: none; }}
