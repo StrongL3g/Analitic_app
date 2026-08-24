@@ -17,6 +17,7 @@ logs/
 Thumbs.db
 Desktop.ini
 
-#config/presets
-config/config.json
-config/presets.json
+# Игнорируем все JSON файлы в config, кроме необходимых
+config/*.json
+config/*.key
+config/*.encrypted

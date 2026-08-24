@@ -1,5 +1,6 @@
 # views/settings.py
 import json
+from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit,
     QPushButton, QMessageBox, QGroupBox, QFormLayout, QComboBox,
@@ -8,15 +9,20 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from database.db import Database
-from config import load_app_config, save_app_config
+from config import get_config, set_config, load_app_config, save_app_config
 from utils.path_manager import get_config_path
+from utils.theme_manager import apply_application_theme
 
 
 class SettingsPage(QWidget):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, main_window=None):
         super().__init__()
         self.db = db
-        self.presets_file = get_config_path() / "presets.json"
+        self.main_window = main_window
+
+        # Путь для пресетов - используем ту же директорию, что и для конфига
+        self.config_dir = get_config_path()
+        self.presets_file = self.config_dir / "presets.json"
         self.presets = {}
 
         # Кастомные цвета по умолчанию
@@ -174,13 +180,21 @@ class SettingsPage(QWidget):
         save_btn.clicked.connect(self.save_settings)
         save_btn.setFixedWidth(200)
 
+        apply_theme_btn = QPushButton("Применить тему")
+        apply_theme_btn.setStyleSheet("background-color: #bbdefb; font-weight: bold;")
+        apply_theme_btn.clicked.connect(self.apply_theme_only)
+        apply_theme_btn.setFixedWidth(200)
+
         btn_layout.addWidget(test_btn)
+        btn_layout.addWidget(apply_theme_btn)
         btn_layout.addWidget(save_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
         info_label = QLabel(
-            "<b>Важно:</b> Новые параметры базы данных и стили оформления вступят в силу после перезапуска приложения.")
+            "<b>Важно:</b> Новые параметры базы данных вступят в силу после перезапуска приложения.<br>"
+            "Тема и цвета применяются сразу после сохранения."
+        )
         info_label.setStyleSheet("color: #d32f2f; padding-top: 5px;")
         layout.addWidget(info_label)
 
@@ -217,7 +231,7 @@ class SettingsPage(QWidget):
             self.update_color_previews()
 
     def load_current_settings(self):
-        """Загружает текущую конфигурацию из config.json"""
+        """Загружает текущую конфигурацию"""
         config = load_app_config()
 
         # Загрузка темы
@@ -262,13 +276,17 @@ class SettingsPage(QWidget):
         }
 
     def load_presets(self):
+        """Загружает пресеты из файла"""
         self.presets = {}
         if self.presets_file.exists():
             try:
                 with open(self.presets_file, 'r', encoding='utf-8') as f:
                     self.presets = json.load(f)
+                print(f"✅ Загружено {len(self.presets)} пресетов из {self.presets_file}")
             except Exception as e:
-                print(f"Ошибка чтения пресетов: {e}")
+                print(f"⚠️ Ошибка чтения пресетов: {e}")
+        else:
+            print(f"ℹ️ Файл пресетов не найден: {self.presets_file}")
 
         self.preset_combo.blockSignals(True)
         self.preset_combo.clear()
@@ -278,9 +296,14 @@ class SettingsPage(QWidget):
         self.preset_combo.blockSignals(False)
 
     def apply_preset(self, index):
-        if index <= 0: return
+        if index <= 0:
+            return
         preset_name = self.preset_combo.currentText()
         preset = self.presets.get(preset_name, {})
+
+        if not preset:
+            QMessageBox.warning(self, "Ошибка", f"Пресет '{preset_name}' не найден!")
+            return
 
         db_type = preset.get("DB_TYPE", "mssql").lower()
         self.db_type.setCurrentText(db_type)
@@ -292,41 +315,80 @@ class SettingsPage(QWidget):
         self.db_pass.setText(preset.get("DB_PASSWORD", ""))
         self.db_driver.setText(preset.get("DB_DRIVER", "ODBC Driver 18 for SQL Server"))
 
+        QMessageBox.information(self, "Успех", f"Пресет '{preset_name}' применен!")
+
     def save_preset(self):
+        """Сохраняет текущие настройки как пресет"""
         name, ok = QInputDialog.getText(self, "Сохранить пресет", "Введите название пресета:")
         if ok and name.strip():
             name = name.strip()
+
+            # Проверяем, не существует ли уже пресет с таким именем
+            if name in self.presets:
+                reply = QMessageBox.question(
+                    self,
+                    "Подтверждение",
+                    f"Пресет '{name}' уже существует. Перезаписать?",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    return
+
+            # Сохраняем текущие данные
             self.presets[name] = self.get_form_data()
+
             try:
+                # Создаем директорию, если её нет
+                self.presets_file.parent.mkdir(parents=True, exist_ok=True)
+
                 with open(self.presets_file, 'w', encoding='utf-8') as f:
                     json.dump(self.presets, f, ensure_ascii=False, indent=4)
+
+                # Обновляем комбобокс
                 self.load_presets()
                 self.preset_combo.setCurrentText(name)
+
                 QMessageBox.information(self, "Успех", f"Пресет '{name}' успешно сохранен!")
+
             except Exception as e:
-                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить пресет: {e}")
+                QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить пресет:\n\n{e}")
 
     def delete_preset(self):
+        """Удаляет выбранный пресет"""
         index = self.preset_combo.currentIndex()
-        if index <= 0: return
+        if index <= 0:
+            QMessageBox.warning(self, "Предупреждение", "Выберите пресет для удаления!")
+            return
+
         name = self.preset_combo.currentText()
 
-        reply = QMessageBox.question(self, "Подтверждение", f"Удалить пресет '{name}'?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение",
+            f"Удалить пресет '{name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
         if reply == QMessageBox.Yes:
             if name in self.presets:
                 del self.presets[name]
                 try:
                     with open(self.presets_file, 'w', encoding='utf-8') as f:
                         json.dump(self.presets, f, ensure_ascii=False, indent=4)
+
                     self.load_presets()
                     QMessageBox.information(self, "Успех", f"Пресет '{name}' удален.")
+
                 except Exception as e:
-                    QMessageBox.critical(self, "Ошибка", f"Не удалось удалить пресет: {e}")
+                    QMessageBox.critical(self, "Ошибка", f"Не удалось удалить пресет:\n\n{e}")
 
     def test_connection(self):
+        """Проверяет подключение к БД"""
         data = self.get_form_data()
         db_type = data["DB_TYPE"].lower()
+
         if db_type == "postgres":
             test_config = {
                 "host": data["DB_HOST"],
@@ -355,18 +417,47 @@ class SettingsPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка подключения", f"Не удалось подключиться к БД:\n\n{e}")
 
+    def apply_theme_only(self):
+        """Применяет тему без сохранения остальных настроек"""
+        try:
+            # Сохраняем только настройки темы
+            set_config("THEME", self.theme_selector.currentText())
+            set_config("CUSTOM_BG", self.custom_bg)
+            set_config("CUSTOM_TEXT", self.custom_text)
+            set_config("CUSTOM_ACCENT", self.custom_accent)
+
+            # Применяем тему
+            if self.main_window:
+                apply_application_theme(self.main_window)
+                QMessageBox.information(self, "Успех", "Тема успешно применена!")
+            else:
+                QMessageBox.warning(self, "Предупреждение",
+                                    "Не удалось применить тему: нет ссылки на главное окно.\n"
+                                    "Тема будет применена после перезапуска.")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось применить тему: {e}")
+
     def save_settings(self):
+        """Сохраняет все настройки"""
         data = self.get_form_data()
         try:
-            # Читаем старый конфиг, чтобы не затереть AC_COUNT и PR_COUNT
+            # Читаем старый конфиг, чтобы не затереть другие настройки
             old_config = load_app_config()
             old_config.update(data)
 
             save_app_config(old_config)
-            QMessageBox.information(
-                self, "Успех",
-                "Все настройки успешно зафиксированы!\n\n"
-                "Пожалуйста, перезапустите систему для полного переключения цветовой схемы и параметров БД."
-            )
+
+            # Применяем тему сразу
+            if self.main_window:
+                apply_application_theme(self.main_window)
+                msg = "Все настройки успешно сохранены!\n\n" \
+                      "Тема применена сразу.\n" \
+                      "Параметры БД вступят в силу после перезапуска."
+            else:
+                msg = "Все настройки успешно сохранены!\n\n" \
+                      "Пожалуйста, перезапустите систему для применения изменений."
+
+            QMessageBox.information(self, "Успех", msg)
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить настройки: {e}")

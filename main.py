@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
         # 1. ОБНОВЛЯЕМ НАСТРОЙКИ ИЗ БД ПЕРЕД СОЗДАНИЕМ ИНТЕРФЕЙСА
         refresh_app_settings()
 
-        # Текущая роль пользователя (получаем из окна логина)
+        # Текущая роль пользователя
         self.current_role = user_role
 
         self.setWindowTitle(f"Система анализа спектров - [{self.current_role}]")
@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         products_item.addChild(self.create_menu_item("Активные модели", "models"))
 
         data_item = self.create_menu_item("Управление данными", "data")
-        data_item.addChild(self.create_menu_item("Интенсивности репера", "rf_meas"))  # <--- Добавили меню
+        data_item.addChild(self.create_menu_item("Интенсивности репера", "rf_meas"))
         data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
         data_item.addChild(self.create_menu_item("Регрессия", "regression"))
         data_item.addChild(self.create_menu_item("Корректировка", "correction"))
@@ -168,13 +168,7 @@ class MainWindow(QMainWindow):
             # 1. Проверяем наличие связи с БД простым тестовым запросом
             self.db.fetch_all("SELECT 1")
 
-            # 2. База доступна. Кэшируем страницы. Это автоматически вызовет
-            # их load_data(), который создаст нужные JSON файлы.
-            # ПОРЯДОК СТРОГИЙ:
-            # - lines -> создает lines.json
-            # - elements -> создает elements.json и math_interactions.json
-            # - ranges -> создает range.json и lines_math_interactions.json (зависит от lines.json)
-
+            # 2. База доступна. Кэшируем страницы.
             for key in ["lines", "elements", "ranges"]:
                 if key not in self.page_cache:
                     page = self.page_classes[key](self.db)
@@ -200,6 +194,9 @@ class MainWindow(QMainWindow):
         # Сразу открываем главную страницу
         self.show_page("dashboard")
 
+        # Сохраняем ссылку на себя для доступа к теме
+        self.wants_logout = False
+
     def create_menu_item(self, text, key):
         item = QTreeWidgetItem()
         item.setText(0, text)
@@ -213,11 +210,14 @@ class MainWindow(QMainWindow):
         if key in self.page_cache:
             page = self.page_cache[key]
         else:
-            args = []
-            if key in self.db_pages:
-                args.append(self.db)
+            # Специальная обработка для страницы настроек - передаем main_window
+            if key == "settings":
+                page = SettingsPage(self.db, self)  # Передаем ссылку на главное окно
+            elif key in self.db_pages:
+                page = self.page_classes[key](self.db)
+            else:
+                page = self.page_classes[key]()
 
-            page = self.page_classes[key](*args)
             self.page_cache[key] = page
             self.stacked_widget.addWidget(page)
 
@@ -231,10 +231,20 @@ class MainWindow(QMainWindow):
         if key:
             self.show_page(key)
 
+    def apply_theme(self):
+        """Применяет текущую тему к приложению"""
+        from utils.theme_manager import apply_application_theme
+        apply_application_theme(self)
+
     def do_logout(self):
         """Устанавливает флаг выхода и закрывает окно"""
         self.wants_logout = True
         self.close()
+
+    def closeEvent(self, event):
+        """Обработчик закрытия окна"""
+        # Можно добавить сохранение состояния здесь
+        event.accept()
 
 
 # ЗАПУСК ПРИЛОЖЕНИЯ
