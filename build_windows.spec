@@ -7,11 +7,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('config/*.json', 'config'),
-        ('config/sample/*.json', 'config/sample'),
-        ('views/data/*.py', 'views/data'),
-        ('views/measurement/*.py', 'views/measurement'),
-        ('views/products/*.py', 'views/products'),
+        # Убираем config/*.json, так как они будут создаваться при первом запуске
+        # Можно добавить пустую директорию для config, если нужно
     ],
     hiddenimports=[
         'config',
@@ -37,7 +34,9 @@ a = Analysis(
         'views.measurement.ranges',
         'views.products.equations',
         'views.products.models',
-        'psycopg2._psycopg',  # Важно для Windows
+        'psycopg2._psycopg',
+        'cryptography',  # Добавляем для шифрования
+        'cryptography.fernet',  # Добавляем для шифрования
     ],
     hookspath=[],
     hooksconfig={},
@@ -62,14 +61,14 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,  # Сжатие - уменьшает размер
+    upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # False - без консоли (GUI приложение)
+    console=False,  # Без консоли
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-#    icon='icon.ico',  # Добавь иконку если есть
+    # icon='icon.ico',
 )

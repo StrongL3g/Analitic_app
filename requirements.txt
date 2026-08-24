@@ -6,3 +6,4 @@ python-dotenv==1.2.1
 matplotlib==3.10.7
 asyncua==1.1.5
 scipy>=1.10.0
+cryptography>=3.4.0  # Для шифрования
