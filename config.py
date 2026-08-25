@@ -26,23 +26,13 @@ class SecureConfigManager:
         self.key_file = self.config_dir / 'config.key'
         self.config_file = self.config_dir / 'config.encrypted'
 
-        self._hide_files()
+        # Убираем скрытие файлов - оно не нужно и вызывает проблемы
+        # self._hide_files()
 
-    def _hide_files(self):
-        """Скрывает файлы конфигурации в Windows"""
-        if os.name == 'nt':
-            try:
-                import ctypes
-                attrs = ctypes.windll.kernel32.GetFileAttributesW(str(self.config_dir))
-                if attrs != -1 and not (attrs & 2):
-                    ctypes.windll.kernel32.SetFileAttributesW(str(self.config_dir), attrs | 2)
-
-                for file in self.config_dir.glob('*'):
-                    attrs = ctypes.windll.kernel32.GetFileAttributesW(str(file))
-                    if attrs != -1 and not (attrs & 2):
-                        ctypes.windll.kernel32.SetFileAttributesW(str(file), attrs | 2)
-            except:
-                pass
+    # Удаляем метод _hide_files полностью или оставляем закомментированным
+    # def _hide_files(self):
+    #     """Скрывает файлы конфигурации в Windows"""
+    #     ...
 
     def _get_or_create_key(self) -> bytes:
         if self.key_file.exists():
@@ -79,13 +69,28 @@ class SecureConfigManager:
             json_data = json.dumps(config, ensure_ascii=False, indent=2)
             encrypted_data = cipher.encrypt(json_data.encode('utf-8'))
 
-            with open(self.config_file, 'wb') as f:
+            # Используем временный файл для безопасной записи
+            temp_file = self.config_file.with_suffix('.tmp')
+
+            # Сначала пишем во временный файл
+            with open(temp_file, 'wb') as f:
                 f.write(encrypted_data)
+                f.flush()
+                os.fsync(f.fileno())
+
+            # Затем переименовываем (атомарная операция)
+            temp_file.replace(self.config_file)
 
             print("✅ Конфигурация сохранена")
 
         except Exception as e:
             print(f"❌ Ошибка сохранения конфига: {e}")
+            # Если есть временный файл, удаляем его
+            if temp_file and temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except:
+                    pass
 
     def _create_default_config(self) -> Dict[str, Any]:
         default_config = {
