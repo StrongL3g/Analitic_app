@@ -317,7 +317,16 @@ class RegressionPage(QWidget):
             active_mdl = self.db.fetch_one("SELECT mdl_nmb FROM mdl_set WHERE pr_nmb = ? AND active_model = 1",
                                            [pr_nmb])
             if not active_mdl:
-                active_mdl = self.db.fetch_one("SELECT TOP 1 mdl_nmb FROM mdl_set WHERE pr_nmb = ?", [pr_nmb])
+                if self.db.db_type == 'postgres':
+                    active_mdl = self.db.fetch_one(
+                        "SELECT mdl_nmb FROM mdl_set WHERE pr_nmb = ? ORDER BY mdl_nmb LIMIT 1",
+                        [pr_nmb]
+                    )
+                else:
+                    active_mdl = self.db.fetch_one(
+                        "SELECT TOP 1 mdl_nmb FROM mdl_set WHERE pr_nmb = ?",
+                        [pr_nmb]
+                    )
                 if not active_mdl: return
 
             active_mdl_nmb = active_mdl["mdl_nmb"]

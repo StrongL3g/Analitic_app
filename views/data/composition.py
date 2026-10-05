@@ -392,7 +392,8 @@ class CompositionPage(QWidget):
                     new_cal = 1 if item_cal.checkState() == Qt.Checked else 0
                     old_cal = self.original_data.get((row, 4), 0)
                     if new_cal != old_cal:
-                        row_changes['calibrate_sample'] = new_cal
+                        # calibrate_sample в Postgres — BOOLEAN
+                        row_changes['calibrate_sample'] = bool(new_cal)
 
                 # 3. Проверка Химии (только если не режим Интенсивностей)
                 if not self.check_inten.isChecked():

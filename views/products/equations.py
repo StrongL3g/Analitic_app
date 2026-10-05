@@ -1006,8 +1006,8 @@ class EquationsPage(QWidget):
                             self._safe_float_convert(self.empty_crit_edit.text()),
                             self.w_element_combo.itemData(self.w_element_combo.currentIndex()),
                             self.e_element_combo.itemData(self.e_element_combo.currentIndex()),
-                            1 if self.w_operator_combo.itemData(self.w_operator_combo.currentIndex()) else 0,
-                            1 if self.e_operator_combo.itemData(self.e_operator_combo.currentIndex()) else 0,
+                            bool(self.w_operator_combo.itemData(self.w_operator_combo.currentIndex())),
+                            bool(self.e_operator_combo.itemData(self.e_operator_combo.currentIndex())),
                             pr_nmb, mdl_nmb
                         ])
 

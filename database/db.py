@@ -4,6 +4,34 @@ import psycopg2
 from contextlib import contextmanager
 import re
 
+
+class _PreparedCursor:
+    """Обёртка над psycopg2/pyodbc курсором с авто-конверсией запроса."""
+
+    def __init__(self, cursor, db_type):
+        self._cursor = cursor
+        self._db_type = db_type
+
+    def _convert_query(self, query):
+        if self._db_type == 'postgres':
+            query = re.sub(r'\[([^\]]+)\]', r'"\1"', query)
+            query = query.replace('?', '%s')
+        return query
+
+    def execute(self, query, params=None):
+        query = self._convert_query(query)
+        if params is None:
+            return self._cursor.execute(query)
+        return self._cursor.execute(query, params)
+
+    def executemany(self, query, params_list):
+        query = self._convert_query(query)
+        return self._cursor.executemany(query, params_list)
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+
 class Database:
     def __init__(self, db_config):
         self.db_config = db_config
@@ -11,18 +39,13 @@ class Database:
         self.database_name = db_config['database']
 
     def _prepare_query_and_params(self, query, params):
-        """Подготавливает запрос и параметры для конкретной СУБД"""
-        if params is None:
-            return query, None
-
-        #print(f"Исходный запрос: {query}")
-
+        """Приводит запрос к синтаксису конкретной СУБД."""
         if self.db_type == 'postgres':
-            converted_query = query.replace('?', '%s')
-            #print(f"Конвертированный запрос: {converted_query}")
-            return converted_query, params
-        else:
-            return query, params
+            # 1) MSSQL-идентификаторы [name] -> "name"
+            query = re.sub(r'\[([^\]]+)\]', r'"\1"', query)
+            # 2) Плейсхолдеры ? -> %s
+            query = query.replace('?', '%s')
+        return query, params
 
     @contextmanager
     def connect(self):
@@ -55,6 +78,19 @@ class Database:
         finally:
             if conn:
                 conn.close()
+
+    @contextmanager
+    def transaction(self):
+        """Несколько запросов в одной транзакции с авто-конверсией ? -> %s."""
+        with self.connect() as conn:
+            cursor = conn.cursor()
+            prepared = _PreparedCursor(cursor, self.db_type)
+            try:
+                yield prepared
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     def fetch_all(self, query, params=None):
         with self.connect() as conn:
@@ -107,7 +143,6 @@ class Database:
             cursor = conn.cursor()
             prepared_query, _ = self._prepare_query_and_params(query, None)
             try:
-                # cursor.executemany принимает запрос и список кортежей с параметрами
                 cursor.executemany(prepared_query, params_list)
                 conn.commit()
                 return cursor.rowcount

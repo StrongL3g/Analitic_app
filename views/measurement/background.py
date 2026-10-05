@@ -309,17 +309,14 @@ class BackgroundPage(QWidget):
 
             updated_count = 0
 
-            with self.db.connect() as conn:
-                cursor = conn.cursor()
+            with self.db.transaction() as cur:
                 for (source_sq, k_nmb), column_changes in changes_by_cell.items():
                     for target_sq, new_value in column_changes.items():
                         db_column = f"ln_{target_sq:02d}"
                         query = f"UPDATE SET03 SET {db_column} = ? WHERE ac_nmb = ? AND sq_nmb = ? AND k_nmb = ?"
 
-                        cursor.execute(query, (float(new_value), self.current_ac_nmb, source_sq, k_nmb))
+                        cur.execute(query, (float(new_value), self.current_ac_nmb, source_sq, k_nmb))
                         updated_count += 1
-
-                conn.commit()
 
             self.modified_data.clear()
             QMessageBox.information(self, "Успех", f"Успешно сохранено {updated_count} изменений")
@@ -348,11 +345,9 @@ class BackgroundPage(QWidget):
                 set_clauses_k2 = ", ".join([f"ln_{i:02d} = 0.0" for i in range(1, 21)])
                 query_k2 = f"UPDATE SET03 SET {set_clauses_k2} WHERE ac_nmb = ? AND k_nmb = 2"
 
-                with self.db.connect() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(query_k1, (self.current_ac_nmb,))
-                    cursor.execute(query_k2, (self.current_ac_nmb,))
-                    conn.commit()
+                with self.db.transaction() as cur:
+                    cur.execute(query_k1, (self.current_ac_nmb,))
+                    cur.execute(query_k2, (self.current_ac_nmb,))
 
                 QMessageBox.information(self, "Успех", "Коэффициенты успешно сброшены к базовым значениям!")
                 self.load_data()

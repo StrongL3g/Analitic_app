@@ -311,8 +311,12 @@ class CorrectionPage(QWidget):
         c_calc_active, c_chem_active = [], []
         for rec in self.raw_buffer:
             if rec.get('is_active', True):
-                c_calc_active.append(rec.get("c_calc", 0))
-                c_chem_active.append(rec.get("c_chem", 0))
+                # ВАЖНО: `.get(k, 0)` возвращает None, если ключ есть и равен None.
+                # Поэтому используем `or 0` — он ловит и отсутствие ключа, и None.
+                val_calc = rec.get("c_calc") or 0
+                val_chem = rec.get("c_chem") or 0
+                c_calc_active.append(val_calc)
+                c_chem_active.append(val_chem)
 
         if len(c_calc_active) > 1:
             X = np.vstack([np.ones(len(c_calc_active)), c_calc_active]).T
@@ -343,8 +347,8 @@ class CorrectionPage(QWidget):
 
         k0, k1 = coeffs[0], coeffs[1]
         for rec in self.raw_buffer:
-            c_chem = rec.get("c_chem", 0)
-            c_calc = rec.get("c_calc", 0)
+            c_chem = rec.get("c_chem") or 0
+            c_calc = rec.get("c_calc") or 0
             c_corr = k0 + k1 * c_calc
             rec['c_corr'] = c_corr
             dc = c_corr - c_chem
@@ -401,9 +405,9 @@ class CorrectionPage(QWidget):
         c_chem_list, c_calc_list, c_corr_list = [], [], []
         for rec in self.raw_buffer:
             if rec.get('is_active', True):
-                c_chem_list.append(rec.get("c_chem", 0))
-                c_calc_list.append(rec.get("c_calc", 0))
-                c_corr_list.append(rec.get("c_corr", 0))
+                c_chem_list.append(rec.get("c_chem") or 0)
+                c_calc_list.append(rec.get("c_calc") or 0)
+                c_corr_list.append(rec.get("c_corr") or 0)
 
         if not c_chem_list: return
         before_stats = self._calc_stats(c_chem_list, c_calc_list)

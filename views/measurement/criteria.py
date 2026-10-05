@@ -89,7 +89,7 @@ class CriteriaPage(QWidget):
 
         try:
             # Исключили SD из запроса, оставили только существующие колонки
-            query = "SELECT id, I_DEF, I_B, K_D_DEF, SR FROM SET04 WHERE ac_nmb = ?"
+            query = "SELECT id, i_def, i_b, k_d_def, sr FROM set04 WHERE ac_nmb = ?"
             data_list = self.db.fetch_all(query, [self.current_ac_nmb])
 
             if not data_list:
@@ -160,8 +160,8 @@ class CriteriaPage(QWidget):
 
             # Исключили SD из UPDATE структуры
             query = """
-            UPDATE SET04
-            SET I_DEF = ?, I_B = ?, K_D_DEF = ?, SR = ?
+            UPDATE set04
+            SET i_def = ?, i_b = ?, k_d_def = ?, sr = ?
             WHERE id = ?
             """
             self.db.execute(query, params)
