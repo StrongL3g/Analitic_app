@@ -442,14 +442,39 @@ class CompositionPage(QWidget):
                 params = list(fields.values())
 
                 if isinstance(ts, datetime):
-                    # Создаем окно ±3 секунды в безопасном формате YYYYMMDD HH:mm:ss
+                    # Окно ±3 секунды вокруг timestamp строки
                     ts_min = (ts - timedelta(seconds=3)).strftime("%Y%m%d %H:%M:%S")
                     ts_max = (ts + timedelta(seconds=3)).strftime("%Y%m%d %H:%M:%S")
 
-                    query = f"UPDATE pr_meas SET {', '.join(set_clauses)} WHERE pr_nmb = ? AND timestamp BETWEEN ? AND ?"
+                    # --- Предохранитель: защита от массовой перезаписи ---
+                    # Ожидаем не больше 6 строк (3 модели × 2 кюветы) в одном измерении.
+                    # Если попадает больше — вероятны дубликаты timestamp в БД.
+                    cnt_row = self.db.fetch_one(
+                        "SELECT COUNT(*) AS cnt FROM pr_meas "
+                        "WHERE pr_nmb = ? AND timestamp BETWEEN ? AND ?",
+                        [pr_nmb, ts_min, ts_max]
+                    )
+                    affected = cnt_row['cnt'] if cnt_row else 0
+                    if affected > 6:
+                        progress.cancel()
+                        QMessageBox.critical(
+                            self, "Остановка сохранения",
+                            f"Правка затронула бы {affected} строк с одинаковым "
+                            f"timestamp (ожидается не больше 6).\n\n"
+                            f"Похоже, в базе есть дубликаты измерений с одинаковой "
+                            f"меткой времени. Сохранение отменено, чтобы не "
+                            f"перезаписать лишние данные.\n\n"
+                            f"Проверьте таблицу pr_meas для прибора №{pr_nmb} "
+                            f"около {ts.strftime('%Y-%m-%d %H:%M:%S')}."
+                        )
+                        return
+                    # --- /Предохранитель ---
+
+                    query = (f"UPDATE pr_meas SET {', '.join(set_clauses)} "
+                             f"WHERE pr_nmb = ? AND timestamp BETWEEN ? AND ?")
                     params.extend([pr_nmb, ts_min, ts_max])
                 else:
-                    # Резервный вариант на случай непредвиденного формата даты (обновит хотя бы текущую строку)
+                    # Резервный вариант: если дата не распарсилась — обновляем по id
                     query = f"UPDATE pr_meas SET {', '.join(set_clauses)} WHERE id = ?"
                     params.append(meta['id'])
 
@@ -464,7 +489,8 @@ class CompositionPage(QWidget):
             QMessageBox.information(
                 self,
                 "Результат",
-                f"Успешно сохранено проб: {success_count} из {len(updates)}\n(Изменения применены ко всем моделям измерения)."
+                f"Успешно сохранено проб: {success_count} из {len(updates)}\n"
+                f"(Изменения применены ко всем моделям измерения)."
             )
 
             self.load_data()
