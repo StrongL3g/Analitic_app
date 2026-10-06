@@ -75,49 +75,8 @@ class MainWindow(QMainWindow):
         self.tree.setFixedWidth(250)
         self.tree.setStyleSheet("QTreeWidget { font-size: 13px; }")
 
-        # Заполнение дерева меню
-        self.tree.addTopLevelItem(self.create_menu_item("Главный", "dashboard"))
-
-        measurement_item = self.create_menu_item("Управление измерениями", "measurement")
-        measurement_item.addChild(self.create_menu_item("Спектральные линии", "lines"))
-        measurement_item.addChild(self.create_menu_item("Спектральные диапазоны", "ranges"))
-        measurement_item.addChild(self.create_menu_item("Фон и наложения", "background"))
-        measurement_item.addChild(self.create_menu_item("Параметры измерения", "params"))
-        measurement_item.addChild(self.create_menu_item("Элементы", "elements"))
-        measurement_item.addChild(self.create_menu_item("Критерии проверок", "criteria"))
-
-        products_item = self.create_menu_item("Управление продуктами", "products")
-        products_item.addChild(self.create_menu_item("Ввод уравнений связи", "equations"))
-        products_item.addChild(self.create_menu_item("Активные модели", "models"))
-
-        data_item = self.create_menu_item("Управление данными", "data")
-        data_item.addChild(self.create_menu_item("Интенсивности репера", "rf_meas"))
-        data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
-        data_item.addChild(self.create_menu_item("Регрессия", "regression"))
-        data_item.addChild(self.create_menu_item("Корректировка", "correction"))
-        data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
-        data_item.addChild(self.create_menu_item("Нормативы", "standards"))
-        data_item.addChild(self.create_menu_item("Отчет", "report"))
-        data_item.addChild(self.create_menu_item("Сравнение моделей", "compare_models"))
-
-        self.tree.addTopLevelItem(measurement_item)
-        self.tree.addTopLevelItem(products_item)
-        self.tree.addTopLevelItem(data_item)
-
-        # Разделы только для инженера-программиста
-        if self.current_role == "Инженер-программист":
-            cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
-            cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))
-            cfg_item.addChild(self.create_menu_item("Продукты", "cfg_pr"))
-            cfg_item.addChild(self.create_menu_item("Пробоотборники", "cfg_sp"))
-            self.tree.addTopLevelItem(cfg_item)
-
-            settings_item = self.create_menu_item("Настройки", "settings")
-            users_item = self.create_menu_item("Пользователи", "users")
-            logs_item = self.create_menu_item("Журнал", "logs")
-            self.tree.addTopLevelItem(settings_item)
-            self.tree.addTopLevelItem(users_item)
-            self.tree.addTopLevelItem(logs_item)
+        # Заполнение дерева меню согласно роли пользователя
+        self.build_menu()
 
         # === Область контента ===
         self.stacked_widget = QStackedWidget()
@@ -169,7 +128,12 @@ class MainWindow(QMainWindow):
             self.db.fetch_all("SELECT 1")
 
             # 2. База доступна. Кэшируем страницы.
-            for key in ["lines", "elements", "ranges"]:
+            #    Но только те, к которым у пользователя есть доступ по роли!
+            allowed_preload = set()
+            if self.current_role in ("Инженер-программист", "Аналитик"):
+                allowed_preload = {"lines", "elements", "ranges"}
+
+            for key in allowed_preload:
                 if key not in self.page_cache:
                     page = self.page_classes[key](self.db)
                     self.page_cache[key] = page
@@ -196,6 +160,65 @@ class MainWindow(QMainWindow):
 
         # Сохраняем ссылку на себя для доступа к теме
         self.wants_logout = False
+
+    # ========================================================================
+    #  ПОСТРОЕНИЕ МЕНЮ ПО РОЛЯМ
+    # ========================================================================
+    def build_menu(self):
+        """Строит дерево меню согласно роли текущего пользователя."""
+        role = self.current_role
+
+        # Главный экран — доступен всем
+        self.tree.addTopLevelItem(self.create_menu_item("Главный", "dashboard"))
+
+        # --- Управление измерениями / продуктами / данными ---
+        # Доступно: админ и аналитик
+        if role in ("Инженер-программист", "Аналитик"):
+            measurement_item = self.create_menu_item("Управление измерениями", "measurement")
+            measurement_item.addChild(self.create_menu_item("Спектральные линии", "lines"))
+            measurement_item.addChild(self.create_menu_item("Спектральные диапазоны", "ranges"))
+            measurement_item.addChild(self.create_menu_item("Фон и наложения", "background"))
+            measurement_item.addChild(self.create_menu_item("Параметры измерения", "params"))
+            measurement_item.addChild(self.create_menu_item("Элементы", "elements"))
+            measurement_item.addChild(self.create_menu_item("Критерии проверок", "criteria"))
+
+            products_item = self.create_menu_item("Управление продуктами", "products")
+            products_item.addChild(self.create_menu_item("Ввод уравнений связи", "equations"))
+            products_item.addChild(self.create_menu_item("Активные модели", "models"))
+
+            data_item = self.create_menu_item("Управление данными", "data")
+            data_item.addChild(self.create_menu_item("Интенсивности репера", "rf_meas"))
+            data_item.addChild(self.create_menu_item("Ввод химических содержаний", "composition"))
+            data_item.addChild(self.create_menu_item("Регрессия", "regression"))
+            data_item.addChild(self.create_menu_item("Корректировка", "correction"))
+            data_item.addChild(self.create_menu_item("Свободный пересчет", "recalc"))
+            data_item.addChild(self.create_menu_item("Нормативы", "standards"))
+            data_item.addChild(self.create_menu_item("Отчет", "report"))
+            data_item.addChild(self.create_menu_item("Сравнение моделей", "compare_models"))
+
+            self.tree.addTopLevelItem(measurement_item)
+            self.tree.addTopLevelItem(products_item)
+            self.tree.addTopLevelItem(data_item)
+
+        # --- Для гостя — только просмотр отчётов ---
+        if role == "Гость":
+            reports_item = self.create_menu_item("Отчёты", "reports")
+            reports_item.addChild(self.create_menu_item("Отчет", "report"))
+            reports_item.addChild(self.create_menu_item("Нормативы", "standards"))
+            reports_item.addChild(self.create_menu_item("Сравнение моделей", "compare_models"))
+            self.tree.addTopLevelItem(reports_item)
+
+        # --- Конфигуратор и системные разделы — только админу ---
+        if role == "Инженер-программист":
+            cfg_item = self.create_menu_item("Конфигуратор", "cfg_main")
+            cfg_item.addChild(self.create_menu_item("Приборы", "cfg_ac"))
+            cfg_item.addChild(self.create_menu_item("Продукты", "cfg_pr"))
+            cfg_item.addChild(self.create_menu_item("Пробоотборники", "cfg_sp"))
+            self.tree.addTopLevelItem(cfg_item)
+
+            self.tree.addTopLevelItem(self.create_menu_item("Настройки", "settings"))
+            self.tree.addTopLevelItem(self.create_menu_item("Пользователи", "users"))
+            self.tree.addTopLevelItem(self.create_menu_item("Журнал", "logs"))
 
     def create_menu_item(self, text, key):
         item = QTreeWidgetItem()
