@@ -21,3 +21,10 @@ Desktop.ini
 config/*.json
 config/*.key
 config/*.encrypted
+
+# === Логи аудита ===
+logs/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

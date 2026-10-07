@@ -50,8 +50,12 @@ from views.login import LoginDialog
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, user_role="Аналитик"):
+    def __init__(self, user_role="Аналитик", username=None):
         super().__init__()
+
+        self.username = username or "unknown"
+
+
 
         # 1. ОБНОВЛЯЕМ НАСТРОЙКИ ИЗ БД ПЕРЕД СОЗДАНИЕМ ИНТЕРФЕЙСА
         refresh_app_settings()
@@ -64,7 +68,7 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
 
         # Подключение к БД
-        self.db = Database(DB_CONFIG)
+        self.db = Database(DB_CONFIG, username=self.username, role=self.current_role)
 
         # Основной разделитель
         splitter = QSplitter(Qt.Horizontal)
@@ -279,7 +283,10 @@ if __name__ == "__main__":
         # 2. Если логин успешен
         if login_dialog.exec() == QDialog.Accepted:
             # 3. Запускаем главное окно
-            window = MainWindow(user_role=login_dialog.user_role)
+            window = MainWindow(
+                user_role=login_dialog.user_role,
+                username=login_dialog.username,
+            )
             window.show()
 
             # Ждем, пока окно не будет закрыто
