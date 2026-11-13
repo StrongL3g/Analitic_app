@@ -202,7 +202,7 @@ class CompositionPage(QWidget):
                 conditions.append("meas_type = 0")
             else:
                 conditions.append("meas_type = 1")
-            if self.check_calib.isChecked(): conditions.append("calibrate_sample = 1")
+            if self.check_calib.isChecked(): conditions.append("calibrate_sample = true")
             if conditions: query += " AND " + " AND ".join(conditions)
 
             query += " ORDER BY timestamp DESC"
