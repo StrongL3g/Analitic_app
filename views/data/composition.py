@@ -291,7 +291,7 @@ class CompositionPage(QWidget):
             if self.check_chem.isChecked():
                 chem_conditions = [f"c_chem_{i:02d} <> 0" for i in range(1, 9)]
                 conditions.append(f"({' OR '.join(chem_conditions)})")
-            if self.check_calib.isChecked(): conditions.append("calibrate_sample = 1")
+            if self.check_calib.isChecked(): conditions.append("calibrate_sample = true")
             if conditions: query += " AND " + " AND ".join(conditions)
 
             query += " ORDER BY timestamp DESC"
