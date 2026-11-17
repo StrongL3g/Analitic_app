@@ -112,6 +112,11 @@ class CompareModelsPage(QWidget):
         self.check_chem.setChecked(False)  # По умолчанию снято
         controls_layout.addWidget(self.check_chem)
 
+        # НОВЫЙ ФИЛЬТР: только валидный статус
+        self.check_valid_status = QCheckBox("Только валидные (st_pr = 0)")
+        self.check_valid_status.setChecked(False)
+        controls_layout.addWidget(self.check_valid_status)
+
         # Галочки моделей (динамические)
         models_label = QLabel("Выберите модели для сравнения:")
         models_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
@@ -163,6 +168,7 @@ class CompareModelsPage(QWidget):
         self.date_from.dateTimeChanged.connect(self.load_data)
         self.date_to.dateTimeChanged.connect(self.load_data)
         self.check_chem.stateChanged.connect(self.load_data)
+        self.check_valid_status.stateChanged.connect(self.load_data)
 
     def load_elements_config(self):
         try:
@@ -251,16 +257,21 @@ class CompareModelsPage(QWidget):
 
         placeholders = ','.join(['?'] * len(selected_mdls))
 
-        # Берем ВСЕ данные без фильтра химии, чтобы база не "оторвала" модели друг от друга
+        # Базовый запрос
         query = f"""
             SELECT pr_nmb, timestamp, sample_name, mdl_nmb, 
                    {cor_col} as corr, {chem_col} as chem 
             FROM pr_meas 
             WHERE pr_nmb = ? AND mdl_nmb IN ({placeholders}) 
             AND timestamp BETWEEN ? AND ? 
-            ORDER BY timestamp DESC, mdl_nmb ASC
         """
         params = [pr_nmb] + selected_mdls + [dt_from, dt_to]
+
+        # НОВОЕ: фильтр по статусу
+        if self.check_valid_status.isChecked():
+            query += " AND st_pr <= 7 "
+
+        query += " ORDER BY timestamp DESC, mdl_nmb ASC"
 
         try:
             rows = self.db.fetch_all(query, params)

@@ -89,10 +89,13 @@ class EquationsPage(QWidget):
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(2)
         self.table_widget.setHorizontalHeaderLabels(["Коэффициенты корректировки", "Уравнения расчета концентраций"])
-        self.table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
         self.table_widget.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        #self.table_widget.setAlternatingRowColors(True)
+        self.table_widget.setColumnWidth(0, 220)
+        # self.table_widget.setAlternatingRowColors(True)
         self.table_widget.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table_widget.setWordWrap(True)
+        self.table_widget.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         # Добавляем разделитель
         splitter = QSplitter(Qt.Vertical)
@@ -740,6 +743,11 @@ class EquationsPage(QWidget):
 
                 # Сохраняем строку для редактирования
                 self.table_widget.item(row_idx, 1).setData(Qt.UserRole, row)
+
+            # Авто-подгонка ширины столбца коэффициентов под реальные данные
+            self.table_widget.resizeColumnToContents(0)
+            if self.table_widget.columnWidth(0) < 220:
+                self.table_widget.setColumnWidth(0, 220)
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки уравнений: {str(e)}")
