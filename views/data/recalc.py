@@ -229,6 +229,52 @@ class RecalcPage(QWidget):
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         return item
 
+    def _clear_ui_empty(self):
+        """Приводит весь UI к 'пустому' состоянию, когда данных нет.
+        Нужен, чтобы при 'плохой' выборке не оставались старые данные и не было зависания."""
+        # Таблицы выборки
+        for t in (self.table_active, self.table_excluded):
+            try:
+                t.setSortingEnabled(False)
+                t.setUpdatesEnabled(False)
+                t.blockSignals(True)
+                t.clearContents()
+                t.setRowCount(0)
+                t.setColumnCount(6)
+                t.setHorizontalHeaderLabels(
+                    ["Продукт", "Время (ts)", "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"]
+                )
+            except Exception:
+                pass
+            finally:
+                try:
+                    t.setUpdatesEnabled(True)
+                    t.setSortingEnabled(True)
+                    t.blockSignals(False)
+                except Exception:
+                    pass
+
+        self.tabs.setTabText(0, "Рабочая выборка (0)")
+        self.tabs.setTabText(1, "Исключенные строки (0)")
+
+        # Статистика
+        for row in range(11):
+            try:
+                self.stats_table.item(row, 1).setText("-")
+                self.stats_table.item(row, 1).setBackground(Qt.GlobalColor.white)
+            except Exception:
+                pass
+
+        # График
+        try:
+            self.ax.clear()
+            self.ax.set_xlabel("C_расч")
+            self.ax.set_ylabel("C_хим")
+            self.ax.set_title("Нет данных для построения")
+            self.canvas.draw_idle()
+        except Exception:
+            pass
+
     def on_table_double_click(self, row, table_widget):
         pr_item = table_widget.item(row, 0)
         if not pr_item: return
@@ -249,6 +295,7 @@ class RecalcPage(QWidget):
         if x_range == 0 or y_range == 0: return
 
         el_nmb = self.combo_element.currentData()
+        if el_nmb is None: return
         chem_col = f"c_chem_{el_nmb:02d}"
 
         for i, rec in enumerate(self.raw_buffer):
@@ -283,33 +330,63 @@ class RecalcPage(QWidget):
     def load_data(self):
         try:
             el_nmb = self.combo_element.currentData()
-            if el_nmb is None: return
+            if el_nmb is None:
+                self.raw_buffer = []
+                self._clear_ui_empty()
+                return
 
             sample_path = get_config_path() / "sample" / "s_regress.json"
-            if not os.path.exists(sample_path): return
+            if not os.path.exists(sample_path):
+                self.raw_buffer = []
+                self._clear_ui_empty()
+                return
+
             with open(sample_path, "r", encoding="utf-8") as f:
                 sample_config = json.load(f)
-            if not sample_config: return
+            if not sample_config:
+                self.raw_buffer = []
+                self._clear_ui_empty()
+                return
 
             pr_nmb = sample_config[0].get("product_id")
             if not pr_nmb or pr_nmb <= 0:
-                for t in [self.table_active, self.table_excluded]: t.setRowCount(0)
+                self.raw_buffer = []
+                self._clear_ui_empty()
                 return
 
             mdl_nmb = self.combo_model.currentIndex() + 1
-            el_set_row = self.db.fetch_one("SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
-                                           [pr_nmb, el_nmb, mdl_nmb])
-            if not el_set_row: return
+            el_set_row = self.db.fetch_one(
+                "SELECT * FROM el_set WHERE pr_nmb = ? AND el_nmb = ? AND mdl_nmb = ?",
+                [pr_nmb, el_nmb, mdl_nmb]
+            )
+            if not el_set_row:
+                # ВАЖНО: чистим UI, иначе на экране останутся старые данные
+                self.raw_buffer = []
+                self._clear_ui_empty()
+                return
 
             self.current_meas_type = el_set_row["meas_type"]
             self._load_equation_terms(self.current_meas_type, el_nmb)
             self._load_coeffs_to_table(el_set_row, self.current_meas_type)
 
-            self.raw_buffer = self._fetch_meas_data(sample_config, el_nmb, mdl_nmb, self.current_meas_type)
+            new_buffer = self._fetch_meas_data(sample_config, el_nmb, mdl_nmb, self.current_meas_type)
+            if not new_buffer:
+                # Выборка пуста — чистим UI, чтобы не висели старые данные
+                self.raw_buffer = []
+                self._clear_ui_empty()
+                return
+
+            self.raw_buffer = new_buffer
             self.perform_recalc()
 
         except Exception as e:
             print(f"Ошибка загрузки: {e}")
+            # Не оставляем UI в промежуточном состоянии
+            try:
+                self.raw_buffer = []
+                self._clear_ui_empty()
+            except Exception:
+                pass
 
     def _load_equation_terms(self, meas_type, el_nmb):
         try:
@@ -441,39 +518,53 @@ class RecalcPage(QWidget):
                 print(f"Ошибка запроса выборки в свободном пересчете: {e}")
         return all_rows
 
-    def perform_recalc(self, *args):  # <--- Добавили *args, чтобы принимать любые сигналы от Qt
-        if not hasattr(self, 'raw_buffer') or not self.raw_buffer:
+    def perform_recalc(self, *args):
+        if not hasattr(self, 'raw_buffer'):
             return
+
+        # Буфер пуст — не молчим, а явно чистим UI
+        if not self.raw_buffer:
+            self._clear_ui_empty()
+            return
+
         try:
             coeffs = []
             for i in range(11):
                 try:
                     coeffs.append(float(self.coeff_table.item(i, 2).text().replace(',', '.')))
-                except ValueError:
+                except (ValueError, AttributeError):
                     coeffs.append(0.0)
             try:
                 k0 = float(self.coeff_table.item(11, 2).text().replace(',', '.'))
-            except ValueError:
+            except (ValueError, AttributeError):
                 k0 = 0.0
             try:
                 k1 = float(self.coeff_table.item(12, 2).text().replace(',', '.'))
-            except ValueError:
+            except (ValueError, AttributeError):
                 k1 = 1.0
 
-            self._is_updating_ui = True
             el_nmb = self.combo_element.currentData()
-            features = []
-            for i, combo in enumerate(self.combo_equation_terms):
-                desc = combo.currentText().strip()
-                self.coeff_table.item(i + 1, 1).setText(desc if desc else "-")
-                feat_vals = self._compute_feature(desc, self.current_meas_type, el_nmb)
-                features.append(feat_vals)
-            self._is_updating_ui = False
+            if el_nmb is None:
+                self._clear_ui_empty()
+                return
+
+            # КРИТИЧНО: _is_updating_ui должен сбрасываться всегда, иначе
+            # on_coeff_changed перестанет реагировать на изменения (визуальный "завис")
+            self._is_updating_ui = True
+            try:
+                features = []
+                for i, combo in enumerate(self.combo_equation_terms):
+                    desc = combo.currentText().strip()
+                    self.coeff_table.item(i + 1, 1).setText(desc if desc else "-")
+                    feat_vals = self._compute_feature(desc, self.current_meas_type, el_nmb)
+                    features.append(feat_vals)
+            finally:
+                self._is_updating_ui = False
 
             c_chem_active, c_calc_active, dc_active = [], [], []
 
             for row_idx, rec in enumerate(self.raw_buffer):
-                c_chem = rec.get(f"c_chem_{el_nmb:02d}", 0.0)
+                c_chem = rec.get(f"c_chem_{el_nmb:02d}", 0.0) or 0.0
                 c_raw = coeffs[0] + sum(coeffs[i + 1] * features[i][row_idx] for i in range(10))
                 c_calc = k0 + k1 * c_raw
                 rec['c_calc'] = c_calc
@@ -485,89 +576,102 @@ class RecalcPage(QWidget):
                     c_calc_active.append(c_calc)
                     dc_active.append(rec['dc'])
 
+            # Если после фильтрации активных < 2 — статистика не считается,
+            # но таблицы и график всё равно обновляем
             self._update_statistics(c_chem_active, c_calc_active, dc_active)
             self._rebuild_tables_ui()
             self._update_plot()
+
         except Exception as e:
             print(f"Ошибка в perform_recalc(): {e}")
+            # На всякий случай гарантируем сброс флага
+            self._is_updating_ui = False
 
     def _rebuild_tables_ui(self):
         for t in [self.table_active, self.table_excluded]:
             t.blockSignals(True)
             t.setUpdatesEnabled(False)
             t.setSortingEnabled(False)
-            t.clear()
 
-        headers = ["Продукт", "Время (ts)", "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"]
-        if self.current_meas_type == 0:
-            headers.extend([f"I_{i:02d}" for i in range(20)])
-        else:
-            headers.extend([f"C_{i:02d}" for i in range(1, 9)])
+        try:
+            for t in [self.table_active, self.table_excluded]:
+                t.clearContents()
+                t.setRowCount(0)
 
-        for t in [self.table_active, self.table_excluded]:
-            t.setColumnCount(len(headers))
-            t.setHorizontalHeaderLabels(headers)
-
-        active_count = sum(1 for r in self.raw_buffer if r['is_active'])
-        excl_count = len(self.raw_buffer) - active_count
-
-        self.table_active.setRowCount(active_count)
-        self.table_excluded.setRowCount(excl_count)
-
-        self.tabs.setTabText(0, f"Рабочая выборка ({active_count})")
-        self.tabs.setTabText(1, f"Исключенные строки ({excl_count})")
-
-        act_idx, exc_idx = 0, 0
-        el_nmb = self.combo_element.currentData()
-        chem_col = f"c_chem_{el_nmb:02d}"
-
-        for buf_idx, rec in enumerate(self.raw_buffer):
-            is_act = rec['is_active']
-            t_widget = self.table_active if is_act else self.table_excluded
-            row_idx = act_idx if is_act else exc_idx
-
-            item_pr = QTableWidgetItem(str(rec.get("pr_nmb", "")))
-            item_pr.setData(Qt.UserRole, buf_idx)
-            item_pr.setFlags(item_pr.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            t_widget.setItem(row_idx, 0, item_pr)
-
-            t_widget.setItem(row_idx, 1, self._create_readonly_item(rec.get("timestamp_str", "")))
-
-            c_chem = rec.get(chem_col, 0.0)
-            c_calc = rec.get("c_calc", 0.0)
-            dc = rec.get("dc", 0.0)
-            ddc = rec.get("ddc", 0.0)
-
-            t_widget.setItem(row_idx, 2, self._create_readonly_item(fmt_num(c_chem), True))
-            t_widget.setItem(row_idx, 3, self._create_readonly_item(fmt_num(c_calc), True))
-            t_widget.setItem(row_idx, 4, self._create_readonly_item(fmt_num(dc), True))
-            t_widget.setItem(row_idx, 5, self._create_readonly_item(f"{ddc * 100:.2f}%", True))
-
-            col_offset = 6
+            headers = ["Продукт", "Время (ts)", "C_хим", "C_расч", "ΔC", "δC=|ΔC/C_хим|"]
             if self.current_meas_type == 0:
-                for i in range(20):
-                    val = rec.get(f"i_00_{i:02d}", 0.0)
-                    t_widget.setItem(row_idx, col_offset + i, self._create_readonly_item(fmt_num(val), True))
+                headers.extend([f"I_{i:02d}" for i in range(20)])
             else:
-                for i in range(1, 9):
-                    val = rec.get(f"c_cor_{i:02d}", 0.0)
-                    t_widget.setItem(row_idx, col_offset + i - 1, self._create_readonly_item(fmt_num(val), True))
+                headers.extend([f"C_{i:02d}" for i in range(1, 9)])
 
-            if is_act:
-                act_idx += 1
-            else:
-                exc_idx += 1
+            for t in [self.table_active, self.table_excluded]:
+                t.setColumnCount(len(headers))
+                t.setHorizontalHeaderLabels(headers)
 
-        for t in [self.table_active, self.table_excluded]:
-            t.setSortingEnabled(True)
-            t.setUpdatesEnabled(True)
-            t.blockSignals(False)
+            active_count = sum(1 for r in self.raw_buffer if r['is_active'])
+            excl_count = len(self.raw_buffer) - active_count
+
+            self.table_active.setRowCount(active_count)
+            self.table_excluded.setRowCount(excl_count)
+
+            self.tabs.setTabText(0, f"Рабочая выборка ({active_count})")
+            self.tabs.setTabText(1, f"Исключенные строки ({excl_count})")
+
+            act_idx, exc_idx = 0, 0
+            el_nmb = self.combo_element.currentData()
+            chem_col = f"c_chem_{el_nmb:02d}" if el_nmb is not None else ""
+
+            for buf_idx, rec in enumerate(self.raw_buffer):
+                is_act = rec['is_active']
+                t_widget = self.table_active if is_act else self.table_excluded
+                row_idx = act_idx if is_act else exc_idx
+
+                item_pr = QTableWidgetItem(str(rec.get("pr_nmb", "")))
+                item_pr.setData(Qt.UserRole, buf_idx)
+                item_pr.setFlags(item_pr.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                t_widget.setItem(row_idx, 0, item_pr)
+
+                t_widget.setItem(row_idx, 1, self._create_readonly_item(rec.get("timestamp_str", "")))
+
+                c_chem = rec.get(chem_col, 0.0) or 0.0
+                c_calc = rec.get("c_calc", 0.0) or 0.0
+                dc = rec.get("dc", 0.0) or 0.0
+                ddc = rec.get("ddc", 0.0) or 0.0
+
+                t_widget.setItem(row_idx, 2, self._create_readonly_item(fmt_num(c_chem), True))
+                t_widget.setItem(row_idx, 3, self._create_readonly_item(fmt_num(c_calc), True))
+                t_widget.setItem(row_idx, 4, self._create_readonly_item(fmt_num(dc), True))
+                t_widget.setItem(row_idx, 5, self._create_readonly_item(f"{ddc * 100:.2f}%", True))
+
+                col_offset = 6
+                if self.current_meas_type == 0:
+                    for i in range(20):
+                        val = rec.get(f"i_00_{i:02d}", 0.0) or 0.0
+                        t_widget.setItem(row_idx, col_offset + i, self._create_readonly_item(fmt_num(val), True))
+                else:
+                    for i in range(1, 9):
+                        val = rec.get(f"c_cor_{i:02d}", 0.0) or 0.0
+                        t_widget.setItem(row_idx, col_offset + i - 1, self._create_readonly_item(fmt_num(val), True))
+
+                if is_act:
+                    act_idx += 1
+                else:
+                    exc_idx += 1
+        finally:
+            for t in [self.table_active, self.table_excluded]:
+                t.setSortingEnabled(True)
+                t.setUpdatesEnabled(True)
+                t.blockSignals(False)
 
     def _update_statistics(self, c_chem, c_calc, dc):
         m = len(dc)
         if m < 2:
-            for row in range(11): self.stats_table.item(row, 1).setText("-")
-            for row in range(7, 11): self.stats_table.item(row, 1).setBackground(Qt.GlobalColor.white)
+            for row in range(11):
+                try:
+                    self.stats_table.item(row, 1).setText("-")
+                    self.stats_table.item(row, 1).setBackground(Qt.GlobalColor.white)
+                except Exception:
+                    pass
             return
 
         max_val, min_val = np.max(c_chem), np.min(c_chem)
@@ -579,8 +683,6 @@ class RecalcPage(QWidget):
         sum_xy = np.sum((x - np.mean(x)) * (y - np.mean(y)))
         sum_x2 = np.sum((x - np.mean(x)) ** 2)
         sum_y2 = np.sum((y - np.mean(y)) ** 2)
-
-        # Точная формула R² без потери точностей
         r2 = (sum_xy ** 2) / (sum_x2 * sum_y2) if (sum_x2 != 0 and sum_y2 != 0) else 0.0
 
         t_calc = (abs(mean_dc) * np.sqrt(m)) / stdev_dc if stdev_dc != 0 else 0
@@ -639,9 +741,14 @@ class RecalcPage(QWidget):
     def _update_plot(self):
         try:
             self.ax.clear()
-            cx_act, cy_act, cx_exc, cy_exc = [], [], [], []
             el_nmb = self.combo_element.currentData()
+            if el_nmb is None:
+                self.ax.set_title("Нет данных")
+                self.canvas.draw_idle()
+                return
+
             chem_col = f"c_chem_{el_nmb:02d}"
+            cx_act, cy_act, cx_exc, cy_exc = [], [], [], []
 
             for rec in self.raw_buffer:
                 c_calc = rec.get("c_calc")
@@ -668,7 +775,10 @@ class RecalcPage(QWidget):
                 self.ax.set_title("График зависимости C_хим от C_расч")
                 self.ax.legend()
                 self.ax.grid(True, alpha=0.3)
-            self.canvas.draw()
+            else:
+                self.ax.set_title("Нет валидных точек (C_хим = 0)")
+            # draw_idle вместо draw — не блокирует UI-поток
+            self.canvas.draw_idle()
         except Exception as e:
             print(f"Ошибка в _update_plot: {e}")
 
@@ -687,7 +797,7 @@ class RecalcPage(QWidget):
             for term in json_data.get("interactions", []):
                 if term.get("description", "").strip() == target_desc:
                     x1, x2, op = term["x1"], term["x2"], term["op"]
-                    found = True;
+                    found = True
                     break
         else:
             for group in json_data.get("interactions", []):
@@ -695,7 +805,7 @@ class RecalcPage(QWidget):
                     for term in group.get("interactions", []):
                         if term.get("description", "").strip() == target_desc:
                             x1, x2, op = term["x1"], term["x2"], term["op"]
-                            found = True;
+                            found = True
                             break
                     if found: break
 
@@ -731,6 +841,6 @@ class RecalcPage(QWidget):
                 else:
                     res = 0.0
                 result.append(res)
-            except:
+            except Exception:
                 result.append(0.0)
         return result

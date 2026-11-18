@@ -93,24 +93,27 @@ class Database:
         where_placeholders = where_part.count('?')
 
         # Формируем параметры ТОЛЬКО для WHERE
-        if not params:
-            select_params = None
-        elif where_placeholders == 0:
-            # В WHERE нет плейсхолдеров, но параметры есть — значит они все ушли в SET
-            select_params = None
-        else:
-            n = where_placeholders
-            if isinstance(params, (list, tuple)):
-                select_params = tuple(params[-n:]) if n <= len(params) else tuple(params)
-            else:
-                select_params = (params,)
+        select_params = None
+        if params:
+            if isinstance(params, dict):
+                # именованные параметры — не поддерживаем выборку,
+                # чтобы не рисковать; просто пропускаем «было»
+                return None
+            if where_placeholders > 0:
+                n = where_placeholders
+                if isinstance(params, (list, tuple)):
+                    select_params = (
+                        tuple(params[-n:]) if n <= len(params) else tuple(params)
+                    )
+                else:
+                    select_params = (params,)
 
         select_sql = f"SELECT * FROM {table} {where_part}"
 
         try:
             was = self.audit_enabled
             self.audit_enabled = False
-            rows = self.fetch_all(select_sql, select_params if select_params else None)
+            rows = self.fetch_all(select_sql, select_params)
             self.audit_enabled = was
             return repr(rows) if rows else None
         except Exception as e:
@@ -131,6 +134,22 @@ class Database:
         cols = re.findall(r'([\[\]\w\".]+)\s*=\s*\?', set_part)
         return [c.strip('[]"').lower() for c in cols]
 
+    @staticmethod
+    def _parse_insert_columns(query: str):
+        """
+        Для INSERT возвращает список колонок.
+        "INSERT INTO t (a, b, c) VALUES (?, ?, ?)" -> ['a', 'b', 'c']
+        Если колонок в запросе нет — вернёт [].
+        """
+        m = re.search(
+            r"^\s*INSERT\s+INTO\s+[\[\]\w\".]+\s*\(([^)]+)\)",
+            query, re.IGNORECASE | re.DOTALL,
+        )
+        if not m:
+            return []
+        cols = re.findall(r'[\[\]\w\".]+', m.group(1))
+        return [c.strip('[]"').lower() for c in cols]
+
     def _audit_log(self, query, params, old_value, new_value, success=True, error=None):
         """Записать в аудит-журнал."""
         op, table = parse_sql(query)
@@ -144,11 +163,17 @@ class Database:
         # === Формируем читаемое "стало" ===
         readable_new = params
         cols = []
-        if op == "UPDATE" and isinstance(params, (list, tuple)):
-            cols = self._parse_update_columns(query)
-            if cols:
-                values = list(params[:len(cols)])
-                readable_new = dict(zip(cols, values))
+        if isinstance(params, (list, tuple)):
+            if op == "UPDATE":
+                cols = self._parse_update_columns(query)
+                if cols:
+                    values = list(params[:len(cols)])
+                    readable_new = dict(zip(cols, values))
+            elif op == "INSERT":
+                insert_cols = self._parse_insert_columns(query)
+                if insert_cols:
+                    values = list(params[:len(insert_cols)])
+                    readable_new = dict(zip(insert_cols, values))
 
         # === Формируем читаемое "было" — только изменяемые колонки ===
         readable_old = old_value

@@ -1,4 +1,7 @@
 # views/logs.py
+import traceback
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QComboBox, QDateTimeEdit, QPushButton,
@@ -13,8 +16,22 @@ class LogsPage(QWidget):
     def __init__(self):
         super().__init__()
         self.audit = get_audit()
-        self.init_ui()
-        self.load_data()
+        try:
+            self.init_ui()
+            self.load_data()
+        except Exception:
+            # Не даём упасть всему приложению из-за страницы логов.
+            # Пишем traceback в crash.log рядом с программой.
+            try:
+                from database.audit import _app_dir
+                crash_path = _app_dir() / "logs" / "crash.log"
+                crash_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(crash_path, "a", encoding="utf-8") as f:
+                    f.write("\n=== LogsPage init ===\n")
+                    f.write(traceback.format_exc())
+            except Exception:
+                pass
+            raise
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -30,6 +47,7 @@ class LogsPage(QWidget):
         info_layout = QHBoxLayout()
         self.info_label = QLabel("")
         self.info_label.setStyleSheet("color: #555; font-size: 12px;")
+        self.info_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         info_layout.addWidget(self.info_label)
         info_layout.addStretch()
 
@@ -97,6 +115,11 @@ class LogsPage(QWidget):
             "Время", "Пользователь", "Роль", "Операция",
             "Таблица", "ID записи", "Было", "Стало"
         ])
+        # ВАЖНО: перенос строк в ячейках + resizeRowsToContents на больших
+        # текстах вызывают stack overflow (0xCFFFFFFF) в Qt на Windows.
+        # Отключаем перенос и фиксируем ширину "Было"/"Стало".
+        self.table.setWordWrap(False)
+
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -104,11 +127,17 @@ class LogsPage(QWidget):
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(6, QHeaderView.Stretch)
-        header.setSectionResizeMode(7, QHeaderView.Stretch)
+        header.setSectionResizeMode(6, QHeaderView.Interactive)
+        header.setSectionResizeMode(7, QHeaderView.Interactive)
+        self.table.setColumnWidth(6, 320)
+        self.table.setColumnWidth(7, 320)
+
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
+        # Убираем автоподгонку высоты строк — она и вызывала падение
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        self.table.verticalHeader().setDefaultSectionSize(22)
         layout.addWidget(self.table)
 
         # Двойной клик по строке — показать полный текст "было/стало"
@@ -141,7 +170,10 @@ class LogsPage(QWidget):
 
     def reload_filter_values(self):
         """Заполнить комбобоксы фильтров значениями из БД."""
-        rows = self.audit.fetch(limit=1000)
+        try:
+            rows = self.audit.fetch(limit=1000)
+        except Exception:
+            rows = []
         users = sorted({r["username"] for r in rows if r.get("username")})
         tables = sorted({r["table_name"] for r in rows if r.get("table_name")})
 
@@ -185,23 +217,39 @@ class LogsPage(QWidget):
             QMessageBox.critical(self, "Ошибка", f"Не удалось прочитать журнал: {e}")
             return
 
-        self.table.setRowCount(len(rows))
-        for i, r in enumerate(rows):
-            cells = [
-                r.get("ts", ""),
-                r.get("username", "") or "",
-                r.get("role", "") or "",
-                r.get("operation", ""),
-                r.get("table_name", "") or "",
-                r.get("record_id", "") or "",
-                (r.get("old_value") or "")[:500],
-                (r.get("new_value") or "")[:500],
-            ]
-            for j, val in enumerate(cells):
-                item = QTableWidgetItem(str(val))
-                self.table.setItem(i, j, item)
+        # На время заполнения отключаем обновление, чтобы не мигало
+        self.table.setUpdatesEnabled(False)
+        try:
+            self.table.setRowCount(len(rows))
+            for i, r in enumerate(rows):
+                # Простые колонки
+                simple = [
+                    r.get("ts", ""),
+                    r.get("username", "") or "",
+                    r.get("role", "") or "",
+                    r.get("operation", ""),
+                    r.get("table_name", "") or "",
+                    r.get("record_id", "") or "",
+                ]
+                for j, val in enumerate(simple):
+                    item = QTableWidgetItem(str(val))
+                    self.table.setItem(i, j, item)
 
-        self.table.resizeRowsToContents()
+                # Было / Стало — показываем первые 500 символов,
+                # полный текст храним в UserRole для двойного клика.
+                full_old = r.get("old_value") or ""
+                full_new = r.get("new_value") or ""
+
+                item_old = QTableWidgetItem(full_old[:500])
+                item_old.setData(Qt.UserRole, full_old)
+                self.table.setItem(i, 6, item_old)
+
+                item_new = QTableWidgetItem(full_new[:500])
+                item_new.setData(Qt.UserRole, full_new)
+                self.table.setItem(i, 7, item_new)
+        finally:
+            self.table.setUpdatesEnabled(True)
+
         self.reload_filter_values()
         self.update_info()
 
@@ -213,37 +261,11 @@ class LogsPage(QWidget):
         item = self.table.item(row, col)
         if not item:
             return
-        # Найдём полную версию — она хранится в фильтрованном списке
-        # Проще: заново прочитать именно эту запись из БД
-        # Но для простоты — используем текст ячейки (может быть обрезан)
-        # Читаем полный текст через повторный запрос по всем полям
-        # Здесь воспользуемся тем, что в фильтрованном списке полная запись есть
-        # Упрощённый путь: заново запросим 2000 записей и найдём по ts + username
-        ts_item = self.table.item(row, 0)
-        if not ts_item:
-            return
-        ts_value = ts_item.text()
-
-        # Перечитываем все записи и ищем нужную
-        all_rows = self.audit.fetch(limit=2000)
-        target = None
-        for r in all_rows:
-            if r.get("ts") == ts_value and (r.get("operation") == (self.table.item(row, 3) or "").text()):
-                # Ещё проверим таблицу и id, чтобы не перепутать
-                if (r.get("table_name") or "") == (self.table.item(row, 4).text() if self.table.item(row, 4) else ""):
-                    target = r
-                    break
-
-        if not target:
-            QMessageBox.information(self, "Полный текст", item.text())
-            return
-
-        full_text = target.get("old_value") if col == 6 else target.get("new_value")
-        QMessageBox.information(
-            self,
-            "Полное значение",
-            full_text or "(пусто)"
-        )
+        full_text = item.data(Qt.UserRole)
+        if full_text is None:
+            # на случай, если UserRole не установлен — покажем текст ячейки
+            full_text = item.text()
+        QMessageBox.information(self, "Полное значение", full_text or "(пусто)")
 
     # ----------------------------------------------------------
     def purge_old(self):

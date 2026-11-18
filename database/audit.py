@@ -2,15 +2,34 @@
 """
 Аудит изменений в БД. Пишет лог в локальный SQLite-файл.
 
-Хранение: <project_root>/logs/audit.db
+Хранение: <папка_программы>/logs/audit.db
+  - если программа собрана PyInstaller'ом -> рядом с .exe
+  - если запущена из исходников          -> рядом с корнем проекта
 """
 
 import os
 import re
+import sys
 import sqlite3
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
+
+
+# ============================================================
+#  Куда класть файл журнала
+# ============================================================
+
+def _app_dir() -> Path:
+    """
+    Папка, где реально лежит программа.
+
+    - PyInstaller (frozen): sys.executable = путь к .exe
+    - обычный запуск:       корень проекта (parent от database/)
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 # ============================================================
@@ -43,17 +62,33 @@ def parse_sql(query: str):
 class AuditLog:
     def __init__(self, project_root: Path = None):
         if project_root is None:
-            # database/audit.py -> project_root = родитель папки database
-            project_root = Path(__file__).resolve().parent.parent
+            project_root = _app_dir()
         log_dir = project_root / "logs"
-        log_dir.mkdir(exist_ok=True)
+        log_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = log_dir / "audit.db"
 
-        self._lock = threading.Lock()
+        # RLock — потому что write() может вызываться из фонового потока,
+        # а fetch()/purge_* — из GUI-потока.
+        self._lock = threading.RLock()
         self._init_schema()
 
+    # ---------- соединение ----------
+    def _connect(self):
+        conn = sqlite3.connect(
+            self.db_path,
+            timeout=15,
+            check_same_thread=False,
+        )
+        # WAL — параллельное чтение во время записи, меньше блокировок
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
+        except sqlite3.OperationalError:
+            pass
+        return conn
+
     def _init_schema(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS audit (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +116,7 @@ class AuditLog:
               sql_text=None, success=True, error=None):
         """Записать одну запись. Потокобезопасно."""
         with self._lock:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 conn.execute("""
                     INSERT INTO audit
                         (ts, username, role, operation, table_name,
@@ -125,14 +160,14 @@ class AuditLog:
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(limit)
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cur = conn.execute(sql, params)
             return [dict(row) for row in cur.fetchall()]
 
     def count_all(self) -> int:
         """Общее число записей в журнале."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cur = conn.execute("SELECT COUNT(*) FROM audit")
             return cur.fetchone()[0]
 
@@ -148,11 +183,10 @@ class AuditLog:
         """Удалить записи старше N дней. Возвращает число удалённых."""
         cutoff = (datetime.now() - timedelta(days=days)).isoformat(timespec="seconds")
         with self._lock:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 cur = conn.execute("DELETE FROM audit WHERE ts < ?", (cutoff,))
                 conn.commit()
                 deleted = cur.rowcount
-                # VACUUM вернёт освободившееся место обратно на диск
                 try:
                     conn.execute("VACUUM")
                 except sqlite3.OperationalError:
@@ -162,7 +196,7 @@ class AuditLog:
     def purge_all(self) -> int:
         """Полностью очистить журнал."""
         with self._lock:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 cur = conn.execute("DELETE FROM audit")
                 conn.commit()
                 deleted = cur.rowcount
