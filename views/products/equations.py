@@ -754,8 +754,9 @@ class EquationsPage(QWidget):
             self.table_widget.setRowCount(0)
 
     def on_table_cell_clicked(self, row, column):
-        """Обработчик клика по ячейке таблицы"""
-        if column == 1:  # Клик по уравнению
+        if row < 0:
+            return
+        if column in (0, 1):
             self.load_equation_for_editing(row)
 
     def load_equation_for_editing(self, row):
